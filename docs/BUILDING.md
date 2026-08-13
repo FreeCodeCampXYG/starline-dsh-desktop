@@ -1,0 +1,123 @@
+# 开发与跨平台构建
+
+## 工具链
+
+- Go 1.25+
+- Node.js 24（开发推荐；运行时也接受 Node 22.19+）
+- npm
+- Wails CLI 2.14.0
+- 平台原生 C/C++ 工具链与 WebView 开发包
+
+```bash
+go install github.com/wailsapp/wails/v2/cmd/wails@v2.14.0
+wails doctor
+```
+
+## 安装前端依赖
+
+```bash
+npm --prefix frontend ci
+```
+
+仓库使用 `package-lock.json`。CI、Release 和正式构建都使用 `npm ci`，不在构建时更新依赖解析结果。
+
+## 本地开发
+
+```bash
+wails dev
+```
+
+前端开发服务器只服务宿主启动/设置界面；就绪后仍嵌入本机 DSH Web UI。
+
+## 基础验证
+
+必须先生成 `frontend/dist`，因为 Go 的 `embed` 在编译测试包时要求资源存在：
+
+```bash
+npm --prefix frontend run typecheck
+npm --prefix frontend run build
+go test ./...
+go vet ./...
+```
+
+Linux 使用 WebKitGTK 4.1 build tag：
+
+```bash
+go test -tags webkit2_41 ./...
+go vet -tags webkit2_41 ./...
+```
+
+## Windows
+
+安装 Go、Node.js、Wails、WebView2 和 NSIS，并确保 `makensis` 在 PATH：
+
+```powershell
+.\scripts\build-windows.ps1 -Version 0.1.0
+```
+
+脚本依次执行：
+
+1. 工具检查；
+2. `npm ci`、typecheck、前端构建；
+3. Go test/vet；
+4. Wails 生产构建；
+5. 当前用户级 NSIS Setup；
+6. 便携 ZIP；
+7. SHA-256 文件。
+
+输出位于 `dist/`。脚本会临时把版本写进 Wails 安装包元数据，并在结束或失败时恢复 `wails.json`。
+
+手动构建：
+
+```powershell
+wails build -clean -trimpath -platform windows/amd64 -nsis -installscope user -ldflags "-s -w -H=windowsgui -X main.version=0.1.0"
+```
+
+Windows ARM64 必须在 ARM64 Windows 或受支持的原生 runner 构建。仓库 Release 使用 `windows-11-arm`，不把 x64 交叉编译结果当作完整平台验证。
+
+## macOS
+
+安装 Xcode Command Line Tools、Go、Node.js 和 Wails：
+
+```bash
+npm --prefix frontend ci
+wails build -clean -trimpath -platform darwin/arm64 -ldflags "-s -w -X main.version=0.1.0"
+```
+
+Intel 使用 `darwin/amd64`。GitHub Actions 分别使用 `macos-15-intel` 与 `macos-15` 原生 runner。
+
+本地未签名 `.app` 只适合开发测试。公开发布前还需要 Developer ID 签名、hardened runtime 和 notarization；它们不能由普通 CI 开关代替。
+
+## Linux
+
+Ubuntu 24.04 开发依赖：
+
+```bash
+sudo apt-get update
+sudo apt-get install -y --no-install-recommends \
+  build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
+```
+
+构建：
+
+```bash
+npm --prefix frontend ci
+wails build -clean -trimpath -platform linux/amd64 -tags webkit2_41 -ldflags "-s -w -X main.version=0.1.0"
+```
+
+ARM64 使用 `linux/arm64`，GitHub Actions 在 `ubuntu-24.04-arm` 原生 runner 上构建。
+
+当前 Linux 产物是动态链接的 TAR.GZ，不宣称跨所有发行版通用。发布前应至少在 Ubuntu 24.04 上验证，并记录其他发行版反馈。
+
+## GitHub Actions 构建矩阵
+
+| OS | Runner | Wails platform | 产物 |
+| --- | --- | --- | --- |
+| Windows x64 | `windows-latest` | `windows/amd64` | Setup.exe + ZIP |
+| Windows ARM64 | `windows-11-arm` | `windows/arm64` | Setup.exe + ZIP |
+| macOS Intel | `macos-15-intel` | `darwin/amd64` | app ZIP |
+| macOS Apple Silicon | `macos-15` | `darwin/arm64` | app ZIP |
+| Linux x64 | `ubuntu-24.04` | `linux/amd64` | TAR.GZ |
+| Linux ARM64 | `ubuntu-24.04-arm` | `linux/arm64` | TAR.GZ |
+
+各目标在对应架构的原生 runner 上构建。矩阵 `fail-fast: false`，一个平台失败时其他平台仍给出结果，但 tag Release 必须等待全部目标成功。

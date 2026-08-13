@@ -1,0 +1,503 @@
+:root {
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Microsoft YaHei", sans-serif;
+  color: #edf3ff;
+  background: #080c14;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+}
+
+.splash {
+  position: relative;
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% -20%, rgba(52, 91, 255, 0.25), transparent 42%),
+    linear-gradient(145deg, #070b12 0%, #0b1020 55%, #070b12 100%);
+}
+
+.ambient {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(70px);
+  opacity: 0.42;
+}
+
+.ambient-one {
+  top: 15%;
+  left: 17%;
+  width: 280px;
+  height: 280px;
+  background: #2457ff;
+}
+
+.ambient-two {
+  right: 13%;
+  bottom: 13%;
+  width: 240px;
+  height: 240px;
+  background: #00a4a6;
+}
+
+.panel {
+  position: relative;
+  z-index: 1;
+  width: min(560px, calc(100vw - 48px));
+  padding: 48px;
+  border: 1px solid rgba(167, 189, 255, 0.16);
+  border-radius: 28px;
+  background: rgba(10, 16, 29, 0.76);
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.42);
+  text-align: center;
+  backdrop-filter: blur(24px);
+}
+
+.mark {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 28px;
+  place-items: center;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #5f78ff, #3153e8 52%, #0dbaa9);
+  box-shadow: 0 14px 44px rgba(58, 86, 238, 0.45);
+  transform: rotate(-6deg);
+}
+
+.mark span {
+  color: white;
+  font-size: 32px;
+  font-weight: 800;
+  transform: rotate(6deg);
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: #7f9eff;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.18em;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(27px, 4vw, 38px);
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+
+.description {
+  max-width: 460px;
+  margin: 18px auto 0;
+  color: #9daac3;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.progress {
+  height: 4px;
+  margin: 34px 0 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.progress span {
+  display: block;
+  width: 38%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #5670ff, #31d5bf);
+  animation: progress 1.45s ease-in-out infinite;
+}
+
+@keyframes progress {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(275%);
+  }
+}
+
+.detail {
+  max-height: 180px;
+  margin: 30px 0 0;
+  padding: 16px;
+  overflow: auto;
+  border: 1px solid rgba(255, 130, 130, 0.18);
+  border-radius: 14px;
+  color: #ffc6c6;
+  background: rgba(112, 27, 36, 0.18);
+  font: 12px/1.65 ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: #eaf0ff;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+
+.button svg,
+.shell-menu svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+}
+
+.button.primary {
+  background: #4662ee;
+  box-shadow: 0 10px 28px rgba(48, 74, 225, 0.3);
+}
+
+.button.secondary {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.055);
+}
+
+footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 34px;
+  color: #66738e;
+  font-size: 11px;
+}
+
+.dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: #45516a;
+}
+
+.workspace {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  grid-template-rows: 34px minmax(0, 1fr);
+  background: #080c14;
+}
+
+.runtime-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #8390a8;
+  background: #0b101b;
+  font-size: 11px;
+  user-select: none;
+}
+
+.runtime-state {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.runtime-state span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #30d3a0;
+  box-shadow: 0 0 12px rgba(48, 211, 160, 0.75);
+}
+
+.shell-menu {
+  position: relative;
+  height: 100%;
+}
+
+.shell-menu summary {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  gap: 6px;
+  padding: 0 7px;
+  color: #95aaff;
+  cursor: pointer;
+  list-style: none;
+}
+
+.shell-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.shell-menu summary::after {
+  margin-left: 5px;
+  content: "▾";
+  font-size: 9px;
+}
+
+.shell-menu[open] summary,
+.shell-menu summary:hover {
+  color: #c7d2ff;
+}
+
+.shell-menu-popover {
+  position: absolute;
+  z-index: 12;
+  top: 31px;
+  right: 0;
+  width: 190px;
+  padding: 6px;
+  border: 1px solid rgba(153, 176, 255, 0.18);
+  border-radius: 11px;
+  background: #111827;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.5);
+}
+
+.shell-menu-popover button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 7px;
+  color: #c5cede;
+  background: transparent;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.shell-menu-popover button svg {
+  color: #829cff;
+}
+
+.shell-menu-popover button:hover {
+  color: #f2f5ff;
+  background: rgba(111, 136, 255, 0.13);
+}
+
+.dsh-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #0b0e14;
+}
+
+.dialog-backdrop {
+	position: fixed;
+	z-index: 20;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	padding: 24px;
+	background: rgba(2, 5, 10, 0.72);
+	backdrop-filter: blur(10px);
+}
+
+.dialog {
+	width: min(620px, 100%);
+	max-height: min(760px, calc(100vh - 48px));
+	padding: 28px;
+	overflow: auto;
+	border: 1px solid rgba(158, 181, 255, 0.18);
+	border-radius: 22px;
+	background: #101726;
+	box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+}
+
+.dialog-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 20px;
+}
+
+.dialog h2 {
+	margin: 0;
+	font-size: 24px;
+}
+
+.dialog h3 {
+	margin: 0 0 6px;
+	font-size: 15px;
+}
+
+.dialog-intro,
+.help-content p {
+	color: #a5b1c8;
+	font-size: 13px;
+	line-height: 1.7;
+}
+
+.icon-button {
+	width: 34px;
+	height: 34px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 10px;
+	color: #b8c3d7;
+	background: rgba(255, 255, 255, 0.04);
+	cursor: pointer;
+}
+
+.settings-form {
+	display: grid;
+	gap: 10px;
+	margin-top: 22px;
+}
+
+.mode-option {
+	display: flex;
+	gap: 12px;
+	padding: 14px;
+	border: 1px solid rgba(255, 255, 255, 0.09);
+	border-radius: 14px;
+	background: rgba(255, 255, 255, 0.025);
+	cursor: pointer;
+}
+
+.mode-option input {
+	margin-top: 3px;
+	accent-color: #6079ff;
+}
+
+.mode-option span,
+.proxy-field {
+	display: grid;
+	gap: 5px;
+}
+
+.mode-option small,
+.proxy-field small {
+	color: #77849e;
+	font-size: 11px;
+	line-height: 1.55;
+}
+
+.proxy-field {
+	margin: 2px 0 2px 40px;
+	transition: 150ms ease;
+}
+
+.proxy-field.is-disabled {
+	opacity: 0.38;
+}
+
+.proxy-field label {
+	color: #bdc8dc;
+	font-size: 12px;
+}
+
+.proxy-field input {
+	height: 42px;
+	padding: 0 12px;
+	border: 1px solid rgba(140, 164, 255, 0.23);
+	border-radius: 10px;
+	outline: none;
+	color: #edf3ff;
+	background: #090e18;
+	font: 13px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.proxy-field input:focus {
+	border-color: #6079ff;
+}
+
+.form-error {
+	min-height: 20px;
+	margin: 0;
+	color: #ffaaaa;
+	font-size: 12px;
+}
+
+.dialog-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+	margin-top: 20px;
+}
+
+.help-content {
+	display: grid;
+	gap: 10px;
+	margin-top: 20px;
+}
+
+.help-content section {
+	padding: 14px 16px;
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 13px;
+	background: rgba(255, 255, 255, 0.025);
+}
+
+.help-content p {
+	margin: 0;
+}
+
+.help-content code {
+	color: #bdcaff;
+}
+
+button:disabled {
+	opacity: 0.55;
+	cursor: wait;
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: 34px 24px;
+  }
+
+	.actions {
+		flex-direction: column;
+	}
+
+	.dialog {
+		padding: 22px;
+	}
+}

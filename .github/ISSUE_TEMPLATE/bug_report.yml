@@ -1,0 +1,107 @@
+name: Bug report / 缺陷报告
+description: Report a reproducible problem in the Starline desktop host
+title: "[Bug]: "
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。Starline DSH Desktop 只负责启动和承载官方 DSH Web UI。
+        如果问题在浏览器直接运行 `dsh web` 时也能复现，请优先向 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness/issues) 反馈。
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前检查
+      options:
+        - label: 我搜索过现有 Issue，没有发现相同问题。
+          required: true
+        - label: 我使用的是最新 Release 或当前 main 分支。
+          required: true
+        - label: 我确认问题与桌面启动、代理、窗口、日志或打包有关，或已说明为什么属于桌面宿主。
+          required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: 操作系统
+      options:
+        - Windows x64
+        - Windows ARM64
+        - macOS Intel
+        - macOS Apple Silicon
+        - Linux x64
+        - Linux ARM64
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: 版本信息
+      description: 请填写 Starline DSH Desktop、DSH、Node.js 和操作系统版本。
+      placeholder: Desktop 0.1.0; DSH 0.1.0-rc.6; Node 24.19.0; Windows 11 24H2
+    validations:
+      required: true
+
+  - type: dropdown
+    id: distribution
+    attributes:
+      label: 安装方式
+      options:
+        - Windows Setup.exe
+        - Portable ZIP
+        - macOS ZIP
+        - Linux TAR.GZ
+        - Source build / wails dev
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 请描述实际发生了什么，以及你认为它为什么属于桌面宿主。
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 启动应用
+        2. 打开“桌面工具”→“代理与启动设置”
+        3. 选择……
+        4. 出现……
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志与截图
+      description: 请粘贴去除密钥、Token、Cookie 和私人路径后的相关日志，并可拖入截图。不要上传完整配置目录。
+      render: shell
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 其他信息
+      description: 代理模式、是否能直接运行 `npx --yes --package=@deepseek-ai/dsh@0.1.0-rc.6 dsh web` 等信息会很有帮助。
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 隐私确认
+      options:
+        - label: 我已确认内容中不包含 API Key、访问令牌、Cookie 或其他凭据。
+          required: true

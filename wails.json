@@ -1,0 +1,19 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "starline-dsh-desktop",
+  "outputfilename": "starline-dsh-desktop",
+  "frontend:install": "npm ci",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "Starline contributors"
+  },
+  "info": {
+    "companyName": "Starline",
+    "productName": "Starline DSH Desktop",
+    "productVersion": "0.1.0",
+    "copyright": "Copyright (c) 2026 Starline contributors",
+    "comments": "Starline desktop host for DeepSeek Harness."
+  }
+}

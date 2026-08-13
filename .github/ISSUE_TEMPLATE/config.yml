@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: DeepSeek Harness upstream issues
+    url: https://github.com/deepseek-ai/deepseek-harness/issues
+    about: Report Agent, model, conversation, plugin, or official Web UI problems that also reproduce outside this desktop host.
+  - name: Security vulnerability / 安全漏洞
+    url: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/security/advisories/new
+    about: Please report vulnerabilities privately instead of opening a public issue.

@@ -1,0 +1,72 @@
+name: Build or packaging problem / 构建与打包问题
+description: Report CI, local compilation, installer, archive, or dependency failures
+title: "[Build]: "
+labels: [build, triage]
+body:
+  - type: dropdown
+    id: target
+    attributes:
+      label: 目标平台
+      options:
+        - Windows x64
+        - Windows ARM64
+        - macOS Intel
+        - macOS Apple Silicon
+        - Linux x64
+        - Linux ARM64
+    validations:
+      required: true
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: 失败阶段
+      options:
+        - Dependency installation
+        - Go test or vet
+        - Frontend typecheck or build
+        - Wails application build
+        - NSIS installer build
+        - Archive or checksum generation
+        - GitHub Actions
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息
+      description: 请提供 Go、Node.js、Wails、NSIS（如适用）与操作系统版本。
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: 执行命令
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: 完整错误输出
+      description: 请删除密钥、令牌和代理凭据，但保留错误前后的上下文。
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: attempts
+    attributes:
+      label: 已尝试的方法
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 隐私确认
+      options:
+        - label: 我已确认输出中不包含 API Key、访问令牌或代理凭据。
+          required: true
