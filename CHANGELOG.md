@@ -8,6 +8,12 @@
 
 - Windows 代码签名与 macOS Developer ID 签名、公证。
 
+## [0.2.3] - 2026-08-14
+
+### 修复
+
+- 调试构建不再在每次启动时自动弹出 WebView 检查器；DevTools 仍可通过平台快捷键按需打开。
+
 ## [0.2.2] - 2026-08-14
 
 ### 新增
@@ -47,7 +53,8 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.1.0...v0.2.0

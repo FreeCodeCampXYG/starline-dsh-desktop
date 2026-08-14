@@ -150,7 +150,7 @@ Node 是 DSH 的运行时。普通 Setup/ZIP 为了保持小体积，继续使�
 
 ### 为什么正式安装包打不开 DevTools？
 
-正式 Release 不携带 Wails DevTools，这是预期的生产安全边界，不是代理或 DSH 页面故障。源码调试时运行 `wails dev`，检查器会自动打开；需要调试独立可执行文件时使用 `wails build -debug`。具体命令见 [开发与跨平台构建](docs/BUILDING.md#本地开发与-devtools)。
+正式 Release 不携带 Wails DevTools，这是预期的生产安全边界，不是代理或 DSH 页面故障。源码调试时运行 `wails dev`；DevTools 默认不弹窗，Windows/Linux 按 `Ctrl+Shift+F12`、macOS 按 `Fn+Command+Shift+F12` 手动打开。需要调试独立可执行文件时使用 `wails build -debug`。具体命令见 [开发与跨平台构建](docs/BUILDING.md#本地开发与-devtools)。
 
 更多排错步骤见 [故障排查](docs/TROUBLESHOOTING.md)。
 
