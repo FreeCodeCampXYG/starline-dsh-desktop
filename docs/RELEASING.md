@@ -37,8 +37,8 @@
 版本提交和 tag 应分别审查。示例命令只作为维护说明，不代表可以跳过仓库的 Git 提交流程：
 
 ```bash
-git tag -a v0.2.0 -m "Starline DSH Desktop v0.2.0"
-git push origin refs/tags/v0.2.0:refs/tags/v0.2.0
+git tag -a v0.2.5 -m "Starline DSH Desktop v0.2.5"
+git push origin refs/tags/v0.2.5:refs/tags/v0.2.5
 ```
 
 Release workflow 会：
@@ -52,28 +52,34 @@ Release workflow 会：
 7. 重新解开最终离线 ZIP/TAR.GZ，再次检查原生文件、权限和真实 PTY；
 8. 生成每个产物的 `.sha256`；
 9. 确认普通包、离线包和安装目录均包含项目 `LICENSE`、`NOTICE.md` 与 `AUTHORS.md`（macOS 位于应用包 `Contents/Resources/licenses/`）；
-10. 汇总为 `SHA256SUMS.txt`，生成 GitHub Release notes；tag 带 `-` 时标记为 prerelease。
+10. 汇总为 `SHA256SUMS.txt`，校验预期资产、独立校验文件与合并清单完全一致；
+11. 从 `CHANGELOG.md` 的当前版本段生成 Release 正文，并按平台显示下载用途与实际体积；缺少版本日志时停止发布；
+12. 创建 GitHub Release；tag 带 `-` 时标记为 prerelease。
 
 ## 产物清单
 
 ```text
-starline-dsh-desktop-windows-amd64-setup.exe
-starline-dsh-desktop-windows-amd64.zip
-starline-dsh-desktop-windows-amd64-offline-full.zip
-starline-dsh-desktop-windows-arm64-setup.exe
-starline-dsh-desktop-windows-arm64.zip
-starline-dsh-desktop-windows-arm64-offline-full.zip
-starline-dsh-desktop-macos-amd64.zip
-starline-dsh-desktop-macos-amd64-offline-full.zip
-starline-dsh-desktop-macos-arm64.zip
-starline-dsh-desktop-macos-arm64-offline-full.zip
-starline-dsh-desktop-linux-amd64.tar.gz
-starline-dsh-desktop-linux-amd64-offline-full.tar.gz
-starline-dsh-desktop-linux-arm64.tar.gz
-starline-dsh-desktop-linux-arm64-offline-full.tar.gz
+starline-dsh-desktop-v<version>-windows-x64-setup-online.exe
+starline-dsh-desktop-v<version>-windows-x64-portable-online.zip
+starline-dsh-desktop-v<version>-windows-x64-portable-offline-full.zip
+starline-dsh-desktop-v<version>-windows-arm64-setup-online.exe
+starline-dsh-desktop-v<version>-windows-arm64-portable-online.zip
+starline-dsh-desktop-v<version>-windows-arm64-portable-offline-full.zip
+starline-dsh-desktop-v<version>-macos-intel-x64-app-online.zip
+starline-dsh-desktop-v<version>-macos-intel-x64-app-offline-full.zip
+starline-dsh-desktop-v<version>-macos-apple-silicon-arm64-app-online.zip
+starline-dsh-desktop-v<version>-macos-apple-silicon-arm64-app-offline-full.zip
+starline-dsh-desktop-v<version>-linux-x64-portable-online.tar.gz
+starline-dsh-desktop-v<version>-linux-x64-portable-offline-full.tar.gz
+starline-dsh-desktop-v<version>-linux-arm64-portable-online.tar.gz
+starline-dsh-desktop-v<version>-linux-arm64-portable-offline-full.tar.gz
 *.sha256
 SHA256SUMS.txt
 ```
+
+命名语法固定为 `<产品>-v<版本>-<系统>-<CPU>-<形态>-<联网模式>.<扩展名>`。其中 `x64` 与 `arm64` 明确处理器架构，`setup`/`portable`/`app` 明确安装形态，`online` 与 `offline-full` 明确是否携带完整 Node/DSH 运行时。不要再用体积或模糊的 `amd64`/`arm64` 后缀让用户自行猜测用途。
+
+Release 正文不是 GitHub 自动生成的单行 `Full Changelog`。`scripts/generate-release-notes.mjs` 必须读取与 tag 完全相同的 `CHANGELOG.md` 版本段，检查以上 14 个主资产及其校验文件，并以实际字节数生成分平台下载表。发布前应检查下载表、版本变化和签名警告是否完整显示。
 
 普通包保持原有小体积。Windows x64 v0.2.4 参考值为普通 ZIP 约 4.3 MiB、Setup 约 6.0 MiB、完整离线 ZIP 约 113.6 MiB；完整离线包解压后超过 350 MiB。平台、架构与依赖选择不同，Release 前必须以实际资产大小为准。GitHub 单文件资产上限不是当前瓶颈，但六个平台会明显增加 Actions 时间、缓存和 Release 存储。
 

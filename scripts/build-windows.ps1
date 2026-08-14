@@ -1,6 +1,6 @@
 param(
     [ValidatePattern('^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$')]
-    [string]$Version = '0.2.4',
+    [string]$Version = '0.2.5',
     [switch]$OfflineFull
 )
 
@@ -53,8 +53,9 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Wails build failed.' }
 
     New-Item -ItemType Directory -Force -Path $distDirectory | Out-Null
-    $portablePath = Join-Path $distDirectory 'starline-dsh-desktop-windows-amd64.zip'
-    $setupPath = Join-Path $distDirectory 'starline-dsh-desktop-windows-amd64-setup.exe'
+    $baseName = "starline-dsh-desktop-v$Version-windows-x64"
+    $portablePath = Join-Path $distDirectory "$baseName-portable-online.zip"
+    $setupPath = Join-Path $distDirectory "$baseName-setup-online.exe"
     Compress-Archive -LiteralPath @($binaryPath, $licensePath, $noticePath, $authorsPath) -DestinationPath $portablePath -Force
 
     $installers = @(Get-ChildItem -LiteralPath (Join-Path $projectRoot 'build\bin') -Filter '*-installer.exe')
@@ -66,7 +67,7 @@ try {
     $artifacts = @($portablePath, $setupPath)
     if ($OfflineFull) {
         & (Join-Path $PSScriptRoot 'prepare-offline-runtime.ps1') -DSHVersion $dshVersion
-        $offlinePath = Join-Path $distDirectory 'starline-dsh-desktop-windows-amd64-offline-full.zip'
+        $offlinePath = Join-Path $distDirectory "$baseName-portable-offline-full.zip"
         if (Test-Path -LiteralPath $offlinePath) {
             Remove-Item -LiteralPath $offlinePath -Force
         }

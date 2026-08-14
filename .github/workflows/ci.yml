@@ -50,6 +50,7 @@ jobs:
       - name: Verify frontend
         run: |
           npm --prefix frontend run docs:check
+          node --test scripts/generate-release-notes.test.mjs
           npm --prefix frontend run typecheck
           npm --prefix frontend run build
 
