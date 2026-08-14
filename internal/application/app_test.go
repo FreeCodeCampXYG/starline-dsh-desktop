@@ -5,10 +5,17 @@ import (
 	"testing"
 )
 
-func TestBeforeCloseRequiresExplicitQuit(t *testing.T) {
+func TestBeforeClosePlatformPolicy(t *testing.T) {
 	app := &App{}
+	if allowWindowCloseWithoutTray() {
+		if app.BeforeClose(context.Background()) {
+			t.Fatal("Unix platforms should allow the native window close")
+		}
+		return
+	}
+
 	if !app.BeforeClose(context.Background()) {
-		t.Fatal("window close should be prevented before an explicit quit")
+		t.Fatal("Windows should prevent window close before an explicit quit")
 	}
 
 	app.RequestQuit()
