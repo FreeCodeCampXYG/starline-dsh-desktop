@@ -100,6 +100,9 @@ func (a *App) Shutdown(context.Context) {
 
 // BeforeClose 阻止窗口关闭事件直接结束进程；托盘菜单的显式退出会先放行。
 func (a *App) BeforeClose(context.Context) bool {
+	if allowWindowCloseWithoutTray() {
+		return false
+	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return !a.quitRequested

@@ -1,3 +1,5 @@
+//go:build windows
+
 package application
 
 import (
@@ -6,19 +8,19 @@ import (
 	"github.com/getlantern/systray"
 )
 
-// Tray 管理跨平台通知区域图标，并把菜单动作转交给 Wails App。
+// Tray 管理 Windows 通知区域图标，并把菜单动作转交给 Wails App。
 type Tray struct {
 	app      *App
 	icon     []byte
 	quitOnce sync.Once
 }
 
-// NewTray 创建桌面托盘控制器。
+// NewTray 创建 Windows 托盘控制器。
 func NewTray(app *App, icon []byte) *Tray {
 	return &Tray{app: app, icon: icon}
 }
 
-// Register 在 Wails 启动自己的 WebView 事件循环前注册托盘回调。
+// Register 在 Wails 启动 WebView 事件循环前注册托盘回调。
 func (t *Tray) Register() {
 	systray.Register(func() {
 		systray.SetIcon(t.icon)
@@ -45,7 +47,16 @@ func (t *Tray) Register() {
 	}, nil)
 }
 
-// Quit 移除托盘图标；Wails 结束后由主程序调用，避免留下通知区域句柄。
+// Quit 移除托盘图标，Wails 结束后由主程序调用。
 func (t *Tray) Quit() {
 	t.quitOnce.Do(systray.Quit)
+}
+
+// HideWindowOnClose 表示 Windows 的关闭按钮应隐藏到通知区域。
+func HideWindowOnClose() bool {
+	return true
+}
+
+func allowWindowCloseWithoutTray() bool {
+	return false
 }

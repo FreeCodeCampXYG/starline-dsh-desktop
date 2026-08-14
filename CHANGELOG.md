@@ -8,6 +8,14 @@
 
 - Windows 代码签名与 macOS Developer ID 签名、公证。
 
+## [0.3.1] - 2026-08-14
+
+### 修复
+
+- 托盘实现改为仅在 Windows 编译第三方原生依赖，避免 macOS 与 Wails `AppDelegate` 符号冲突。
+- Linux 构建不再在 Wails 绑定生成阶段加载 GTK 托盘依赖，修复无显示 CI runner 上的构建失败。
+- macOS/Linux 关闭窗口时正常退出；Windows 继续通过托盘隐藏窗口，并从托盘菜单显式退出。
+
 ## [0.3.0] - 2026-08-14
 
 ### 改进
@@ -92,7 +100,8 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.5...v0.3.0
 [0.2.5]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.3...v0.2.4

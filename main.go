@@ -42,7 +42,7 @@ func main() {
 		Fullscreen:        false,
 		Frameless:         false,
 		StartHidden:       true,
-		HideWindowOnClose: true,
+		HideWindowOnClose: application.HideWindowOnClose(),
 		BackgroundColour:  &options.RGBA{R: 8, G: 12, B: 20, A: 1},
 		AssetServer:       &assetserver.Options{Assets: assets},
 		Menu:              application.Menu(app),

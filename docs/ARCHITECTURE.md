@@ -86,10 +86,10 @@ Wails application
 
 ## 窗口与托盘生命周期
 
-- Wails 使用 `HideWindowOnClose`：窗口右上角 X 只隐藏主窗口，应用和 DSH 子进程继续运行。
-- `internal/application/tray.go` 注册跨平台托盘图标，提供“显示窗口”“重启 DSH”和“退出”。
-- 只有显式“退出”会设置 `quitRequested` 并调用 `runtime.Quit`，随后进入 `OnShutdown`，确保 DSH/Node 进程树和托盘句柄一起回收。
-- Windows/Linux 通常显示通知区域图标；macOS 显示菜单栏图标，Dock 和系统菜单行为由平台决定。关闭窗口后看到进程仍在是预期行为，需从托盘退出才能释放资源。
+- Windows 使用 `HideWindowOnClose`：窗口右上角 X 只隐藏主窗口，应用和 DSH 子进程继续运行。
+- `internal/application/tray_windows.go` 仅在 Windows 编译第三方托盘依赖，提供“显示窗口”“重启 DSH”和“退出”。
+- Windows 只有显式“退出”会设置 `quitRequested` 并调用 `runtime.Quit`，随后进入 `OnShutdown`，确保 DSH/Node 进程树和托盘句柄一起回收。
+- macOS/Linux 使用 `tray_unix.go` 空实现并允许原生关闭窗口直接退出，避开 macOS `AppDelegate` 重名和 Linux 无显示 CI 的 GTK 初始化问题。后续如引入与 Wails 原生菜单兼容的托盘实现，再恢复对应平台的隐藏行为。
 
 ## 进程回收
 
