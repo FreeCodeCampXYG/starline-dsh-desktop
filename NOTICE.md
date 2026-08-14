@@ -32,6 +32,7 @@ MIT License 不提供任何明示或默示担保。作者或版权所有者不�
 
 - [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 及 `@deepseek-ai/dsh` 保留 DeepSeek 的版权，并遵循其自身随包许可证；
 - [Wails](https://github.com/wailsapp/wails)、Go 模块、Node.js、npm 包以及系统 WebView2、WebKit、GTK 等组件遵循各自的版权声明和许可证；
+- [getlantern/systray](https://github.com/getlantern/systray) 用于 Windows、macOS 和 Linux 系统托盘，遵循 Apache License 2.0；
 - `offline-full` 会再分发固定版本的 Node.js、DeepSeek Harness 及其生产依赖。包内原有的 `LICENSE`、`NOTICE` 或同类文件仍属于对应组件，不因打包进入本项目而改变版权所有者或许可方式；
 - 依赖锁文件只用于固定版本，不等同于完整的第三方版权清单。正式发布前，维护者仍需检查实际分发内容及其许可文件。
 

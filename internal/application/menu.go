@@ -20,6 +20,9 @@ func Menu(app *App) *menu.Menu {
 	application.AddText("重新启动 DSH", nil, func(*menu.CallbackData) {
 		app.Retry()
 	})
+	application.AddText("退出", nil, func(*menu.CallbackData) {
+		app.RequestQuit()
+	})
 	application.AddSeparator()
 	application.AddText("打开日志目录", nil, func(*menu.CallbackData) {
 		_ = app.OpenLogs()

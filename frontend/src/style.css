@@ -26,7 +26,6 @@ button {
 }
 
 .splash {
-  position: relative;
   display: grid;
   min-height: 100%;
   place-items: center;
@@ -36,29 +35,6 @@ button {
     linear-gradient(145deg, #070b12 0%, #0b1020 55%, #070b12 100%);
 }
 
-.ambient {
-  position: absolute;
-  border-radius: 999px;
-  filter: blur(70px);
-  opacity: 0.42;
-}
-
-.ambient-one {
-  top: 15%;
-  left: 17%;
-  width: 280px;
-  height: 280px;
-  background: #2457ff;
-}
-
-.ambient-two {
-  right: 13%;
-  bottom: 13%;
-  width: 240px;
-  height: 240px;
-  background: #00a4a6;
-}
-
 .panel {
   position: relative;
   z-index: 1;
@@ -66,7 +42,7 @@ button {
   padding: 48px;
   border: 1px solid rgba(167, 189, 255, 0.16);
   border-radius: 28px;
-  background: rgba(10, 16, 29, 0.76);
+  background: rgba(10, 16, 29, 0.92);
   box-shadow: 0 30px 100px rgba(0, 0, 0, 0.42);
   text-align: center;
   backdrop-filter: blur(24px);
@@ -155,14 +131,6 @@ h1 {
   word-break: break-word;
 }
 
-.actions {
-	display: flex;
-	flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 28px;
-}
-
 .button {
   display: inline-flex;
   align-items: center;
@@ -177,7 +145,16 @@ h1 {
   transition: 160ms ease;
 }
 
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+
 .button svg,
+.status-action svg,
 .shell-menu svg {
   width: 16px;
   height: 16px;
@@ -224,8 +201,12 @@ footer {
   display: grid;
   width: 100%;
   height: 100%;
-  grid-template-rows: 34px minmax(0, 1fr);
+  grid-template-rows: 34px auto minmax(0, 1fr);
   background: #080c14;
+}
+
+.workspace-ready {
+  grid-template-rows: 34px minmax(0, 1fr);
 }
 
 .runtime-bar {
@@ -252,6 +233,184 @@ footer {
   border-radius: 50%;
   background: #30d3a0;
   box-shadow: 0 0 12px rgba(48, 211, 160, 0.75);
+}
+
+.runtime-state.state-idle span,
+.runtime-state.state-starting span {
+  background: #7890ff;
+  box-shadow: 0 0 12px rgba(120, 144, 255, 0.72);
+  animation: pulse 1.25s ease-in-out infinite;
+}
+
+.runtime-state.state-failed span,
+.runtime-state.state-stopped span {
+  background: #ff717b;
+  box-shadow: 0 0 12px rgba(255, 113, 123, 0.68);
+}
+
+.status-banner {
+  display: flex;
+  z-index: 2;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 62px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #101725;
+}
+
+.status-banner.is-error {
+  border-bottom-color: rgba(255, 113, 123, 0.3);
+  background: #22131b;
+}
+
+.status-summary {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 11px;
+}
+
+.status-summary > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.status-summary strong {
+  color: #edf3ff;
+  font-size: 13px;
+}
+
+.status-summary small {
+  overflow: hidden;
+  color: #8896af;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.is-error .status-summary small {
+  color: #d49ca2;
+}
+
+.status-indicator,
+.frame-spinner {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border: 2px solid rgba(126, 148, 255, 0.24);
+  border-top-color: #7e94ff;
+  border-radius: 50%;
+  animation: spin 0.85s linear infinite;
+}
+
+.is-error .status-indicator {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 113, 123, 0.55);
+  color: #ff8e97;
+  animation: none;
+}
+
+.is-error .status-indicator::after {
+  content: "!";
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.status-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.status-action {
+  display: inline-flex;
+  height: 30px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 8px;
+  color: #bac5d9;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.status-action.primary {
+  border-color: rgba(114, 138, 255, 0.42);
+  color: #eef1ff;
+  background: #4059d7;
+}
+
+.status-action:hover {
+  color: #f5f7ff;
+  background: rgba(111, 136, 255, 0.13);
+}
+
+.startup-stage {
+  display: grid;
+  min-height: 0;
+  place-content: center;
+  justify-items: center;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(76, 101, 225, 0.13), transparent 32%),
+    #080c14;
+}
+
+.startup-mark {
+  position: relative;
+  display: grid;
+  width: 50px;
+  height: 50px;
+  place-items: center;
+  border: 1px solid rgba(139, 159, 255, 0.22);
+  border-radius: 15px;
+  color: #dbe3ff;
+  background: #111a2d;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.28);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+
+.startup-mark i {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid #080c14;
+  border-radius: 50%;
+  background: #30d3a0;
+  animation: pulse 1.25s ease-in-out infinite;
+}
+
+.startup-stage p {
+  margin: 18px 0 5px;
+  color: #cbd5e8;
+  font-size: 13px;
+}
+
+.startup-stage small {
+  color: #697791;
+  font-size: 11px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
+  }
 }
 
 .shell-menu {
@@ -322,11 +481,41 @@ footer {
   background: rgba(111, 136, 255, 0.13);
 }
 
+.frame-stage {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  background: #0b0e14;
+}
+
 .dsh-frame {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   border: 0;
+  opacity: 0;
   background: #0b0e14;
+  transform: translateY(2px);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.dsh-frame.is-loaded {
+  opacity: 1;
+  transform: none;
+}
+
+.startup-overlay {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  opacity: 1;
+  transition: opacity 260ms ease;
+}
+
+.startup-overlay.is-hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .dialog-backdrop {
@@ -488,14 +677,38 @@ button:disabled {
 	cursor: wait;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .dsh-frame,
+  .startup-overlay {
+    transition: none;
+  }
+
+  .runtime-state span,
+  .status-indicator,
+  .startup-mark i,
+  .progress span {
+    animation: none;
+  }
+}
+
 @media (max-width: 640px) {
   .panel {
     padding: 34px 24px;
   }
 
-	.actions {
-		flex-direction: column;
-	}
+  .actions {
+    flex-direction: column;
+  }
+
+  .status-banner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .status-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
 
 	.dialog {
 		padding: 22px;

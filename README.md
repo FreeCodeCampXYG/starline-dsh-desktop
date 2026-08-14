@@ -14,7 +14,7 @@ Starline DSH Desktop 是 [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 
 > **v0.2.4 平台提示：** Windows x64 `offline-full` 已完成真实 PTY 抽查；macOS `offline-full` 存在 `spawn-helper` 权限缺陷，Linux `offline-full` 缺少可加载的 `node-pty` 原生绑定。需要终端、Shell 或 Bash 工具的 macOS/Linux 用户应暂用普通包。详情和未完成的设备验证见 [已知问题与平台支持边界](docs/KNOWN_ISSUES.md)。
 
-> 当前 `main`（v0.2.5 候选）已加入白名单原生依赖准备、六平台真实 PTY 测试和最终归档复测，但这些改动不会反向改变 v0.2.4 资产；请以新版本 Release 的矩阵结果为准。
+> 当前 `main`（v0.3.0）已加入白名单原生依赖准备、六平台真实 PTY 测试、最终归档复测和托盘生命周期管理；这些改动不会反向改变旧版本资产，请以对应版本 Release 的矩阵结果为准。
 
 ## 功能
 
@@ -24,7 +24,8 @@ Starline DSH Desktop 是 [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 - 代理可视化：继承环境、自定义 HTTP(S) 代理、禁用代理；
 - 本地 DSH 健康检查强制直连，不受外部代理影响；
 - 启动诊断、日志目录、浏览器打开和一键重启；
-- 退出窗口时只回收本应用创建的 DSH 进程树；
+- 启动页与运行状态栏显示桌面端版本和 DSH 版本；
+- 窗口右上角 X 只隐藏到系统托盘；从托盘菜单选择“退出”才回收本应用创建的 DSH 进程树；
 - Windows Setup.exe 与便携 ZIP；macOS ZIP；Linux TAR.GZ；
 - x64 与 ARM64 原生 GitHub Actions 构建。
 
@@ -50,7 +51,7 @@ Starline DSH Desktop (Go + Wails)
 | npm / npx | 普通包需要；`offline-full` 启动时不使用 npm/npx |
 | Windows | Windows 10/11，WebView2 Runtime |
 | macOS | Intel 或 Apple Silicon，使用系统 WebKit |
-| Linux | GTK3、WebKitGTK 4.1 及其运行库；普通包首次安装原生依赖时还可能需要 Python 3、make 和 C/C++ 编译器 |
+| Linux | GTK3、WebKitGTK 4.1、libayatana-appindicator3 及其运行库；普通包首次安装原生依赖时还可能需要 Python 3、make 和 C/C++ 编译器 |
 | 网络 | 普通包首次运行需要 npm registry；`offline-full` 不访问 npm，但模型服务等功能可能仍需网络 |
 
 当前默认启动 `@deepseek-ai/dsh@0.1.0-rc.6`。可用 `DSH_DESKTOP_DSH_VERSION` 临时覆盖，但正式 Release 仍以仓库固定版本为准。
@@ -68,9 +69,9 @@ Release 页面会按平台分组并显示每个文件的实际体积，不需要
 
 ### Windows
 
-- `starline-dsh-desktop-v0.2.5-windows-x64-setup-online.exe`：常规 x64 在线小包，默认安装到当前用户目录；安装向导可选择其他本地可写目录；
-- `starline-dsh-desktop-v0.2.5-windows-x64-portable-online.zip`：x64 在线便携版，解压后运行；
-- `starline-dsh-desktop-v0.2.5-windows-x64-portable-offline-full.zip`：内含 Node 与固定 DSH 依赖的 x64 完整离线便携版；
+- `starline-dsh-desktop-v0.3.0-windows-x64-setup-online.exe`：常规 x64 在线小包，默认安装到当前用户目录；安装向导可选择其他本地可写目录；
+- `starline-dsh-desktop-v0.3.0-windows-x64-portable-online.zip`：x64 在线便携版，解压后运行；
+- `starline-dsh-desktop-v0.3.0-windows-x64-portable-offline-full.zip`：内含 Node 与固定 DSH 依赖的 x64 完整离线便携版；
 - Windows on ARM 设备选择文件名含 `windows-arm64` 的对应产物，不要下载 x64 包。
 
 安装包未签名时，SmartScreen 可能提示未知发布者。正式广泛分发前需要代码签名证书。
@@ -88,7 +89,7 @@ v0.2.4 的 macOS `offline-full` 包不支持依赖 PTY 的终端/Shell 工具：
 常见 Intel/AMD 电脑下载 `linux-x64`，ARM 设备下载 `linux-arm64`。在线小包示例：
 
 ```bash
-tar -xzf starline-dsh-desktop-v0.2.5-linux-x64-portable-online.tar.gz
+tar -xzf starline-dsh-desktop-v0.3.0-linux-x64-portable-online.tar.gz
 chmod +x starline-dsh-desktop
 ./starline-dsh-desktop
 ```
@@ -106,13 +107,17 @@ sudo apt-get install libgtk-3-0 libwebkit2gtk-4.1-0
 ## 第一次启动
 
 1. 应用优先检查可执行文件旁的完整 `offline-runtime/`；
-2. 存在匹配离线运行时就直接启动包内 Node/DSH；否则检查系统 Node.js 和 `npx`，第一次可能下载数分钟；
+2. 存在匹配离线运行时就直接启动包内 Node/DSH；否则检查系统 Node.js 和 `npx`，优先复用 npm 内容缓存，缓存缺失时第一次下载可能需要数分钟；
 3. DSH 启动在随机的 `127.0.0.1` 高位端口；
-4. 宿主确认 HTTP 200 和 `<title>DeepSeek Harness</title>` 后显示官方页面；
+4. 原生窗口先短暂隐藏预热；宿主确认 HTTP 200 和 `<title>DeepSeek Harness</title>` 后在遮罩后加载 iframe，并以淡入方式显示官方页面；
 5. 第一次选择工作区是 DSH 自身的正常初始化；
 6. 模型、插件和工作区权限继续在官方 DSH 页面中设置。
 
-关闭窗口后，宿主会回收自己创建的 DSH/Node 进程树，不扫描或终止其他 DSH 实例。
+预热最多等待 800 毫秒：DSH 很快就绪时直接显示已加载页面；较慢时会先显示稳定的“后台准备”界面，不会让窗口一直隐藏。启动失败或 DSH 意外退出时，错误摘要会固定显示在顶部，并提供详情、重试、代理设置和日志入口。
+
+普通包不会直接调用 PATH 中版本未知的全局 `dsh`，而是要求桌面端选定的固定版本（当前默认 `@deepseek-ai/dsh@0.1.0-rc.6`）。npx 会优先复用与该版本对应的 npm 缓存，因此日常重复启动不会重复下载完整包；缓存不存在或已被清理时才需要联网获取。
+
+窗口右上角 X 的行为是隐藏到系统托盘，因此 DSH/Node 会继续运行，方便从托盘快速恢复窗口。需要释放端口、文件句柄和子进程时，请右击托盘图标并选择“退出”；宿主只回收自己创建的 DSH/Node 进程树，不扫描或终止其他 DSH 实例。Windows、Linux 通常显示在通知区域，macOS 显示在菜单栏，具体位置由系统托盘设置决定。
 
 ## 代理设置
 
@@ -135,13 +140,13 @@ sudo apt-get install libgtk-3-0 libwebkit2gtk-4.1-0
 Windows：
 
 ```powershell
-Get-FileHash .\starline-dsh-desktop-v0.2.5-windows-x64-setup-online.exe -Algorithm SHA256
+Get-FileHash .\starline-dsh-desktop-v0.3.0-windows-x64-setup-online.exe -Algorithm SHA256
 ```
 
 macOS/Linux：
 
 ```bash
-sha256sum -c starline-dsh-desktop-v0.2.5-linux-x64-portable-online.tar.gz.sha256
+sha256sum -c starline-dsh-desktop-v0.3.0-linux-x64-portable-online.tar.gz.sha256
 ```
 
 ## 常见问题
@@ -160,7 +165,7 @@ Node 是 DSH 的运行时。普通 Setup/ZIP 为了保持小体积，继续使�
 
 ### 关闭时出现黑框怎么办？
 
-当前 Windows 版本已用隐藏窗口标志启动 Node 检查、DSH 和 `taskkill`。如果最新版本仍闪黑框，请提交 Bug，并附系统版本、安装方式和脱敏日志。
+当前 Windows 版本使用无控制台窗口启动 Node/DSH。窗口 X 会隐藏到托盘而不是结束进程；要释放资源请使用托盘“退出”。如果选择托盘退出后仍闪黑框，请提交 Bug，并附系统版本、安装方式和脱敏日志。
 
 ### 页面功能异常应该在哪里反馈？
 

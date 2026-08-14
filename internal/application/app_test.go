@@ -1,6 +1,21 @@
 package application
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
+
+func TestBeforeCloseRequiresExplicitQuit(t *testing.T) {
+	app := &App{}
+	if !app.BeforeClose(context.Background()) {
+		t.Fatal("window close should be prevented before an explicit quit")
+	}
+
+	app.RequestQuit()
+	if app.BeforeClose(context.Background()) {
+		t.Fatal("explicit quit should allow Wails shutdown")
+	}
+}
 
 func TestResolveDSHVersion(t *testing.T) {
 	t.Setenv("DSH_DESKTOP_DSH_VERSION", " 0.1.0-test ")

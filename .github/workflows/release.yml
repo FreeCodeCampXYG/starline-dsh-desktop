@@ -9,7 +9,7 @@ on:
       version:
         description: Version embedded in the artifacts (for example 0.2.0-dev)
         required: true
-        default: 0.2.5-dev
+        default: 0.3.0-dev
 
 permissions:
   contents: read
@@ -76,7 +76,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
+          sudo apt-get install -y --no-install-recommends build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
 
       - name: Ensure NSIS is available
         if: runner.os == 'Windows'

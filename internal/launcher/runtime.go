@@ -39,11 +39,7 @@ func resolveDSHCommand(version string) (dshCommandSpec, error) {
 	if err != nil {
 		return dshCommandSpec{}, err
 	}
-	prefix := append(append([]string{}, commandPrefix...),
-		"--yes",
-		"--package=@deepseek-ai/dsh@"+version,
-		"dsh",
-	)
+	prefix := onlineDSHPrefix(commandPrefix, version)
 	return dshCommandSpec{
 		nodePath:    nodePath,
 		commandPath: commandPath,
@@ -51,6 +47,16 @@ func resolveDSHCommand(version string) (dshCommandSpec, error) {
 		mode:        "online",
 		label:       " npx",
 	}, nil
+}
+
+// onlineDSHPrefix 固定 DSH 版本并优先复用 npm 内容缓存；缓存缺失时仍允许正常下载。
+func onlineDSHPrefix(commandPrefix []string, version string) []string {
+	return append(append([]string{}, commandPrefix...),
+		"--yes",
+		"--prefer-offline",
+		"--package=@deepseek-ai/dsh@"+version,
+		"dsh",
+	)
 }
 
 func findOfflineRuntime() (string, bool, error) {

@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	readyEvent   = "dsh:ready"
-	failedEvent  = "dsh:failed"
-	stoppedEvent = "dsh:stopped"
+	readyEvent        = "dsh:ready"
+	failedEvent       = "dsh:failed"
+	stoppedEvent      = "dsh:stopped"
+	windowRevealDelay = 800 * time.Millisecond
 )
 
 type App struct {
@@ -29,6 +30,7 @@ type App struct {
 	settings        config.Settings
 	settingsLoadErr error
 	generation      uint64
+	quitRequested   bool
 }
 
 type Status struct {
@@ -62,7 +64,21 @@ func New(appVersion, defaultDSHVersion string) *App {
 
 // Startup 保存 Wails 上下文，并在后台启动 DSH，避免阻塞窗口创建。
 func (a *App) Startup(ctx context.Context) {
+	a.mu.Lock()
 	a.ctx = ctx
+	a.quitRequested = false
+	a.mu.Unlock()
+	// 允许前端先在隐藏窗口中完成一次预热；即使前端异常，也会在短暂等待后显示窗口。
+	go func() {
+		timer := time.NewTimer(windowRevealDelay)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return
+		case <-timer.C:
+			runtime.WindowShow(ctx)
+		}
+	}()
 	if a.settingsLoadErr != nil {
 		a.fail("代理配置无法读取", a.settingsLoadErr)
 		return
@@ -79,6 +95,34 @@ func (a *App) Shutdown(context.Context) {
 	a.mu.Unlock()
 	if process != nil {
 		_ = process.Stop(5 * time.Second)
+	}
+}
+
+// BeforeClose 阻止窗口关闭事件直接结束进程；托盘菜单的显式退出会先放行。
+func (a *App) BeforeClose(context.Context) bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return !a.quitRequested
+}
+
+// ShowWindow 从托盘恢复主窗口。
+func (a *App) ShowWindow() {
+	a.mu.Lock()
+	ctx := a.ctx
+	a.mu.Unlock()
+	if ctx != nil {
+		runtime.WindowShow(ctx)
+	}
+}
+
+// RequestQuit 记录显式退出意图，并让 Wails 走标准 shutdown 回收流程。
+func (a *App) RequestQuit() {
+	a.mu.Lock()
+	a.quitRequested = true
+	ctx := a.ctx
+	a.mu.Unlock()
+	if ctx != nil {
+		runtime.Quit(ctx)
 	}
 }
 

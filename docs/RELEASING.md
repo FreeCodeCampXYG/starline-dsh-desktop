@@ -37,8 +37,8 @@
 版本提交和 tag 应分别审查。示例命令只作为维护说明，不代表可以跳过仓库的 Git 提交流程：
 
 ```bash
-git tag -a v0.2.5 -m "Starline DSH Desktop v0.2.5"
-git push origin refs/tags/v0.2.5:refs/tags/v0.2.5
+git tag -a v0.3.0 -m "Starline DSH Desktop v0.3.0"
+git push origin refs/tags/v0.3.0:refs/tags/v0.3.0
 ```
 
 Release workflow 会：

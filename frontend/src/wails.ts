@@ -24,6 +24,7 @@ type AppBindings = {
 
 type WailsRuntime = {
   EventsOn(name: string, callback: (...args: unknown[]) => void): () => void;
+  WindowShow(): void;
 };
 
 declare global {
@@ -34,6 +35,8 @@ declare global {
 }
 
 export const backend = (): AppBindings => window.go.application.App;
+
+export const showWindow = (): void => window.runtime.WindowShow();
 
 export const onStatusEvent = (
   name: "dsh:ready" | "dsh:failed" | "dsh:stopped",

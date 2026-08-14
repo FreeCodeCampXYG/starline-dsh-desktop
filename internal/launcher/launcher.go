@@ -70,7 +70,7 @@ func Start(_ context.Context, config Config) (*Process, error) {
 	if command.mode == "offline" {
 		_, _ = fmt.Fprintf(logFile, "[%s] Starline DSH Desktop 正在使用包内离线运行时启动 @deepseek-ai/dsh@%s。\n", time.Now().Format(time.RFC3339), config.Version)
 	} else {
-		_, _ = fmt.Fprintf(logFile, "[%s] Starline DSH Desktop 正在通过 npx 准备 @deepseek-ai/dsh@%s。首次下载可能需要数分钟。\n", time.Now().Format(time.RFC3339), config.Version)
+		_, _ = fmt.Fprintf(logFile, "[%s] Starline DSH Desktop 正在通过 npx 准备 @deepseek-ai/dsh@%s；优先复用 npm 缓存，缓存缺失时才下载。\n", time.Now().Format(time.RFC3339), config.Version)
 		_, _ = fmt.Fprintf(logFile, "npm 调试日志目录：%s\n", npmLogDir())
 	}
 	args := append(append([]string{}, command.prefix...), []string{

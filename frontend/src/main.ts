@@ -3,6 +3,7 @@ import {
   backend,
   onCommandEvent,
   onStatusEvent,
+  showWindow,
   type Settings,
   type Status,
 } from "./wails";
@@ -44,16 +45,40 @@ const initialStatus: Status = {
 };
 
 let currentStatus = initialStatus;
+let renderSequence = 0;
 
-const render = (status: Status): void => {
-  currentStatus = status;
-  if (status.state === "ready" && status.url) {
-    renderReady(status);
-    return;
-  }
+const runtimeLabel = (status: Status): string => {
+  if (status.runtimeMode === "offline") return "包内离线运行时";
+  if (status.runtimeMode === "online") return "系统 Node / npx";
+  return "正在检测运行时";
+};
 
+const renderDesktopMenu = (includeBrowser: boolean): string => `
+  <details class="shell-menu">
+    <summary>${icons.shell}<span>桌面工具</span></summary>
+    <div class="shell-menu-popover">
+      <button data-action="settings">${icons.settings}<span>代理与启动设置</span></button>
+      <button data-action="restart">${icons.restart}<span>重新启动 DSH</span></button>
+      <button data-action="logs">${icons.logs}<span>打开日志目录</span></button>
+      ${includeBrowser ? `<button data-action="browser">${icons.browser}<span>在浏览器中打开</span></button>` : ""}
+      <button data-action="help">${icons.help}<span>使用帮助</span></button>
+    </div>
+  </details>
+`;
+
+const renderRuntimeBar = (status: Status, includeBrowser: boolean): string => `
+  <div class="runtime-bar">
+    <div class="runtime-state state-${escapeHTML(status.state)}">
+      <span></span>
+      DSH ${escapeHTML(status.dshVersion)} · Desktop ${escapeHTML(status.version)} · ${runtimeLabel(status)}
+    </div>
+    ${renderDesktopMenu(includeBrowser)}
+  </div>
+`;
+
+const renderSplash = (status: Status): string => {
   const isBusy = status.state === "starting" || status.state === "idle";
-  const runtimeLabel = status.runtimeMode === "offline" ? "包内离线运行时" : status.runtimeMode === "online" ? "系统 Node / npx" : "自动检测运行时";
+  const runtimeText = runtimeLabel(status);
   const eyebrow = isBusy ? "LOCAL RUNTIME" : "STARTUP DIAGNOSTIC";
   const description = isBusy
     ? status.runtimeMode === "offline"
@@ -61,10 +86,8 @@ const render = (status: Status): void => {
       : "桌面宿主正在检查包内离线运行时；普通包会通过系统 Node 与 npx 准备官方 DSH。"
     : "桌面宿主没有修改 DSH 内核。你可以调整代理、查看原始日志，修复问题后重试。";
 
-  root.innerHTML = `
+  return `
     <section class="splash">
-      <div class="ambient ambient-one"></div>
-      <div class="ambient ambient-two"></div>
       <div class="panel">
         <div class="mark" aria-hidden="true"><span>D</span></div>
         <p class="eyebrow">${eyebrow}</p>
@@ -86,60 +109,131 @@ const render = (status: Status): void => {
           <span class="dot"></span>
           <span>DSH ${escapeHTML(status.dshVersion)}</span>
           <span class="dot"></span>
-          <span>${runtimeLabel}</span>
+          <span>${runtimeText}</span>
         </footer>
       </div>
     </section>
   `;
-  bindCommonActions();
 };
 
-const renderReady = (status: Status): void => {
-  const source = status.url ?? "";
-  const runtimeLabel = status.runtimeMode === "offline" ? "离线运行时" : "系统 Node";
+const render = (status: Status): void => {
+  currentStatus = status;
+  const sequence = ++renderSequence;
+  if (status.state === "ready" && status.url) {
+    renderReady(status, sequence);
+    return;
+  }
+
+  const isBusy = status.state === "starting" || status.state === "idle";
+  if (isBusy) {
+    root.innerHTML = renderSplash(status);
+    bindCommonActions();
+    return;
+  }
+
+  const description = isBusy
+    ? status.runtimeMode === "offline"
+      ? "桌面宿主正在使用包内固定版本的 Node 与 DSH，不会访问 npm registry。"
+      : "桌面宿主正在检查包内离线运行时；普通包会通过系统 Node 与 npx 准备官方 DSH。"
+    : "桌面宿主没有修改 DSH 内核。你可以调整代理、查看原始日志，修复问题后重试。";
+  const bannerTone = isBusy ? "is-busy" : "is-error";
+  const bannerRole = isBusy ? "status" : "alert";
+
   root.innerHTML = `
-    <section class="workspace">
-      <div class="runtime-bar">
-        <div class="runtime-state"><span></span> DSH ${escapeHTML(status.dshVersion)} · ${runtimeLabel}</div>
-        <details class="shell-menu">
-          <summary>${icons.shell}<span>桌面工具</span></summary>
-          <div class="shell-menu-popover">
-            <button data-action="settings">${icons.settings}<span>代理与启动设置</span></button>
-            <button data-action="restart">${icons.restart}<span>重新启动 DSH</span></button>
-            <button data-action="logs">${icons.logs}<span>打开日志目录</span></button>
-            <button data-action="browser">${icons.browser}<span>在浏览器中打开</span></button>
-            <button data-action="help">${icons.help}<span>使用帮助</span></button>
+    <section class="workspace workspace-status">
+      ${renderRuntimeBar(status, false)}
+      <div class="status-banner ${bannerTone}" role="${bannerRole}">
+        <div class="status-summary">
+          <span class="status-indicator" aria-hidden="true"></span>
+          <div>
+            <strong>${escapeHTML(status.message)}</strong>
+            <small>${escapeHTML(status.detail ?? description)}</small>
           </div>
-        </details>
+        </div>
+        <div class="status-actions">
+          ${status.detail ? `<button class="status-action" data-action="error-details">查看详情</button>` : ""}
+          ${isBusy ? "" : `<button class="status-action primary" data-action="retry">${icons.restart}<span>重试</span></button>`}
+          <button class="status-action" data-action="settings">${icons.settings}<span>代理</span></button>
+          <button class="status-action" data-action="logs">${icons.logs}<span>日志</span></button>
+        </div>
       </div>
-      <iframe
-        class="dsh-frame"
-        src="${escapeHTML(source)}"
-        title="DeepSeek Harness"
-        allow="clipboard-read; clipboard-write"
-      ></iframe>
+      <div class="startup-stage" aria-busy="${isBusy}">
+        <div class="startup-mark" aria-hidden="true"><span>ST</span><i></i></div>
+        <p>${isBusy ? "正在后台准备官方 DSH 页面" : "DSH 页面暂时不可用"}</p>
+        <small>${isBusy ? "检查完成后会自动载入，无需操作。" : "请根据上方提示修复后重试。"}</small>
+      </div>
     </section>
   `;
   bindCommonActions();
-  root.querySelector<HTMLButtonElement>("[data-action='browser']")?.addEventListener("click", () => {
-    void backend().OpenInBrowser();
+  if (!isBusy) showWindow();
+};
+
+const renderReady = (status: Status, sequence: number): void => {
+  const source = status.url ?? "";
+  const startupStatus: Status = {
+    ...status,
+    state: "starting",
+    message: "正在载入 DeepSeek Harness…",
+    detail: undefined,
+  };
+  root.innerHTML = `
+    <section class="workspace workspace-ready">
+      ${renderRuntimeBar(status, true)}
+      <div class="frame-stage">
+        <iframe
+          class="dsh-frame"
+          title="DeepSeek Harness"
+          allow="clipboard-read; clipboard-write"
+        ></iframe>
+        <div class="startup-overlay">${renderSplash(startupStatus)}</div>
+      </div>
+    </section>
+  `;
+  bindCommonActions();
+  const frame = root.querySelector<HTMLIFrameElement>(".dsh-frame");
+  const overlay = root.querySelector<HTMLElement>(".startup-overlay");
+  if (!frame) {
+    showWindow();
+    return;
+  }
+  frame.addEventListener("load", () => {
+    if (sequence !== renderSequence || !frame.isConnected) return;
+    showWindow();
+    requestAnimationFrame(() => {
+      frame.classList.add("is-loaded");
+      overlay?.classList.add("is-hidden");
+    });
+    window.setTimeout(() => overlay?.remove(), 360);
+  }, { once: true });
+  frame.src = source;
+};
+
+const restart = (): void => {
+  render({
+    ...currentStatus,
+    state: "starting",
+    message: "正在重新启动 DeepSeek Harness…",
+    detail: undefined,
   });
-  root.querySelector<HTMLButtonElement>("[data-action='restart']")?.addEventListener("click", () => {
-    render({ ...status, state: "starting", message: "正在重新启动 DeepSeek Harness…", detail: undefined });
-    void backend().Retry();
-  });
+  void backend().Retry();
 };
 
 const bindCommonActions = (): void => {
-	root.querySelectorAll<HTMLButtonElement>(".shell-menu-popover button").forEach((button) => {
-		button.addEventListener("click", () => {
-			const menu = button.closest<HTMLDetailsElement>(".shell-menu");
-			if (menu) menu.open = false;
-		});
-	});
+  root.querySelectorAll<HTMLButtonElement>(".shell-menu-popover button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const menu = button.closest<HTMLDetailsElement>(".shell-menu");
+      if (menu) menu.open = false;
+    });
+  });
   root.querySelector<HTMLButtonElement>("[data-action='retry']")?.addEventListener("click", () => {
-    render({ ...currentStatus, state: "starting", message: "正在重新启动 DeepSeek Harness…", detail: undefined });
-    void backend().Retry();
+    restart();
+  });
+  root.querySelector<HTMLButtonElement>("[data-action='restart']")?.addEventListener("click", restart);
+  root.querySelector<HTMLButtonElement>("[data-action='browser']")?.addEventListener("click", () => {
+    void backend().OpenInBrowser();
+  });
+  root.querySelector<HTMLButtonElement>("[data-action='error-details']")?.addEventListener("click", () => {
+    showErrorDialog(currentStatus.message, currentStatus.detail ?? "没有更多错误信息。");
   });
   root.querySelector<HTMLButtonElement>("[data-action='logs']")?.addEventListener("click", () => {
     void backend().OpenLogs();

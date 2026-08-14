@@ -8,6 +8,17 @@
 
 - Windows 代码签名与 macOS Developer ID 签名、公证。
 
+## [0.3.0] - 2026-08-14
+
+### 改进
+
+- 窗口右上角 X 改为隐藏到系统托盘，托盘菜单提供显示窗口、重启 DSH 和显式退出；显式退出才会进入 Wails shutdown 并回收宿主创建的子进程。
+- 运行状态栏常驻显示 Desktop 与 DSH 版本号，便于确认实际启动的桌面端和上游运行时版本。
+- Linux 构建补充 `libayatana-appindicator3-dev`，为通知区域托盘提供原生依赖。
+- 首次启动增加短暂隐藏预热：DSH 很快就绪时直接显示已加载页面，超过 800 毫秒则显示稳定的后台准备界面，避免空白窗口和整页切换闪动。
+- DSH iframe 在遮罩后加载并淡入；启动失败或进程意外退出时立即显示窗口，并在顶部状态栏提供错误摘要、详情、重试、代理和日志入口。
+- 普通包通过 npx 启动固定版本 DSH 时增加 `--prefer-offline`，优先复用 npm 内容缓存，只有缓存缺失时才下载。
+
 ## [0.2.5] - 2026-08-14
 
 ### 修复
@@ -81,7 +92,8 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.5...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.5...v0.3.0
 [0.2.5]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.2...v0.2.3

@@ -58,6 +58,20 @@ func TestResolveDSHCommandRejectsOfflineVersionMismatch(t *testing.T) {
 	}
 }
 
+func TestOnlineDSHPrefixPrefersNPMCache(t *testing.T) {
+	prefix := onlineDSHPrefix([]string{"npx-cli.js"}, "0.1.0-rc.6")
+	want := []string{
+		"npx-cli.js",
+		"--yes",
+		"--prefer-offline",
+		"--package=@deepseek-ai/dsh@0.1.0-rc.6",
+		"dsh",
+	}
+	if strings.Join(prefix, "\x00") != strings.Join(want, "\x00") {
+		t.Fatalf("onlineDSHPrefix() = %#v, want %#v", prefix, want)
+	}
+}
+
 func TestOfflineRuntimeStartsWeb(t *testing.T) {
 	if os.Getenv("DSH_DESKTOP_RUN_OFFLINE_INTEGRATION") != "1" {
 		t.Skip("set DSH_DESKTOP_RUN_OFFLINE_INTEGRATION=1 to run the packaged runtime")

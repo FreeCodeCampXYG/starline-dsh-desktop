@@ -19,6 +19,9 @@ var assets embed.FS
 //go:embed build/appicon.png
 var appIcon []byte
 
+//go:embed build/windows/icon.ico
+var trayIcon []byte
+
 var (
 	version           = "dev"
 	defaultDSHVersion = "0.1.0-rc.6"
@@ -26,6 +29,9 @@ var (
 
 func main() {
 	app := application.New(version, defaultDSHVersion)
+	tray := application.NewTray(app, trayIcon)
+	tray.Register()
+	defer tray.Quit()
 	err := wails.Run(&options.App{
 		Title:             "Starline DSH Desktop",
 		Width:             1280,
@@ -35,13 +41,14 @@ func main() {
 		DisableResize:     false,
 		Fullscreen:        false,
 		Frameless:         false,
-		StartHidden:       false,
-		HideWindowOnClose: false,
+		StartHidden:       true,
+		HideWindowOnClose: true,
 		BackgroundColour:  &options.RGBA{R: 8, G: 12, B: 20, A: 1},
 		AssetServer:       &assetserver.Options{Assets: assets},
 		Menu:              application.Menu(app),
 		OnStartup:         app.Startup,
 		OnShutdown:        app.Shutdown,
+		OnBeforeClose:     app.BeforeClose,
 		Bind:              []interface{}{app},
 		Windows: &windows.Options{
 			WebviewIsTransparent: false,

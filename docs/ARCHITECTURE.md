@@ -56,22 +56,22 @@ Wails application
 
 ## 启动序列
 
-1. Wails 创建原生窗口并加载内嵌前端资源。
+1. Wails 创建隐藏的原生窗口并加载内嵌前端资源；800 毫秒兜底计时器保证前端异常或 DSH 较慢时窗口仍会主动显示。
 2. Go 宿主读取用户代理配置。
 3. 宿主优先查找与可执行文件同包的 `offline-runtime/`；macOS 在应用包 `Contents/Resources` 中查找。
 4. 离线运行时必须同时包含匹配版本文件、Node 可执行文件和 DSH 入口，缺损或版本不一致时明确失败，不静默联网回退。
-5. 未发现离线运行时时，宿主查找系统 Node.js 并验证版本；Windows 直接让 Node 执行 `npx-cli.js`，Unix 使用 PATH 中的 `npx`。
+5. 未发现离线运行时时，宿主查找系统 Node.js 并验证版本；Windows 直接让 Node 执行 `npx-cli.js`，Unix 使用 PATH 中的 `npx`。命令使用 `--prefer-offline` 优先复用 npm 内容缓存，但不直接信任 PATH 中版本未知的全局 `dsh`。
 6. 宿主向 DSH 传入 `--port 0`，由 DSH 保持 listener 所有权并选择可用 loopback 端口；宿主不再预占后释放端口。
 7. 子进程执行固定版本的 `@deepseek-ai/dsh`。普通包使用：
 
    ```text
-   npx --yes --package=@deepseek-ai/dsh@<version> dsh web --host 127.0.0.1 --port 0
+   npx --yes --prefer-offline --package=@deepseek-ai/dsh@<version> dsh web --host 127.0.0.1 --port 0
    ```
 
    `offline-full` 直接执行 `offline-runtime/node[.exe] offline-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js web ...`，不调用 npm registry。
 
 8. 宿主从 DSH 输出的 `dsh web: http://...` 行解析实际地址，只接受通过 loopback 安全校验的 HTTP URL，再使用禁用代理的 HTTP client 轮询并验证状态码和 DSH 页面标题。
-9. 就绪后前端 iframe 导航到该 loopback URL。
+9. 就绪后前端先在遮罩后让 iframe 导航到该 loopback URL；iframe `load` 后主动显示原生窗口并淡入页面。启动失败或进程意外退出时跳过等待，立即显示顶部错误状态栏。
 
 ## 安全边界
 
@@ -83,6 +83,13 @@ Wails application
 - 日志文件权限使用用户私有权限，并最多保留最近 10 份；
 - 退出时只回收宿主持有的子进程树，不按进程名全局扫描；
 - 重启使用 generation 标识，旧启动任务的迟到结果不能覆盖新状态。
+
+## 窗口与托盘生命周期
+
+- Wails 使用 `HideWindowOnClose`：窗口右上角 X 只隐藏主窗口，应用和 DSH 子进程继续运行。
+- `internal/application/tray.go` 注册跨平台托盘图标，提供“显示窗口”“重启 DSH”和“退出”。
+- 只有显式“退出”会设置 `quitRequested` 并调用 `runtime.Quit`，随后进入 `OnShutdown`，确保 DSH/Node 进程树和托盘句柄一起回收。
+- Windows/Linux 通常显示通知区域图标；macOS 显示菜单栏图标，Dock 和系统菜单行为由平台决定。关闭窗口后看到进程仍在是预期行为，需从托盘退出才能释放资源。
 
 ## 进程回收
 
