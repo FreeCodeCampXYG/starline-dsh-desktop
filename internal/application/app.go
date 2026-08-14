@@ -1,4 +1,4 @@
-package main
+package application
 
 import (
 	"context"
@@ -8,54 +8,60 @@ import (
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"starline-dsh-desktop/internal/config"
 	"starline-dsh-desktop/internal/launcher"
 )
 
 const (
-	defaultDSHVersion = "0.1.0-rc.6"
-	readyEvent        = "dsh:ready"
-	failedEvent       = "dsh:failed"
-	stoppedEvent      = "dsh:stopped"
+	readyEvent   = "dsh:ready"
+	failedEvent  = "dsh:failed"
+	stoppedEvent = "dsh:stopped"
 )
 
 type App struct {
-	ctx     context.Context
-	version string
+	ctx        context.Context
+	version    string
+	dshVersion string
 
 	mu              sync.Mutex
 	process         *launcher.Process
 	status          Status
-	settings        Settings
+	settings        config.Settings
 	settingsLoadErr error
 	generation      uint64
 }
 
 type Status struct {
-	State      string `json:"state"`
-	URL        string `json:"url,omitempty"`
-	Message    string `json:"message"`
-	Detail     string `json:"detail,omitempty"`
-	Version    string `json:"version"`
-	DSHVersion string `json:"dshVersion"`
+	State       string `json:"state"`
+	URL         string `json:"url,omitempty"`
+	Message     string `json:"message"`
+	Detail      string `json:"detail,omitempty"`
+	Version     string `json:"version"`
+	DSHVersion  string `json:"dshVersion"`
+	RuntimeMode string `json:"runtimeMode"`
 }
 
-func NewApp(appVersion string) *App {
-	settings, settingsErr := loadSettings()
+// New 组装 Wails 适配层需要的状态；DSH 版本在启动时解析一次，运行期间保持稳定。
+func New(appVersion, defaultDSHVersion string) *App {
+	settings, settingsErr := config.Load()
+	dshVersion := resolveDSHVersion(defaultDSHVersion)
 	return &App{
 		version:         appVersion,
+		dshVersion:      dshVersion,
 		settings:        settings,
 		settingsLoadErr: settingsErr,
 		status: Status{
-			State:      "idle",
-			Message:    "等待启动 DeepSeek Harness",
-			Version:    appVersion,
-			DSHVersion: configuredDSHVersion(),
+			State:       "idle",
+			Message:     "等待启动 DeepSeek Harness",
+			Version:     appVersion,
+			DSHVersion:  dshVersion,
+			RuntimeMode: "auto",
 		},
 	}
 }
 
-// startup 保存 Wails 上下文，并在后台启动 DSH，避免阻塞窗口创建。
-func (a *App) startup(ctx context.Context) {
+// Startup 保存 Wails 上下文，并在后台启动 DSH，避免阻塞窗口创建。
+func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 	if a.settingsLoadErr != nil {
 		a.fail("代理配置无法读取", a.settingsLoadErr)
@@ -64,8 +70,8 @@ func (a *App) startup(ctx context.Context) {
 	a.restart()
 }
 
-// shutdown 确保桌面窗口退出时同步回收由它启动的 DSH 子进程。
-func (a *App) shutdown(context.Context) {
+// Shutdown 确保桌面窗口退出时同步回收由它启动的 DSH 子进程。
+func (a *App) Shutdown(context.Context) {
 	a.mu.Lock()
 	a.generation++
 	process := a.process
@@ -89,19 +95,19 @@ func (a *App) Retry() Status {
 }
 
 // GetSettings 返回当前代理配置，不向前端暴露配置文件路径。
-func (a *App) GetSettings() Settings {
+func (a *App) GetSettings() config.Settings {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return a.settings
 }
 
 // SaveSettings 持久化代理配置，并立即重启由外壳管理的 DSH 进程。
-func (a *App) SaveSettings(settings Settings) (Status, error) {
-	normalized, err := normalizeSettings(settings)
+func (a *App) SaveSettings(settings config.Settings) (Status, error) {
+	normalized, err := config.Normalize(settings)
 	if err != nil {
 		return a.GetStatus(), err
 	}
-	if err := saveSettings(normalized); err != nil {
+	if err := config.Save(normalized); err != nil {
 		return a.GetStatus(), err
 	}
 	a.mu.Lock()
@@ -127,7 +133,7 @@ func (a *App) OpenInBrowser() error {
 }
 
 // launch 完成端口选择、子进程启动和 HTTP 就绪探测。
-func (a *App) launch(generation uint64, settings Settings) {
+func (a *App) launch(generation uint64, settings config.Settings) {
 	workingDir, err := os.Getwd()
 	if err != nil {
 		a.failIfCurrent(generation, "无法确定工作目录", err)
@@ -135,7 +141,7 @@ func (a *App) launch(generation uint64, settings Settings) {
 	}
 
 	process, err := launcher.Start(a.ctx, launcher.Config{
-		Version:    configuredDSHVersion(),
+		Version:    a.dshVersion,
 		WorkingDir: workingDir,
 		ProxyMode:  settings.ProxyMode,
 		ProxyURL:   settings.ProxyURL,
@@ -144,6 +150,7 @@ func (a *App) launch(generation uint64, settings Settings) {
 		a.failIfCurrent(generation, "DSH 启动失败", err)
 		return
 	}
+	runtimeMode := process.RuntimeMode()
 
 	a.mu.Lock()
 	if generation != a.generation {
@@ -161,11 +168,12 @@ func (a *App) launch(generation uint64, settings Settings) {
 	}
 
 	status := Status{
-		State:      "ready",
-		URL:        process.URL(),
-		Message:    "DeepSeek Harness 已就绪",
-		Version:    a.version,
-		DSHVersion: configuredDSHVersion(),
+		State:       "ready",
+		URL:         process.URL(),
+		Message:     "DeepSeek Harness 已就绪",
+		Version:     a.version,
+		DSHVersion:  a.dshVersion,
+		RuntimeMode: runtimeMode,
 	}
 	if !a.setStatusIfCurrent(generation, status) {
 		_ = process.Stop(3 * time.Second)
@@ -189,11 +197,12 @@ func (a *App) launch(generation uint64, settings Settings) {
 			detail = err.Error()
 		}
 		stopped := Status{
-			State:      "stopped",
-			Message:    "DeepSeek Harness 意外停止",
-			Detail:     detail,
-			Version:    a.version,
-			DSHVersion: configuredDSHVersion(),
+			State:       "stopped",
+			Message:     "DeepSeek Harness 意外停止",
+			Detail:      detail,
+			Version:     a.version,
+			DSHVersion:  a.dshVersion,
+			RuntimeMode: runtimeMode,
 		}
 		a.setStatus(stopped)
 		runtime.EventsEmit(a.ctx, stoppedEvent, stopped)
@@ -209,10 +218,11 @@ func (a *App) restart() Status {
 	a.process = nil
 	settings := a.settings
 	a.status = Status{
-		State:      "starting",
-		Message:    "正在启动 DeepSeek Harness…",
-		Version:    a.version,
-		DSHVersion: configuredDSHVersion(),
+		State:       "starting",
+		Message:     "正在启动 DeepSeek Harness…",
+		Version:     a.version,
+		DSHVersion:  a.dshVersion,
+		RuntimeMode: "auto",
 	}
 	status := a.status
 	a.mu.Unlock()
@@ -226,11 +236,12 @@ func (a *App) restart() Status {
 
 func (a *App) failIfCurrent(generation uint64, message string, err error) {
 	status := Status{
-		State:      "failed",
-		Message:    message,
-		Detail:     err.Error(),
-		Version:    a.version,
-		DSHVersion: configuredDSHVersion(),
+		State:       "failed",
+		Message:     message,
+		Detail:      err.Error(),
+		Version:     a.version,
+		DSHVersion:  a.dshVersion,
+		RuntimeMode: "auto",
 	}
 	if a.setStatusIfCurrent(generation, status) && a.ctx != nil {
 		runtime.EventsEmit(a.ctx, failedEvent, status)
@@ -239,11 +250,12 @@ func (a *App) failIfCurrent(generation uint64, message string, err error) {
 
 func (a *App) fail(message string, err error) {
 	status := Status{
-		State:      "failed",
-		Message:    message,
-		Detail:     err.Error(),
-		Version:    a.version,
-		DSHVersion: configuredDSHVersion(),
+		State:       "failed",
+		Message:     message,
+		Detail:      err.Error(),
+		Version:     a.version,
+		DSHVersion:  a.dshVersion,
+		RuntimeMode: "auto",
 	}
 	a.setStatus(status)
 	if a.ctx != nil {
@@ -273,9 +285,9 @@ func (a *App) emit(event string) {
 	}
 }
 
-func configuredDSHVersion() string {
+func resolveDSHVersion(fallback string) string {
 	if value := strings.TrimSpace(os.Getenv("DSH_DESKTOP_DSH_VERSION")); value != "" {
 		return value
 	}
-	return defaultDSHVersion
+	return fallback
 }

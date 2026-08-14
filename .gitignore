@@ -6,5 +6,10 @@
 /frontend/node_modules/
 /frontend/wailsjs/
 /frontend/package.json.md5
+/offline-runtime/node_modules/
+/offline-runtime/node.exe
+/offline-runtime/node
+/offline-runtime/LICENSE-node.txt
+/offline-runtime/dsh-version.txt
 *.log
 .DS_Store

@@ -10,6 +10,22 @@
 
 应用最多保留最近 10 份日志。分享日志前删除 API Key、Token、Cookie、用户名和私人路径。
 
+## Windows 自定义安装目录
+
+Setup 向导的“选择安装位置”页面可以改目录。当前用户安装默认位于 `%LOCALAPPDATA%\Programs\Starline DSH Desktop`，也可以选择其他当前用户可写位置。安装器会记录所选 `InstallLocation`，以后再次安装或升级时继续使用。
+
+中文和空格路径受支持。若自定义路径启动失败，请检查：
+
+1. 目录是否允许当前用户写入；`Program Files` 通常需要管理员权限，不适合当前用户安装包；
+2. 安全软件是否阻止该目录中的未签名程序；
+3. 离线便携版的 `offline-runtime/` 是否仍与 EXE 相邻；
+4. 是否只移动了 EXE，而没有移动完整离线目录；
+5. 日志中的 Node/DSH 路径是否完整，分享前先脱敏。
+
+配置和日志保存在系统用户目录，不依赖安装位置；更换安装目录不会自动搬动 DSH 自己的工作区数据。
+
+当前自动化证据覆盖本地 NTFS 中文和空格路径；UNC 网络共享、映射盘断连和超长路径尚未作为支持目标验证。
+
 ## 找不到 Node.js
 
 终端执行：
@@ -20,6 +36,14 @@ npx --version
 ```
 
 需要 Node `22.19+` 或 `24+`。Node 23 不在 DSH 支持范围内。图形应用继承的 PATH 可能与终端不同；macOS/Linux 从桌面启动时尤其需要确认 Node 安装在系统可见位置。
+
+如果电脑不能安装 Node 或访问 npm，请下载与操作系统及架构一致的 `offline-full` 包。离线包正常启动时，桌面顶部会显示“离线运行时”。
+
+## 离线运行时损坏或版本不一致
+
+不要只复制桌面可执行文件。Windows/Linux 需要让 `offline-runtime/` 与可执行文件保持在同一目录；macOS 运行时位于应用包的 `Contents/Resources/offline-runtime`。
+
+出现缺少 `dsh-version.txt`、Node、DSH 入口或版本不匹配时，请重新解压完整离线资产。宿主会明确失败，不会静默回退到 npm 下载。设置 `DSH_DESKTOP_DSH_VERSION` 覆盖版本时，也必须与离线包版本完全一致。
 
 ## npm 下载失败
 
@@ -53,6 +77,8 @@ npx --yes --package=@deepseek-ai/dsh@0.1.0-rc.6 dsh web
 - 地址是否是 HTTP(S)，例如 `http://127.0.0.1:10808`；
 - 代理客户端是否允许来自 Node.js 的连接；
 - npm registry 与模型服务是否都能通过该代理访问。
+
+`offline-full` 不访问 npm registry，但代理设置仍会传递给 DSH，用于模型 provider、远程 MCP、Web 工具等网络功能。
 
 ## Windows 黑框闪烁
 

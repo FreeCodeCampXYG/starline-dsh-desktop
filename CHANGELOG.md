@@ -7,7 +7,18 @@
 ### 计划
 
 - Windows 代码签名与 macOS Developer ID 签名、公证。
-- 可审计的可选离线运行时方案。
+
+## [0.2.0] - 2026-08-14
+
+### 新增
+
+- 独立的六平台 `offline-full` 便携包，内含固定 Node 与锁定的 DSH 生产依赖。
+- 启动器优先使用完整且版本匹配的包内运行时，缺损时明确报错，不静默访问 npm。
+- 桌面 UI 显示当前使用包内离线运行时还是系统 Node。
+- Windows 安装器记住自定义安装目录，并增加中文、空格路径的安装/升级/卸载验证。
+- Go 宿主按 application、config、launcher 职责分层，启动器进一步拆分运行时、代理、网络和日志模块。
+- 新增统一文档导航与失效本地链接检查。
+- 明确 MIT 版权所有者、贡献版权与第三方许可边界，并让发行产物携带许可证说明。
 
 ## [0.1.0] - 2026-08-14
 
@@ -21,5 +32,6 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/releases/tag/v0.1.0

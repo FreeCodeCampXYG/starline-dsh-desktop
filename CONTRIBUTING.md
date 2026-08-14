@@ -16,14 +16,29 @@
 3. 新增 Go 逻辑应包含针对行为的测试；
 4. 面向用户的提示和错误优先使用中文，技术标识保持英文；
 5. 更新受影响的 README 或 `docs/`；
-6. 不提交 `dist/`、`build/bin/`、`frontend/dist/`、`node_modules/` 或生成的 Wails bindings。
+6. 不提交 `dist/`、`build/bin/`、`frontend/dist/`、任何 `node_modules/`、生成的离线 Node 文件或 Wails bindings。
+
+## 目录职责
+
+| 目录 | 放什么 | 不放什么 |
+| --- | --- | --- |
+| `internal/application` | Wails 生命周期、绑定和桌面状态 | Node 命令解析、配置文件细节 |
+| `internal/config` | 设置类型、输入校验、用户目录持久化 | Wails runtime 调用 |
+| `internal/launcher` | DSH 命令、代理环境、loopback、日志和进程回收 | 前端展示逻辑 |
+| `frontend` | 桌面宿主拥有的启动、错误、设置和帮助 UI | DSH Agent/会话/插件实现 |
+| `build` / `scripts` | 原生资源、安装器源码和可复现构建工具 | 最终二进制和临时打包目录 |
+
+新增代码先选择拥有该行为的包。只有出现新的独立变化原因时才创建新包；不要为了“看起来分层”增加只转发一次调用的空目录。
 
 ## 必须验证
 
 ```bash
 npm --prefix frontend ci
+npm --prefix frontend run docs:check
 npm --prefix frontend run typecheck
 npm --prefix frontend run build
+npm --prefix offline-runtime ci --omit=dev --ignore-scripts --workspaces=false
+node offline-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js --version
 go test ./...
 go vet ./...
 ```
@@ -54,4 +69,4 @@ go vet ./...
 
 ## 许可证
 
-提交代码即表示你有权以项目的 MIT License 提供该贡献。
+提交代码、文档或其他内容，即表示你确认有权提供该贡献，并同意按项目的 [MIT License](LICENSE) 授权。除非另有书面版权转让协议，你仍保留自己贡献部分的版权。第三方代码、素材或生成文件必须保留其原始版权和许可声明，并在 PR 中说明来源；详细边界见 [版权与第三方许可说明](NOTICE.md)。

@@ -40,6 +40,7 @@ const initialStatus: Status = {
   message: "正在连接桌面宿主…",
   version: "dev",
   dshVersion: "0.1.0-rc.6",
+  runtimeMode: "auto",
 };
 
 let currentStatus = initialStatus;
@@ -52,9 +53,12 @@ const render = (status: Status): void => {
   }
 
   const isBusy = status.state === "starting" || status.state === "idle";
+  const runtimeLabel = status.runtimeMode === "offline" ? "包内离线运行时" : status.runtimeMode === "online" ? "系统 Node / npx" : "自动检测运行时";
   const eyebrow = isBusy ? "LOCAL RUNTIME" : "STARTUP DIAGNOSTIC";
   const description = isBusy
-    ? "桌面宿主正在准备官方 DSH Web UI。首次运行需要下载较大的依赖闭包，可能耗时数分钟。"
+    ? status.runtimeMode === "offline"
+      ? "桌面宿主正在使用包内固定版本的 Node 与 DSH，不会访问 npm registry。"
+      : "桌面宿主正在检查包内离线运行时；普通包会通过系统 Node 与 npx 准备官方 DSH。"
     : "桌面宿主没有修改 DSH 内核。你可以调整代理、查看原始日志，修复问题后重试。";
 
   root.innerHTML = `
@@ -81,6 +85,8 @@ const render = (status: Status): void => {
           <span>Desktop ${escapeHTML(status.version)}</span>
           <span class="dot"></span>
           <span>DSH ${escapeHTML(status.dshVersion)}</span>
+          <span class="dot"></span>
+          <span>${runtimeLabel}</span>
         </footer>
       </div>
     </section>
@@ -90,10 +96,11 @@ const render = (status: Status): void => {
 
 const renderReady = (status: Status): void => {
   const source = status.url ?? "";
+  const runtimeLabel = status.runtimeMode === "offline" ? "离线运行时" : "系统 Node";
   root.innerHTML = `
     <section class="workspace">
       <div class="runtime-bar">
-        <div class="runtime-state"><span></span> DSH ${escapeHTML(status.dshVersion)}</div>
+        <div class="runtime-state"><span></span> DSH ${escapeHTML(status.dshVersion)} · ${runtimeLabel}</div>
         <details class="shell-menu">
           <summary>${icons.shell}<span>桌面工具</span></summary>
           <div class="shell-menu-popover">
@@ -241,10 +248,10 @@ const openHelp = (): void => {
       <button class="icon-button" data-dialog-close aria-label="关闭">×</button>
     </header>
     <div class="help-content">
-      <section><h3>首次启动</h3><p>需要 Node.js 22.19+ 或 24+。应用会通过 npx 下载固定版本的 DSH，首次运行可能需要数分钟；第一次选择工作区是 DSH 自身的正常初始化。</p></section>
+      <section><h3>首次启动</h3><p>普通包需要系统 Node.js 22.19+ 或 24+，并会通过 npx 下载固定版本的 DSH。<code>offline-full</code> 已包含 Node 与 DSH，不访问 npm registry；第一次选择工作区仍是 DSH 自身的正常初始化。</p></section>
       <section><h3>代理怎么填</h3><p>如果代理软件监听本机端口，选择“自定义代理”，填写 <code>http://127.0.0.1:端口</code>。例如端口 10808 就填 <code>http://127.0.0.1:10808</code>。</p></section>
       <section><h3>出错排查</h3><p>先打开日志检查 Node、npm 下载或网络错误；改完代理后保存，外壳会自动重启 DSH。模型服务的密钥仍在官方 DSH 页面中配置。</p></section>
-      <section><h3>安装版与便携版</h3><p>Setup.exe 安装到当前用户目录并创建卸载项；ZIP 解压即用。两种版本都不会内嵌或改写 DSH 内核。</p></section>
+      <section><h3>普通包与离线包</h3><p>Setup.exe 和普通 ZIP 体积较小，需要系统 Node/npm。<code>offline-full</code> 是较大的便携包，内含固定 DSH 依赖，但模型服务、远程 MCP 和联网工具仍可能需要网络。</p></section>
     </div>
     <div class="dialog-actions">
       <button class="button secondary" data-action="help-logs">${icons.logs}<span>打开日志目录</span></button>

@@ -5,6 +5,7 @@ export type Status = {
   detail?: string;
   version: string;
   dshVersion: string;
+  runtimeMode: "auto" | "online" | "offline";
 };
 
 export type Settings = {
@@ -27,12 +28,12 @@ type WailsRuntime = {
 
 declare global {
   interface Window {
-    go: { main: { App: AppBindings } };
+    go: { application: { App: AppBindings } };
     runtime: WailsRuntime;
   }
 }
 
-export const backend = (): AppBindings => window.go.main.App;
+export const backend = (): AppBindings => window.go.application.App;
 
 export const onStatusEvent = (
   name: "dsh:ready" | "dsh:failed" | "dsh:stopped",

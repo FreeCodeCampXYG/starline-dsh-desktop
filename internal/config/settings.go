@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"encoding/json"
@@ -21,12 +21,12 @@ type Settings struct {
 	ProxyURL  string `json:"proxyUrl,omitempty"`
 }
 
-func defaultSettings() Settings {
+func Default() Settings {
 	return Settings{ProxyMode: proxyModeInherit}
 }
 
-// normalizeSettings 校验界面输入，并把省略协议的常见代理地址补成 HTTP URL。
-func normalizeSettings(settings Settings) (Settings, error) {
+// Normalize 校验界面输入，并把省略协议的常见代理地址补成 HTTP URL。
+func Normalize(settings Settings) (Settings, error) {
 	settings.ProxyMode = strings.TrimSpace(settings.ProxyMode)
 	settings.ProxyURL = strings.TrimSpace(settings.ProxyURL)
 	switch settings.ProxyMode {
@@ -53,35 +53,44 @@ func normalizeSettings(settings Settings) (Settings, error) {
 	}
 }
 
-func loadSettings() (Settings, error) {
-	path, err := settingsPath()
+// Load 从当前用户配置目录读取桌面宿主设置。
+func Load() (Settings, error) {
+	path, err := Path()
 	if err != nil {
-		return defaultSettings(), err
+		return Default(), err
 	}
+	return loadFile(path)
+}
+
+func loadFile(path string) (Settings, error) {
 	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return defaultSettings(), nil
+		return Default(), nil
 	}
 	if err != nil {
-		return defaultSettings(), fmt.Errorf("无法读取配置：%w", err)
+		return Default(), fmt.Errorf("无法读取配置：%w", err)
 	}
 	var settings Settings
 	if err := json.Unmarshal(data, &settings); err != nil {
-		return defaultSettings(), fmt.Errorf("配置文件格式无效：%w", err)
+		return Default(), fmt.Errorf("配置文件格式无效：%w", err)
 	}
-	settings, err = normalizeSettings(settings)
+	settings, err = Normalize(settings)
 	if err != nil {
-		return defaultSettings(), fmt.Errorf("配置内容无效：%w", err)
+		return Default(), fmt.Errorf("配置内容无效：%w", err)
 	}
 	return settings, nil
 }
 
-// saveSettings 先完整写入临时文件，再替换用户配置，避免留下半份 JSON。
-func saveSettings(settings Settings) error {
-	path, err := settingsPath()
+// Save 先完整写入临时文件，再替换用户配置，避免留下半份 JSON。
+func Save(settings Settings) error {
+	path, err := Path()
 	if err != nil {
 		return err
 	}
+	return saveFile(path, settings)
+}
+
+func saveFile(path string, settings Settings) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return fmt.Errorf("无法创建配置目录：%w", err)
 	}
@@ -114,7 +123,8 @@ func saveSettings(settings Settings) error {
 	return nil
 }
 
-func settingsPath() (string, error) {
+// Path 返回当前用户的设置文件路径，不依赖应用安装目录。
+func Path() (string, error) {
 	base, err := os.UserConfigDir()
 	if err != nil || base == "" {
 		return "", errors.New("无法确定用户配置目录")

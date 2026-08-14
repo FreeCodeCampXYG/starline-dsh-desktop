@@ -7,13 +7,13 @@
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
   "author": {
-    "name": "Starline contributors"
+    "name": "starline and contributors"
   },
   "info": {
     "companyName": "Starline",
     "productName": "Starline DSH Desktop",
-    "productVersion": "0.1.0",
-    "copyright": "Copyright (c) 2026 Starline contributors",
+    "productVersion": "0.2.0",
+    "copyright": "Copyright (c) 2026 starline and contributors",
     "comments": "Starline desktop host for DeepSeek Harness."
   }
 }

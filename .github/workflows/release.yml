@@ -9,7 +9,7 @@ on:
       version:
         description: Version embedded in the artifacts (for example 0.2.0-dev)
         required: true
-        default: 0.1.0-dev
+        default: 0.2.0-dev
 
 permissions:
   contents: read
@@ -66,9 +66,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version-file: offline-runtime/node-version.txt
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: |
+            frontend/package-lock.json
+            offline-runtime/package-lock.json
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
@@ -91,7 +93,9 @@ jobs:
           }
 
       - name: Install frontend dependencies
-        run: npm --prefix frontend ci
+        run: |
+          npm --prefix frontend ci
+          npm --prefix frontend run docs:check
 
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.14.0
@@ -116,17 +120,54 @@ jobs:
         run: |
           node -e 'const fs = require("fs"); const path = "wails.json"; const data = JSON.parse(fs.readFileSync(path, "utf8")); data.info.productVersion = process.argv[1].split(/[-+]/)[0]; fs.writeFileSync(path, JSON.stringify(data, null, 2) + "\n");' "${{ steps.version.outputs.value }}"
 
+      - name: Resolve pinned offline DSH version
+        id: offline
+        shell: bash
+        run: |
+          DSH_VERSION="$(node -p "require('./offline-runtime/package.json').dependencies['@deepseek-ai/dsh']")"
+          if [[ ! "$DSH_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid offline DSH version: $DSH_VERSION" >&2
+            exit 1
+          fi
+          echo "dsh=$DSH_VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Build Windows package
         if: runner.os == 'Windows'
-        run: wails build -clean -trimpath -platform ${{ matrix.platform }} -nsis -installscope user -ldflags "-s -w -H=windowsgui -X main.version=${{ steps.version.outputs.value }}"
+        run: wails build -clean -trimpath -platform ${{ matrix.platform }} -nsis -installscope user -ldflags "-s -w -H=windowsgui -X main.version=${{ steps.version.outputs.value }} -X main.defaultDSHVersion=${{ steps.offline.outputs.dsh }}"
 
       - name: Build macOS package
         if: runner.os == 'macOS'
-        run: wails build -clean -trimpath -platform ${{ matrix.platform }} -ldflags "-s -w -X main.version=${{ steps.version.outputs.value }}"
+        run: wails build -clean -trimpath -platform ${{ matrix.platform }} -ldflags "-s -w -X main.version=${{ steps.version.outputs.value }} -X main.defaultDSHVersion=${{ steps.offline.outputs.dsh }}"
 
       - name: Build Linux package
         if: runner.os == 'Linux'
-        run: wails build -clean -trimpath -platform ${{ matrix.platform }} -tags webkit2_41 -ldflags "-s -w -X main.version=${{ steps.version.outputs.value }}"
+        run: wails build -clean -trimpath -platform ${{ matrix.platform }} -tags webkit2_41 -ldflags "-s -w -X main.version=${{ steps.version.outputs.value }} -X main.defaultDSHVersion=${{ steps.offline.outputs.dsh }}"
+
+      - name: Prepare Windows offline runtime
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/prepare-offline-runtime.ps1 -DSHVersion '${{ steps.offline.outputs.dsh }}'
+
+      - name: Prepare macOS/Linux offline runtime
+        if: runner.os != 'Windows'
+        shell: bash
+        run: bash scripts/prepare-offline-runtime.sh '${{ steps.offline.outputs.dsh }}'
+
+      - name: Smoke-test Windows offline web runtime
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:DSH_DESKTOP_OFFLINE_ROOT = (Resolve-Path offline-runtime).Path
+          $env:DSH_DESKTOP_RUN_OFFLINE_INTEGRATION = '1'
+          go test ./internal/launcher -run TestOfflineRuntimeStartsWeb -count=1 -timeout 2m
+
+      - name: Smoke-test macOS/Linux offline web runtime
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          DSH_DESKTOP_OFFLINE_ROOT="$PWD/offline-runtime" \
+          DSH_DESKTOP_RUN_OFFLINE_INTEGRATION=1 \
+          go test ./internal/launcher -run TestOfflineRuntimeStartsWeb -count=1 -timeout 2m
 
       - name: Package Windows artifacts
         if: runner.os == 'Windows'
@@ -135,13 +176,15 @@ jobs:
           New-Item -ItemType Directory -Force release | Out-Null
           $portable = "release/${{ matrix.asset }}.zip"
           $setup = "release/${{ matrix.asset }}-setup.exe"
-          Compress-Archive -LiteralPath build/bin/starline-dsh-desktop.exe -DestinationPath $portable
+          $offline = "release/${{ matrix.asset }}-offline-full.zip"
+          Compress-Archive -LiteralPath @('build/bin/starline-dsh-desktop.exe', 'LICENSE', 'NOTICE.md') -DestinationPath $portable
           $installers = @(Get-ChildItem -LiteralPath build/bin -Filter '*-installer.exe')
           if ($installers.Count -ne 1) {
             throw "Expected exactly one NSIS installer, found $($installers.Count)."
           }
           Copy-Item -LiteralPath $installers[0].FullName -Destination $setup
-          foreach ($artifact in @($portable, $setup)) {
+          tar.exe -a -c -f $offline -C build/bin starline-dsh-desktop.exe -C ../.. LICENSE NOTICE.md offline-runtime
+          foreach ($artifact in @($portable, $setup, $offline)) {
             $hash = (Get-FileHash -LiteralPath $artifact -Algorithm SHA256).Hash.ToLower()
             $name = [IO.Path]::GetFileName($artifact)
             "$hash  $name" | Out-File "$artifact.sha256" -Encoding ascii
@@ -153,8 +196,19 @@ jobs:
         run: |
           mkdir -p release
           artifact="release/${{ matrix.asset }}.zip"
+          offline_artifact="release/${{ matrix.asset }}-offline-full.zip"
+          license_resources="build/bin/starline-dsh-desktop.app/Contents/Resources/licenses"
+          mkdir -p "$license_resources"
+          cp LICENSE "$license_resources/LICENSE"
+          cp NOTICE.md "$license_resources/NOTICE.md"
           ditto -c -k --sequesterRsrc --keepParent build/bin/starline-dsh-desktop.app "$artifact"
-          shasum -a 256 "$artifact" | sed 's#release/##' > "$artifact.sha256"
+          offline_resources="build/bin/starline-dsh-desktop.app/Contents/Resources/offline-runtime"
+          mkdir -p "$offline_resources"
+          cp -R offline-runtime/. "$offline_resources/"
+          ditto -c -k --sequesterRsrc --keepParent build/bin/starline-dsh-desktop.app "$offline_artifact"
+          for package in "$artifact" "$offline_artifact"; do
+            shasum -a 256 "$package" | sed 's#release/##' > "$package.sha256"
+          done
 
       - name: Package Linux artifact
         if: runner.os == 'Linux'
@@ -162,8 +216,17 @@ jobs:
         run: |
           mkdir -p release
           artifact="release/${{ matrix.asset }}.tar.gz"
-          tar -C build/bin -czf "$artifact" starline-dsh-desktop
-          sha256sum "$artifact" | sed 's#release/##' > "$artifact.sha256"
+          offline_artifact="release/${{ matrix.asset }}-offline-full.tar.gz"
+          tar -czf "$artifact" -C build/bin starline-dsh-desktop -C ../.. LICENSE NOTICE.md
+          offline_stage="$RUNNER_TEMP/${{ matrix.asset }}-offline-full"
+          mkdir -p "$offline_stage"
+          cp build/bin/starline-dsh-desktop "$offline_stage/"
+          cp LICENSE NOTICE.md "$offline_stage/"
+          cp -a offline-runtime "$offline_stage/"
+          tar -C "$offline_stage" -czf "$offline_artifact" starline-dsh-desktop LICENSE NOTICE.md offline-runtime
+          for package in "$artifact" "$offline_artifact"; do
+            sha256sum "$package" | sed 's#release/##' > "$package.sha256"
+          done
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v7

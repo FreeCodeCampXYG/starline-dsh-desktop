@@ -21,11 +21,12 @@
 
 1. 确认工作区干净，依赖锁文件已提交；
 2. 确认默认 DSH 版本确实能启动；
-3. 本机至少执行基础测试与一个平台生产构建；
-4. CI 六个平台全部通过；
-5. 检查 README、变更记录和已知限制；
-6. 确认没有 API Key、Token、Cookie、私有代理地址或构建缓存；
-7. 确认签名状态。未签名时必须保留 Release 警告。
+3. 确认 `offline-runtime/package-lock.json` 与 `main.go` 默认 DSH 版本一致，离线 CLI smoke test 通过；
+4. 本机至少执行基础测试与一个平台生产构建；
+5. CI 六个平台全部通过；
+6. 检查 README、变更记录和已知限制；
+7. 确认没有 API Key、Token、Cookie、私有代理地址或构建缓存；
+8. 确认签名状态。未签名时必须保留 Release 警告。
 
 ## 创建版本
 
@@ -41,25 +42,38 @@ Release workflow 会：
 1. 从 tag 去掉前缀 `v`；
 2. 校验版本格式；
 3. 在六个原生 runner 构建；
-4. 生成每个产物的 `.sha256`；
-5. 汇总为 `SHA256SUMS.txt`；
-6. 生成 GitHub Release notes；
-7. tag 带 `-` 时标记为 prerelease。
+4. 在每个 runner 安装锁定的 DSH 生产依赖，复制原生 Node 24.19.0，并执行 CLI smoke test；
+5. 同时生成轻量普通包和独立 `offline-full` 包；
+6. 生成每个产物的 `.sha256`；
+7. 确认普通包、离线包和安装目录均包含项目 `LICENSE` 与 `NOTICE.md`（macOS 位于应用包 `Contents/Resources/licenses/`）；
+8. 汇总为 `SHA256SUMS.txt`；
+9. 生成 GitHub Release notes；
+10. tag 带 `-` 时标记为 prerelease。
 
 ## 产物清单
 
 ```text
 starline-dsh-desktop-windows-amd64-setup.exe
 starline-dsh-desktop-windows-amd64.zip
+starline-dsh-desktop-windows-amd64-offline-full.zip
 starline-dsh-desktop-windows-arm64-setup.exe
 starline-dsh-desktop-windows-arm64.zip
+starline-dsh-desktop-windows-arm64-offline-full.zip
 starline-dsh-desktop-macos-amd64.zip
+starline-dsh-desktop-macos-amd64-offline-full.zip
 starline-dsh-desktop-macos-arm64.zip
+starline-dsh-desktop-macos-arm64-offline-full.zip
 starline-dsh-desktop-linux-amd64.tar.gz
+starline-dsh-desktop-linux-amd64-offline-full.tar.gz
 starline-dsh-desktop-linux-arm64.tar.gz
+starline-dsh-desktop-linux-arm64-offline-full.tar.gz
 *.sha256
 SHA256SUMS.txt
 ```
+
+普通包保持原有小体积。Windows x64 本地实测普通 ZIP 约 4.3 MiB、Setup 约 6.0 MiB、完整离线 ZIP 约 113.6 MiB，离线运行时解压后约 334 MiB。平台、架构与依赖选择不同，Release 前必须以实际资产大小为准。GitHub 单文件资产上限不是当前瓶颈，但六个平台会明显增加 Actions 时间、缓存和 Release 存储。
+
+MIT License 要求分发副本保留版权与许可声明。Windows Setup 会把 `LICENSE.txt` 与 `NOTICE.md` 安装到应用目录；Windows/Linux 压缩包在根目录携带 `LICENSE` 与 `NOTICE.md`；macOS 应用包在 `Contents/Resources/licenses/` 中携带 `LICENSE` 与 `NOTICE.md`。`offline-full` 还必须保留 Node.js、DeepSeek Harness 和 npm 依赖自身随包提供的许可证文件。发布前应抽查解包内容，不能只检查仓库根目录。
 
 ## 签名与公证
 

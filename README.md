@@ -32,18 +32,18 @@ Starline DSH Desktop (Go + Wails)
    └─ dsh web --host 127.0.0.1 --port <动态端口>
 ```
 
-详细边界见 [架构说明](docs/ARCHITECTURE.md)。
+详细边界见 [架构说明](docs/ARCHITECTURE.md)，全部维护资料从 [文档导航](docs/README.md) 进入。
 
 ## 系统要求
 
 | 项目 | 要求 |
 | --- | --- |
-| Node.js | `22.19+` 或 `24+`；不支持 Node 23 |
-| npm / npx | 随 Node.js 安装 |
+| Node.js | 普通包需要 `22.19+` 或 `24+`；`offline-full` 已内置固定 Node 24 |
+| npm / npx | 普通包需要；`offline-full` 启动时不使用 npm/npx |
 | Windows | Windows 10/11，WebView2 Runtime |
 | macOS | Intel 或 Apple Silicon，使用系统 WebKit |
 | Linux | GTK3、WebKitGTK 4.1 及其运行库 |
-| 网络 | 首次运行需要访问 npm registry；模型网络要求由 DSH/模型服务决定 |
+| 网络 | 普通包首次运行需要 npm registry；`offline-full` 不访问 npm，但模型服务等功能可能仍需网络 |
 
 当前默认启动 `@deepseek-ai/dsh@0.1.0-rc.6`。可用 `DSH_DESKTOP_DSH_VERSION` 临时覆盖，但正式 Release 仍以仓库固定版本为准。
 
@@ -51,15 +51,18 @@ Starline DSH Desktop (Go + Wails)
 
 ### Windows
 
-- `starline-dsh-desktop-windows-amd64-setup.exe`：常规 x64 安装版，安装到当前用户目录，无需管理员权限；
+- `starline-dsh-desktop-windows-amd64-setup.exe`：常规 x64 安装版，默认安装到当前用户目录，无需管理员权限；安装向导可自行选择其他本地可写目录；
 - `starline-dsh-desktop-windows-amd64.zip`：x64 便携版，解压后运行；
+- `starline-dsh-desktop-windows-amd64-offline-full.zip`：内含 Node 与固定 DSH 依赖的 x64 离线便携版；
 - `windows-arm64` 同名产物：Windows on ARM 原生版本。
 
 安装包未签名时，SmartScreen 可能提示未知发布者。正式广泛分发前需要代码签名证书。
 
+安装器使用 Unicode NSIS，并对目录中的中文、空格进行自动化安装/升级/卸载测试。应用不依赖固定安装路径：普通安装版从系统 PATH 查找 Node；`offline-full` 始终从桌面可执行文件旁定位 `offline-runtime/`。安装器会把用户选择的目录记录为 `InstallLocation`，再次安装或升级时继续使用该目录。由于 Setup 是当前用户权限，选择 `Program Files` 等需要管理员权限的位置会失败；建议选择当前用户有写权限的本地目录。UNC 网络路径和超长路径尚未完成设备验证，不作为当前支持承诺。
+
 ### macOS
 
-根据处理器下载 `macos-amd64`（Intel）或 `macos-arm64`（Apple Silicon）ZIP，解压后将应用移动到 Applications。当前构建未进行 Developer ID 签名和 notarization，Gatekeeper 可能阻止首次打开。
+根据处理器下载 `macos-amd64`（Intel）或 `macos-arm64`（Apple Silicon）ZIP；无 npm 网络的机器选择同架构的 `offline-full.zip`。解压后将应用移动到 Applications。当前构建未进行 Developer ID 签名和 notarization，Gatekeeper 可能阻止首次打开。
 
 ### Linux
 
@@ -71,6 +74,10 @@ chmod +x starline-dsh-desktop
 ./starline-dsh-desktop
 ```
 
+离线机器选择同架构的 `offline-full.tar.gz`，目录结构和启动命令相同，但会多出 `offline-runtime/`。
+
+`offline-full` 是独立可选产物，不会放进普通 Setup 或便携包。Windows x64 本地实测：普通 ZIP 约 4.3 MiB、Setup 约 6.0 MiB、完整离线 ZIP 约 113.6 MiB；离线运行时解压后约 334 MiB。各平台的准确体积以 Release 资产为准。
+
 不同发行版的 WebKitGTK 包名不同。Ubuntu 24.04 可安装：
 
 ```bash
@@ -79,8 +86,8 @@ sudo apt-get install libgtk-3-0 libwebkit2gtk-4.1-0
 
 ## 第一次启动
 
-1. 应用检查 Node.js 和 `npx`；
-2. `npx` 准备固定版本 DSH，第一次可能耗时数分钟；
+1. 应用优先检查可执行文件旁的完整 `offline-runtime/`；
+2. 存在匹配离线运行时就直接启动包内 Node/DSH；否则检查系统 Node.js 和 `npx`，第一次可能下载数分钟；
 3. DSH 启动在随机的 `127.0.0.1` 高位端口；
 4. 宿主确认 HTTP 200 和 `<title>DeepSeek Harness</title>` 后显示官方页面；
 5. 第一次选择工作区是 DSH 自身的正常初始化；
@@ -124,9 +131,9 @@ sha256sum -c starline-dsh-desktop-linux-amd64.tar.gz.sha256
 
 DSH 已有完整 Web UI。复制会话、SSE、工具审批和插件 UI 会产生第二套客户端，并使上游升级成本急剧增加。本项目刻意保持窄边界。
 
-### 为什么仍需要 Node.js？
+### 为什么普通包仍需要 Node.js？
 
-当前版本只分发桌面宿主，不重新分发 Node.js、DSH npm 包及其完整依赖闭包。这使许可证、供应链和上游版本关系保持清晰。离线运行时属于后续独立里程碑。
+Node 是 DSH 的运行时。普通 Setup/ZIP 为了保持小体积，继续使用系统 Node 与 npx；可选的 `offline-full` 则重新分发固定 Node 可执行文件和锁定的 DSH 生产依赖。离线包免除 npm 下载，但不会让模型 provider、远程 MCP、Web 工具或更新功能自动离线。
 
 ### 启动后让我选择工作区正常吗？
 
@@ -145,6 +152,7 @@ DSH 已有完整 Web UI。复制会话、SSE、工具审批和插件 UI 会产�
 
 ## 开发、构建与发布
 
+- [文档导航](docs/README.md)
 - [开发与跨平台构建](docs/BUILDING.md)
 - [架构与安全边界](docs/ARCHITECTURE.md)
 - [发布流程](docs/RELEASING.md)
@@ -152,6 +160,7 @@ DSH 已有完整 Web UI。复制会话、SSE、工具审批和插件 UI 会产�
 - [贡献指南](CONTRIBUTING.md)
 - [变更日志](CHANGELOG.md)
 - [安全策略](SECURITY.md)
+- [版权与第三方许可说明](NOTICE.md)
 
 ## 路线图
 
@@ -164,4 +173,10 @@ DSH 已有完整 Web UI。复制会话、SSE、工具审批和插件 UI 会产�
 
 ## 许可证
 
-本项目代码使用 [MIT License](LICENSE)。DeepSeek Harness、Node.js、WebView/WebKit 及其他依赖遵循各自许可证；当前 Release 不重新分发 DSH npm 包。
+```text
+Copyright (c) 2026 starline and contributors
+```
+
+本项目自有代码、构建脚本、项目自有前端和配套文档使用 [MIT License](LICENSE)。你可以使用、修改、分发、再许可和商业使用，但在软件副本或实质性部分中必须保留原版权声明与 MIT 许可声明。MIT 是版权许可，不是版权转让：starline 与贡献者仍保留各自作品的版权；软件按“原样”提供，不附带担保。
+
+DeepSeek Harness、Node.js、Wails、WebView/WebKit、GTK 及其他第三方依赖保留各自版权，并遵循各自许可证。`offline-full` 会保留包内随第三方组件分发的许可文件，但依赖锁文件不等于完整的法律清单。详细边界、贡献版权和商标说明见 [版权与第三方许可说明](NOTICE.md)。所有安装包和便携压缩包都会携带本项目的许可证与 NOTICE 说明，具体位置见 [发布流程](docs/RELEASING.md)。

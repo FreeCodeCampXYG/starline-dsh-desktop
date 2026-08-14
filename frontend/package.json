@@ -1,11 +1,12 @@
 {
   "name": "starline-dsh-desktop-frontend",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "build": "tsc && vite build",
     "dev": "vite",
+    "docs:check": "node ../scripts/check-doc-links.mjs",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

@@ -4,10 +4,96 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestResolveDSHCommandUsesOfflineRuntime(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "中文 安装目录", "offline-runtime")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	version := "0.1.0-rc.6"
+	nodePath := filepath.Join(root, offlineNodeName())
+	dshPath := filepath.Join(root, "node_modules", "@deepseek-ai", "dsh", "lib", "bin.js")
+	if err := os.MkdirAll(filepath.Dir(dshPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for path, content := range map[string]string{
+		filepath.Join(root, "dsh-version.txt"): version + "\n",
+		nodePath:                               "node",
+		dshPath:                                "dsh",
+	} {
+		if err := os.WriteFile(path, []byte(content), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv(offlineRuntimeEnv, root)
+
+	command, err := resolveDSHCommand(version)
+	if err != nil {
+		t.Fatalf("resolveDSHCommand() error = %v", err)
+	}
+	if command.mode != "offline" || command.nodePath != nodePath || command.commandPath != nodePath {
+		t.Fatalf("unexpected offline command: %#v", command)
+	}
+	if len(command.prefix) != 1 || command.prefix[0] != dshPath {
+		t.Fatalf("unexpected offline prefix: %#v", command.prefix)
+	}
+}
+
+func TestResolveDSHCommandRejectsOfflineVersionMismatch(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "dsh-version.txt"), []byte("0.1.0-rc.5\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(offlineRuntimeEnv, root)
+
+	_, err := resolveDSHCommand("0.1.0-rc.6")
+	if err == nil || !strings.Contains(err.Error(), "版本") {
+		t.Fatalf("expected version mismatch, got %v", err)
+	}
+}
+
+func TestOfflineRuntimeStartsWeb(t *testing.T) {
+	if os.Getenv("DSH_DESKTOP_RUN_OFFLINE_INTEGRATION") != "1" {
+		t.Skip("set DSH_DESKTOP_RUN_OFFLINE_INTEGRATION=1 to run the packaged runtime")
+	}
+	root := strings.TrimSpace(os.Getenv(offlineRuntimeEnv))
+	if root == "" {
+		t.Fatal("DSH_DESKTOP_OFFLINE_ROOT is required")
+	}
+	versionData, err := os.ReadFile(filepath.Join(root, "dsh-version.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	workingDir := filepath.Join(t.TempDir(), "中文 工作区")
+	if err := os.MkdirAll(workingDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	process, err := Start(context.Background(), Config{
+		Version:    strings.TrimSpace(string(versionData)),
+		WorkingDir: workingDir,
+		ProxyMode:  "disabled",
+	})
+	if err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	t.Cleanup(func() {
+		_ = process.Stop(5 * time.Second)
+	})
+	if process.RuntimeMode() != "offline" {
+		t.Fatalf("RuntimeMode() = %q, want offline", process.RuntimeMode())
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	if err := process.WaitReady(ctx, 90*time.Second); err != nil {
+		t.Fatalf("WaitReady() error = %v", err)
+	}
+}
 
 func TestParseNodeVersion(t *testing.T) {
 	tests := []struct {
