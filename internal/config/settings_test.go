@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"path/filepath"
 	"testing"
 )
@@ -44,5 +45,29 @@ func TestSettingsRoundTripInChineseAndSpacePath(t *testing.T) {
 	}
 	if got != want {
 		t.Fatalf("配置往返不一致：got %#v, want %#v", got, want)
+	}
+}
+
+func TestSaveFileIfUnchangedRejectsStaleWriter(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	initial := Default()
+	updated := Settings{ProxyMode: proxyModeCustom, ProxyURL: "http://127.0.0.1:10808"}
+	other := Settings{ProxyMode: proxyModeDisabled}
+
+	if err := saveFile(path, initial); err != nil {
+		t.Fatalf("初始配置保存失败：%v", err)
+	}
+	if err := saveFileIfUnchanged(path, initial, updated); err != nil {
+		t.Fatalf("首次条件保存失败：%v", err)
+	}
+	if err := saveFileIfUnchanged(path, initial, other); !errors.Is(err, ErrConflict) {
+		t.Fatalf("预期检测到过期配置，得到：%v", err)
+	}
+	got, err := loadFile(path)
+	if err != nil {
+		t.Fatalf("读取最终配置失败：%v", err)
+	}
+	if got != updated {
+		t.Fatalf("过期写入不应覆盖新配置：got %#v, want %#v", got, updated)
 	}
 }

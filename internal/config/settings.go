@@ -16,6 +16,9 @@ const (
 	proxyModeDisabled = "disabled"
 )
 
+// ErrConflict 表示另一个桌面实例已经修改了配置，当前实例不能覆盖它。
+var ErrConflict = errors.New("配置已被其他实例修改，请重新加载后再保存")
+
 type Settings struct {
 	ProxyMode string `json:"proxyMode"`
 	ProxyURL  string `json:"proxyUrl,omitempty"`
@@ -90,7 +93,42 @@ func Save(settings Settings) error {
 	return saveFile(path, settings)
 }
 
+// SaveIfUnchanged 仅在磁盘配置仍等于 expected 时保存，避免多开实例静默覆盖彼此的设置。
+func SaveIfUnchanged(expected, settings Settings) error {
+	path, err := Path()
+	if err != nil {
+		return err
+	}
+	return saveFileIfUnchanged(path, expected, settings)
+}
+
 func saveFile(path string, settings Settings) error {
+	lock, err := acquireFileLock(path)
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
+	return writeFile(path, settings)
+}
+
+func saveFileIfUnchanged(path string, expected, settings Settings) error {
+	lock, err := acquireFileLock(path)
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
+
+	current, err := loadFile(path)
+	if err != nil {
+		return err
+	}
+	if current != expected {
+		return ErrConflict
+	}
+	return writeFile(path, settings)
+}
+
+func writeFile(path string, settings Settings) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return fmt.Errorf("无法创建配置目录：%w", err)
 	}

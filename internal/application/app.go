@@ -154,7 +154,10 @@ func (a *App) SaveSettings(settings config.Settings) (Status, error) {
 	if err != nil {
 		return a.GetStatus(), err
 	}
-	if err := config.Save(normalized); err != nil {
+	a.mu.Lock()
+	expected := a.settings
+	a.mu.Unlock()
+	if err := config.SaveIfUnchanged(expected, normalized); err != nil {
 		return a.GetStatus(), err
 	}
 	a.mu.Lock()
