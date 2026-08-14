@@ -20,6 +20,12 @@ Copyright (c) 2026 starline and contributors
 
 MIT License 不提供任何明示或默示担保。作者或版权所有者不对因软件或软件使用产生的索赔、损害或其他责任负责。这里的中文说明不会修改、缩减或扩张 MIT License 原文授予的权利。
 
+## 项目图标与品牌资产
+
+`build/appicon.png`、`build/windows/icon.ico` 及其生成脚本属于项目自有资产，使用星轨 `S`、终端提示符与四角星组成的原创几何设计，没有复制或描摹 DeepSeek、Wails、Node.js 或其他第三方徽标。这些文件随项目按 MIT License 提供，设计含义和再生成方式见 [品牌与应用图标](docs/BRANDING.md)。
+
+上述说明不转让也不授予任何第三方名称或商标权，不构成对所有司法辖区商标注册结果的保证。
+
 ## 第三方软件与内容
 
 本项目是 DeepSeek Harness 的独立桌面宿主，不是 DeepSeek 官方产品，也不代表双方存在隶属、背书或商业合作关系。

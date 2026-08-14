@@ -11,5 +11,7 @@
 /offline-runtime/node
 /offline-runtime/LICENSE-node.txt
 /offline-runtime/dsh-version.txt
+__pycache__/
+*.py[cod]
 *.log
 .DS_Store

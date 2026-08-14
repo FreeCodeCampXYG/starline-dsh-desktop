@@ -5,6 +5,7 @@
 | 文档 | 面向对象 | 维护范围 |
 | --- | --- | --- |
 | [架构说明](ARCHITECTURE.md) | 开发者 | 分层、启动序列、信任边界、目录职责 |
+| [品牌与应用图标](BRANDING.md) | 使用者/维护者 | 图标含义、权利边界、资源格式与再生成 |
 | [开发与构建](BUILDING.md) | 开发者 | 固定工具链、本地命令、原生包构建 |
 | [发布流程](RELEASING.md) | 维护者 | 版本、标签、六平台产物、签名边界 |
 | [故障排查](TROUBLESHOOTING.md) | 使用者/维护者 | 安装目录、Node、代理、日志、平台问题 |
@@ -19,8 +20,9 @@
 
 1. 文件职责、启动序列或边界变化时更新 `ARCHITECTURE.md`；
 2. 命令、工具版本或目录变化时更新 `BUILDING.md`；
-3. 产物、标签或 Actions 变化时更新 `RELEASING.md`；
-4. 用户可见行为同时更新根 README 和 `TROUBLESHOOTING.md`；
-5. 不复制整段规范到多个文件，优先链接到唯一说明；
-6. 作者、版权所有者、分发内容或第三方依赖变化时更新根目录 `AUTHORS.md`、`LICENSE` 与 `NOTICE.md`；
-7. 运行 `npm --prefix frontend run docs:check`，拒绝指向不存在文件的本地链接。
+3. 图标含义、源文件或生成方式变化时更新 `BRANDING.md`；
+4. 产物、标签或 Actions 变化时更新 `RELEASING.md`；
+5. 用户可见行为同时更新根 README 和 `TROUBLESHOOTING.md`；
+6. 不复制整段规范到多个文件，优先链接到唯一说明；
+7. 作者、版权所有者、分发内容或第三方依赖变化时更新根目录 `AUTHORS.md`、`LICENSE` 与 `NOTICE.md`；
+8. 运行 `npm --prefix frontend run docs:check`，拒绝指向不存在文件的本地链接。

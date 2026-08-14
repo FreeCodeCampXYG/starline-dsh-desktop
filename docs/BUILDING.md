@@ -7,6 +7,7 @@
 - npm
 - Wails CLI 2.14.0
 - 平台原生 C/C++ 工具链与 WebView 开发包
+- Python 与固定 Pillow 版本（仅重新生成应用图标时需要，不是程序运行依赖）
 
 ```bash
 go install github.com/wailsapp/wails/v2/cmd/wails@v2.14.0
@@ -68,12 +69,23 @@ go test -tags webkit2_41 ./...
 go vet -tags webkit2_41 ./...
 ```
 
+## 重新生成应用图标
+
+图标设计、权利边界和各文件用途见 [品牌与应用图标](BRANDING.md)。生成器会同时写入 Wails 主 PNG 和 Windows 多尺寸 ICO：
+
+```powershell
+python -m pip install -r scripts/requirements-icons.txt
+python scripts/generate-app-icons.py
+```
+
+生成后至少检查 16/24/32 像素可读性，并执行一次 Windows Wails 构建；仅替换 `appicon.png` 不会覆盖已经存在的 `build/windows/icon.ico`。
+
 ## Windows
 
 安装 Go、Node.js、Wails、WebView2 和 NSIS，并确保 `makensis` 在 PATH：
 
 ```powershell
-.\scripts\build-windows.ps1 -Version 0.2.3
+.\scripts\build-windows.ps1 -Version 0.2.4
 ```
 
 额外构建 Windows x64 离线便携包：
@@ -105,7 +117,7 @@ go vet -tags webkit2_41 ./...
 手动构建：
 
 ```powershell
-wails build -clean -trimpath -platform windows/amd64 -nsis -installscope user -ldflags "-s -w -H=windowsgui -X main.version=0.2.3"
+wails build -clean -trimpath -platform windows/amd64 -nsis -installscope user -ldflags "-s -w -H=windowsgui -X main.version=0.2.4"
 ```
 
 Windows ARM64 必须在 ARM64 Windows 或受支持的原生 runner 构建。仓库 Release 使用 `windows-11-arm`，不把 x64 交叉编译结果当作完整平台验证。
@@ -116,7 +128,7 @@ Windows ARM64 必须在 ARM64 Windows 或受支持的原生 runner 构建。仓�
 
 ```bash
 npm --prefix frontend ci
-wails build -clean -trimpath -platform darwin/arm64 -ldflags "-s -w -X main.version=0.2.3"
+wails build -clean -trimpath -platform darwin/arm64 -ldflags "-s -w -X main.version=0.2.4"
 ```
 
 Intel 使用 `darwin/amd64`。GitHub Actions 分别使用 `macos-15-intel` 与 `macos-15` 原生 runner。
@@ -137,7 +149,7 @@ sudo apt-get install -y --no-install-recommends \
 
 ```bash
 npm --prefix frontend ci
-wails build -clean -trimpath -platform linux/amd64 -tags webkit2_41 -ldflags "-s -w -X main.version=0.2.3"
+wails build -clean -trimpath -platform linux/amd64 -tags webkit2_41 -ldflags "-s -w -X main.version=0.2.4"
 ```
 
 ARM64 使用 `linux/arm64`，GitHub Actions 在 `ubuntu-24.04-arm` 原生 runner 上构建。

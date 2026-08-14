@@ -16,6 +16,9 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+//go:embed build/appicon.png
+var appIcon []byte
+
 var (
 	version           = "dev"
 	defaultDSHVersion = "0.1.0-rc.6"
@@ -50,9 +53,11 @@ func main() {
 			About: &mac.AboutInfo{
 				Title:   "Starline DSH Desktop",
 				Message: "A thin desktop host for DeepSeek Harness.",
+				Icon:    appIcon,
 			},
 		},
 		Linux: &linux.Options{
+			Icon:        appIcon,
 			ProgramName: "Starline DSH Desktop",
 		},
 	})

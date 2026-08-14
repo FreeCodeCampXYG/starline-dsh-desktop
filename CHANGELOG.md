@@ -8,6 +8,14 @@
 
 - Windows 代码签名与 macOS Developer ID 签名、公证。
 
+## [0.2.4] - 2026-08-14
+
+### 新增
+
+- 使用项目原创“星轨终端”图标替换 Wails 默认 `W`/旧图标，表达 Starline、终端与 DSH 宿主含义。
+- 提供 1024×1024 RGBA 主图、Windows 七档多尺寸 ICO、可审计生成脚本及品牌/权利边界文档。
+- Go 宿主显式嵌入主图，并用于 Linux 窗口与 macOS About 面板，避免平台回退到默认图标。
+
 ## [0.2.3] - 2026-08-14
 
 ### 修复
@@ -53,7 +61,8 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.0...v0.2.1

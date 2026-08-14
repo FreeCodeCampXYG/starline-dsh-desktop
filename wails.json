@@ -13,7 +13,7 @@
   "info": {
     "companyName": "Starline",
     "productName": "Starline DSH Desktop",
-    "productVersion": "0.2.3",
+    "productVersion": "0.2.4",
     "copyright": "Copyright (c) 2026 starline and contributors",
     "comments": "Starline desktop host for DeepSeek Harness."
   }

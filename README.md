@@ -1,5 +1,9 @@
 # Starline DSH Desktop
 
+<p align="center">
+  <img src="build/appicon.png" alt="Starline DSH Desktop 星轨终端图标" width="112">
+</p>
+
 [![CI](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/workflows/ci.yml)
 [![Release](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/workflows/release.yml/badge.svg)](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/workflows/release.yml)
 [![License](https://img.shields.io/github/license/FreeCodeCampXYG/starline-dsh-desktop)](LICENSE)
@@ -159,6 +163,7 @@ Node 是 DSH 的运行时。普通 Setup/ZIP 为了保持小体积，继续使�
 - [文档导航](docs/README.md)
 - [开发与跨平台构建](docs/BUILDING.md)
 - [架构与安全边界](docs/ARCHITECTURE.md)
+- [品牌与应用图标](docs/BRANDING.md)
 - [发布流程](docs/RELEASING.md)
 - [开源工程参考](docs/OPEN_SOURCE_REFERENCES.md)
 - [贡献指南](CONTRIBUTING.md)
