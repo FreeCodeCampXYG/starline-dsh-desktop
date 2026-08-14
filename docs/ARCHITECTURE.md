@@ -61,16 +61,16 @@ Wails application
 3. 宿主优先查找与可执行文件同包的 `offline-runtime/`；macOS 在应用包 `Contents/Resources` 中查找。
 4. 离线运行时必须同时包含匹配版本文件、Node 可执行文件和 DSH 入口，缺损或版本不一致时明确失败，不静默联网回退。
 5. 未发现离线运行时时，宿主查找系统 Node.js 并验证版本；Windows 直接让 Node 执行 `npx-cli.js`，Unix 使用 PATH 中的 `npx`。
-6. 操作系统分配可用 loopback 端口，宿主关闭临时监听并将端口传给 DSH。
+6. 宿主向 DSH 传入 `--port 0`，由 DSH 保持 listener 所有权并选择可用 loopback 端口；宿主不再预占后释放端口。
 7. 子进程执行固定版本的 `@deepseek-ai/dsh`。普通包使用：
 
    ```text
-   npx --yes --package=@deepseek-ai/dsh@<version> dsh web --host 127.0.0.1 --port <port>
+   npx --yes --package=@deepseek-ai/dsh@<version> dsh web --host 127.0.0.1 --port 0
    ```
 
    `offline-full` 直接执行 `offline-runtime/node[.exe] offline-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js web ...`，不调用 npm registry。
 
-8. 宿主使用禁用代理的 HTTP client 轮询本地地址，并同时验证状态码和 DSH 页面标题。
+8. 宿主从 DSH 输出的 `dsh web: http://...` 行解析实际地址，只接受通过 loopback 安全校验的 HTTP URL，再使用禁用代理的 HTTP client 轮询并验证状态码和 DSH 页面标题。
 9. 就绪后前端 iframe 导航到该 loopback URL。
 
 ## 安全边界
@@ -101,6 +101,8 @@ Wails application
 
 配置写入先完成临时文件，再替换目标。Windows 替换旧配置前需要显式移除旧文件，这是标准库跨平台语义差异。
 
+宿主当前不设置 `DSH_HOME`。桌面端与命令行 DSH 因而遵循上游默认用户数据目录，共享状态；`offline-full` 的“便携”只表示程序和运行时可以整体移动，不表示工作区、会话和账户配置也随包移动。
+
 ## 安装目录与路径语义
 
 - Windows Setup 的目录页允许选择任意当前用户可写目录，并通过注册表 `InstallLocation` 记住选择；
@@ -119,3 +121,15 @@ Wails application
 - npm 包本身的自动更新策略。
 
 如果功能需要复制上述模块，应先判断它是否应提交到 DSH 上游。
+
+## 当前兼容性边界
+
+- 官方 DSH Web UI 通过 iframe 承载；若上游将来启用禁止嵌入的 CSP 或 `X-Frame-Options`，需要改用浏览器回退或与上游协调；
+- Web/CLI 启动检查不等于 Node 原生扩展或工具调用检查；平台缺陷、离线包 PTY 状态和设备证据统一记录在 [已知问题与平台支持边界](KNOWN_ISSUES.md)。
+
+## 工具与操作系统权限
+
+- Wails 宿主只负责启动 DSH，不为 DSH 工具提权，也不移除上游审批或工作区策略；
+- `node-pty` 提供终端传输能力，不等同于管理员、UAC、root、全盘文件访问或沙箱逃逸能力；
+- DSH 子进程继承当前桌面用户的操作系统权限和经过代理设置处理的环境变量；系统 ACL、macOS 隐私权限、Linux 文件模式和安全软件仍然生效；
+- 宿主只回收自己启动的 DSH 进程树，不以更高权限扫描或终止其他用户进程。

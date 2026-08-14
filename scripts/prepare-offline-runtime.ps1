@@ -9,14 +9,10 @@ $runtimeRoot = Join-Path $repositoryRoot 'offline-runtime'
 $packageJson = Get-Content -LiteralPath (Join-Path $runtimeRoot 'package.json') -Raw | ConvertFrom-Json
 $lockedVersion = $packageJson.dependencies.'@deepseek-ai/dsh'
 $nodeVersion = (Get-Content -LiteralPath (Join-Path $runtimeRoot 'node-version.txt') -Raw).Trim()
+$verifier = Join-Path $PSScriptRoot 'verify-offline-runtime.mjs'
 
 if ($lockedVersion -ne $DSHVersion) {
     throw "offline-runtime/package.json pins DSH $lockedVersion, expected $DSHVersion."
-}
-
-npm --prefix $runtimeRoot ci --omit=dev --ignore-scripts --workspaces=false
-if ($LASTEXITCODE -ne 0) {
-    throw "npm ci failed with exit code $LASTEXITCODE."
 }
 
 $nodeSource = (Get-Command node -ErrorAction Stop).Source
@@ -24,6 +20,30 @@ $actualNodeVersion = (& $nodeSource --version).Trim().TrimStart('v')
 if ($actualNodeVersion -ne $nodeVersion) {
     throw "Node $actualNodeVersion is active, expected pinned Node $nodeVersion."
 }
+
+npm --prefix $runtimeRoot ci --omit=dev --ignore-scripts --workspaces=false
+if ($LASTEXITCODE -ne 0) {
+    throw "npm ci failed with exit code $LASTEXITCODE."
+}
+
+& $nodeSource $verifier preflight $runtimeRoot
+if ($LASTEXITCODE -ne 0) {
+    throw "Offline lifecycle-script preflight failed with exit code $LASTEXITCODE."
+}
+
+# npm ci keeps every lifecycle script disabled. Only the pinned and hash-checked
+# node-pty install/postinstall pair is allowed to run here.
+npm --prefix $runtimeRoot rebuild node-pty --foreground-scripts --ignore-scripts=false --workspaces=false
+if ($LASTEXITCODE -ne 0) {
+    throw "Approved node-pty rebuild failed with exit code $LASTEXITCODE."
+}
+
+$permissionFix = Join-Path $runtimeRoot 'node_modules\@deepseek-ai\dsh-subprocess-local\scripts\ensure-spawn-helper.mjs'
+& $nodeSource $permissionFix
+if ($LASTEXITCODE -ne 0) {
+    throw "Approved node-pty permission repair failed with exit code $LASTEXITCODE."
+}
+
 $nodeRoot = Split-Path -Parent $nodeSource
 $licenseSource = Join-Path $nodeRoot 'LICENSE'
 Copy-Item -LiteralPath $nodeSource -Destination (Join-Path $runtimeRoot 'node.exe') -Force
@@ -52,6 +72,11 @@ $dshEntry = Join-Path $runtimeRoot 'node_modules\@deepseek-ai\dsh\lib\bin.js'
 & (Join-Path $runtimeRoot 'node.exe') $dshEntry --version
 if ($LASTEXITCODE -ne 0) {
     throw "Bundled DSH smoke test failed with exit code $LASTEXITCODE."
+}
+
+& (Join-Path $runtimeRoot 'node.exe') $verifier verify $runtimeRoot
+if ($LASTEXITCODE -ne 0) {
+    throw "Bundled node-pty functional test failed with exit code $LASTEXITCODE."
 }
 
 $payloadBytes = (

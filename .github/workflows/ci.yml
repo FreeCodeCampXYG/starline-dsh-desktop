@@ -70,8 +70,8 @@ jobs:
 
       - name: Verify offline DSH dependency closure
         run: |
-          npm --prefix offline-runtime ci --omit=dev --ignore-scripts --workspaces=false
-          node offline-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js --version
+          DSH_VERSION="$(node -p "require('./offline-runtime/package.json').dependencies['@deepseek-ai/dsh']")"
+          bash scripts/prepare-offline-runtime.sh "$DSH_VERSION"
 
   native-build:
     name: Build ${{ matrix.name }}
@@ -111,7 +111,7 @@ jobs:
             build_tags: webkit2_41
             extra_ldflags: ""
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -129,7 +129,9 @@ jobs:
         with:
           node-version-file: offline-runtime/node-version.txt
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: |
+            frontend/package-lock.json
+            offline-runtime/package-lock.json
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
@@ -151,3 +153,17 @@ jobs:
             args+=(-tags "${{ matrix.build_tags }}")
           fi
           wails "${args[@]}"
+
+      - name: Prepare and function-test Windows offline runtime
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dshVersion = node -p "require('./offline-runtime/package.json').dependencies['@deepseek-ai/dsh']"
+          ./scripts/prepare-offline-runtime.ps1 -DSHVersion $dshVersion
+
+      - name: Prepare and function-test macOS/Linux offline runtime
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          DSH_VERSION="$(node -p "require('./offline-runtime/package.json').dependencies['@deepseek-ai/dsh']")"
+          bash scripts/prepare-offline-runtime.sh "$DSH_VERSION"

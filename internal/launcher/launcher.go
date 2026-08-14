@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -66,13 +65,6 @@ func Start(_ context.Context, config Config) (*Process, error) {
 		urlReady:    make(chan struct{}),
 		done:        make(chan struct{}),
 	}
-	port, err := availableLoopbackPort()
-	if err != nil {
-		_ = logFile.Close()
-		return nil, fmt.Errorf("无法选择本地监听端口：%w", err)
-	}
-	process.url = "http://127.0.0.1:" + strconv.Itoa(port)
-	process.urlOnce.Do(func() { close(process.urlReady) })
 	lineSink := &lineWriter{onLine: process.inspectLine}
 	writer := io.MultiWriter(logFile, lineSink)
 	if command.mode == "offline" {
@@ -86,7 +78,7 @@ func Start(_ context.Context, config Config) (*Process, error) {
 		"--host",
 		"127.0.0.1",
 		"--port",
-		strconv.Itoa(port),
+		"0",
 	}...)
 	cmd := exec.Command(command.commandPath, args...)
 	cmd.Dir = config.WorkingDir

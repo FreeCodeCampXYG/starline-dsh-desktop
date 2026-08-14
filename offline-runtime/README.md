@@ -2,7 +2,7 @@
 
 This directory defines the pinned DSH production dependency closure used only by `offline-full` release artifacts.
 
-Release jobs install it with the committed lock file on each native runner, use the Node version pinned in `node-version.txt`, copy the matching Node executable and verified Node license into this directory, smoke-test the DSH CLI, and then place the directory next to the desktop executable or inside the macOS app bundle.
+Release jobs install it with the committed lock file and all lifecycle scripts disabled. They then verify the approved package versions, lockfile integrity values, lifecycle commands, and script hashes before rebuilding only `node-pty` and running DSH's reviewed spawn-helper permission repair. Each native runner uses the Node version pinned in `node-version.txt`, performs a real PTY shell spawn, and repeats the functional check after unpacking the final archive.
 
 Generated files are intentionally ignored:
 

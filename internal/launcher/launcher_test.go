@@ -169,6 +169,19 @@ func TestInspectLineAcceptsOnlyDSHLoopbackURL(t *testing.T) {
 	}
 }
 
+func TestInspectLineRejectsNonLoopbackAnnouncement(t *testing.T) {
+	process := &Process{urlReady: make(chan struct{})}
+	process.inspectLine("dsh web: http://example.com:41234/")
+	if process.URL() != "" {
+		t.Fatalf("unexpected unsafe URL: %s", process.URL())
+	}
+	select {
+	case <-process.urlReady:
+		t.Fatal("unsafe URL marked process ready")
+	default:
+	}
+}
+
 func TestMergeNoProxyPreservesUserValues(t *testing.T) {
 	environment := mergeNoProxy(
 		[]string{"PATH=/bin", "no_proxy=example.com,localhost", "HTTP_PROXY=http://proxy"},

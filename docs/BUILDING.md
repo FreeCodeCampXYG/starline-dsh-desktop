@@ -22,12 +22,24 @@ npm --prefix frontend ci
 
 仓库使用 `package-lock.json`。CI、Release 和正式构建都使用 `npm ci`，不在构建时更新依赖解析结果。
 
-离线运行时有独立锁文件：
+离线运行时有独立锁文件。使用平台准备脚本，不要手工只运行 `npm ci --ignore-scripts`：
+
+```powershell
+.\scripts\prepare-offline-runtime.ps1 -DSHVersion 0.1.0-rc.6
+```
 
 ```bash
-npm --prefix offline-runtime ci --omit=dev --ignore-scripts --workspaces=false
-node offline-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js --version
+bash scripts/prepare-offline-runtime.sh 0.1.0-rc.6
 ```
+
+准备脚本采用显式白名单，而不是开放所有依赖脚本：
+
+1. `npm ci --ignore-scripts` 安装锁定依赖；
+2. `verify-offline-runtime.mjs preflight` 核对包版本、lockfile integrity、生命周期命令和已审查脚本 SHA-256；
+3. 只重建 `node-pty`，再执行锁定 DSH 提供的 `ensure-spawn-helper.mjs`；
+4. 使用包内 Node 真实启动平台 Shell，并核对输出和退出码。
+
+新增或升级白名单包时必须重新审查脚本并显式更新校验值。CLI `--version` 成功只证明 JavaScript 入口可启动，不能替代功能测试。v0.2.4 已发布资产的影响范围见 [已知问题与平台支持边界](KNOWN_ISSUES.md)。
 
 `offline-runtime/node_modules`、Node 可执行文件、Node 许可证副本和 `dsh-version.txt` 都是构建产物，不提交到仓库。
 
@@ -62,6 +74,17 @@ go test ./...
 go vet ./...
 ```
 
+上述验证覆盖 Go 宿主和前端，不覆盖离线 Node 依赖的运行时完整性。离线包还必须在目标平台验证：
+
+1. 包内 Node 的平台和架构正确；
+2. DSH CLI 与 Web 页面能够启动；
+3. `sharp`、`koffi`、`node-pty` 等原生依赖能够从包内路径加载；
+4. `node-pty` 实际启动平台 Shell，输出唯一测试标记并以退出码 0 结束；
+5. macOS helper 保留可执行位，Linux 归档包含当前架构的 `pty.node`；
+6. 测试对象是重新解开的最终 ZIP/TAR.GZ/安装包，而不只是打包前目录。
+
+只检查 HTTP 200、页面标题或 `dsh --version` 属于启动证据，不能替代功能证据。
+
 Linux 使用 WebKitGTK 4.1 build tag：
 
 ```bash
@@ -91,7 +114,7 @@ python scripts/generate-app-icons.py
 额外构建 Windows x64 离线便携包：
 
 ```powershell
-.\scripts\build-windows.ps1 -Version 0.1.1 -OfflineFull
+.\scripts\build-windows.ps1 -Version 0.2.4 -OfflineFull
 ```
 
 脚本依次执行：
@@ -170,3 +193,5 @@ ARM64 使用 `linux/arm64`，GitHub Actions 在 `ubuntu-24.04-arm` 原生 runner
 各目标在对应架构的原生 runner 上构建。矩阵 `fail-fast: false`，一个平台失败时其他平台仍给出结果，但 tag Release 必须等待全部目标成功。
 
 Release 脚本在每个原生 runner 上用同一锁文件安装平台适配的可选依赖，并复制该 runner 的 Node 24.19.0。普通包不受体积影响；离线包按平台单独下载，不把六个平台运行时合并在一个文件中。
+
+v0.2.4 的六个平台构建和 Web 启动检查虽为绿色，但当时没有白名单原生准备和 PTY 功能检查，因此 macOS/Linux 离线包不满足当前发布门槛。当前 `main` 已在六个原生 runner 增加真实 `node-pty.spawn()`；修复必须由递增版本交付，不能移动已公开 tag。

@@ -50,7 +50,7 @@ jobs:
             platform: linux/arm64
             asset: starline-dsh-desktop-linux-arm64
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
+    timeout-minutes: 50
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -184,6 +184,17 @@ jobs:
           }
           Copy-Item -LiteralPath $installers[0].FullName -Destination $setup
           tar.exe -a -c -f $offline -C build/bin starline-dsh-desktop.exe -C ../.. LICENSE NOTICE.md AUTHORS.md offline-runtime
+          $verifyRoot = Join-Path $env:RUNNER_TEMP ("starline-offline-verify-" + [guid]::NewGuid().ToString('N'))
+          New-Item -ItemType Directory -Path $verifyRoot | Out-Null
+          tar.exe -xf $offline -C $verifyRoot
+          if ($LASTEXITCODE -ne 0) {
+            throw "Final Windows offline archive extraction failed with exit code $LASTEXITCODE."
+          }
+          $verifyRuntime = Join-Path $verifyRoot 'offline-runtime'
+          & (Join-Path $verifyRuntime 'node.exe') scripts/verify-offline-runtime.mjs verify $verifyRuntime
+          if ($LASTEXITCODE -ne 0) {
+            throw "Final Windows offline archive verification failed with exit code $LASTEXITCODE."
+          }
           foreach ($artifact in @($portable, $setup, $offline)) {
             $hash = (Get-FileHash -LiteralPath $artifact -Algorithm SHA256).Hash.ToLower()
             $name = [IO.Path]::GetFileName($artifact)
@@ -207,6 +218,10 @@ jobs:
           mkdir -p "$offline_resources"
           cp -R offline-runtime/. "$offline_resources/"
           ditto -c -k --sequesterRsrc --keepParent build/bin/starline-dsh-desktop.app "$offline_artifact"
+          verify_root="$(mktemp -d "$RUNNER_TEMP/starline-offline-verify.XXXXXX")"
+          ditto -x -k "$offline_artifact" "$verify_root"
+          verify_runtime="$verify_root/starline-dsh-desktop.app/Contents/Resources/offline-runtime"
+          "$verify_runtime/node" scripts/verify-offline-runtime.mjs verify "$verify_runtime"
           for package in "$artifact" "$offline_artifact"; do
             shasum -a 256 "$package" | sed 's#release/##' > "$package.sha256"
           done
@@ -225,6 +240,10 @@ jobs:
           cp LICENSE NOTICE.md AUTHORS.md "$offline_stage/"
           cp -a offline-runtime "$offline_stage/"
           tar -C "$offline_stage" -czf "$offline_artifact" starline-dsh-desktop LICENSE NOTICE.md AUTHORS.md offline-runtime
+          verify_root="$(mktemp -d "$RUNNER_TEMP/starline-offline-verify.XXXXXX")"
+          tar -xzf "$offline_artifact" -C "$verify_root"
+          verify_runtime="$verify_root/offline-runtime"
+          "$verify_runtime/node" scripts/verify-offline-runtime.mjs verify "$verify_runtime"
           for package in "$artifact" "$offline_artifact"; do
             sha256sum "$package" | sed 's#release/##' > "$package.sha256"
           done

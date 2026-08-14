@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+### 修复
+
+- 离线运行时继续默认禁用全部依赖脚本，只对白名单校验通过的 `node-pty` 构建和 DSH 官方 helper 权限修复开放执行。
+- 六个原生平台增加真实 `node-pty.spawn()` Shell 测试，并在最终离线归档重新解包后复测原生文件、权限、输出和退出码。
+- DSH Web 改用 `--port 0` 并解析其实际公布的 loopback URL，移除宿主预占后释放端口的竞争窗口。
+
+### 文档
+
+- 新增各平台已确认缺陷、同构建逻辑推断、设备验证缺口和临时规避方案的统一说明。
+- 明确 v0.2.4 macOS/Linux `offline-full` 的 PTY 原生依赖问题，以及 CLI/Web 启动检查不能代替真实工具功能测试。
+- 补充 Windows ARM64、Linux 发行版兼容性、签名、公证、安装路径和便携数据边界。
+
 ### 计划
 
 - Windows 代码签名与 macOS Developer ID 签名、公证。

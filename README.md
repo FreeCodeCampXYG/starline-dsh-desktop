@@ -12,6 +12,10 @@ Starline DSH Desktop 是 [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 
 > 本项目是独立社区项目，与 DeepSeek 官方无隶属、背书或商业关系。DSH 仍处于开发者预览阶段，上游版本可能发生破坏性变化。
 
+> **v0.2.4 平台提示：** Windows x64 `offline-full` 已完成真实 PTY 抽查；macOS `offline-full` 存在 `spawn-helper` 权限缺陷，Linux `offline-full` 缺少可加载的 `node-pty` 原生绑定。需要终端、Shell 或 Bash 工具的 macOS/Linux 用户应暂用普通包。详情和未完成的设备验证见 [已知问题与平台支持边界](docs/KNOWN_ISSUES.md)。
+
+> 当前 `main` 已加入白名单原生依赖准备、六平台真实 PTY 测试和最终归档复测，但这些改动不会反向改变 v0.2.4 资产；请以新版本 Release 的矩阵结果为准。
+
 ## 功能
 
 - Windows、macOS、Linux 原生桌面窗口；
@@ -46,7 +50,7 @@ Starline DSH Desktop (Go + Wails)
 | npm / npx | 普通包需要；`offline-full` 启动时不使用 npm/npx |
 | Windows | Windows 10/11，WebView2 Runtime |
 | macOS | Intel 或 Apple Silicon，使用系统 WebKit |
-| Linux | GTK3、WebKitGTK 4.1 及其运行库 |
+| Linux | GTK3、WebKitGTK 4.1 及其运行库；普通包首次安装原生依赖时还可能需要 Python 3、make 和 C/C++ 编译器 |
 | 网络 | 普通包首次运行需要 npm registry；`offline-full` 不访问 npm，但模型服务等功能可能仍需网络 |
 
 当前默认启动 `@deepseek-ai/dsh@0.1.0-rc.6`。可用 `DSH_DESKTOP_DSH_VERSION` 临时覆盖，但正式 Release 仍以仓库固定版本为准。
@@ -66,7 +70,9 @@ Starline DSH Desktop (Go + Wails)
 
 ### macOS
 
-根据处理器下载 `macos-amd64`（Intel）或 `macos-arm64`（Apple Silicon）ZIP；无 npm 网络的机器选择同架构的 `offline-full.zip`。解压后将应用移动到 Applications。当前构建未进行 Developer ID 签名和 notarization，Gatekeeper 可能阻止首次打开。
+根据处理器下载 `macos-amd64`（Intel）或 `macos-arm64`（Apple Silicon）ZIP。解压后将应用移动到 Applications。当前构建未进行 Developer ID 签名和 notarization，Gatekeeper 可能阻止首次打开。
+
+v0.2.4 的 macOS `offline-full` 包不支持依赖 PTY 的终端/Shell 工具：ARM64 正式归档已确认 `spawn-helper` 缺少可执行位，Intel 包因相同打包逻辑也按受影响处理。需要这些能力时请使用普通包；同时要求完全离线和 PTY 时请等待修复版本。
 
 ### Linux
 
@@ -78,9 +84,9 @@ chmod +x starline-dsh-desktop
 ./starline-dsh-desktop
 ```
 
-离线机器选择同架构的 `offline-full.tar.gz`，目录结构和启动命令相同，但会多出 `offline-runtime/`。
+离线机器可以选择同架构的 `offline-full.tar.gz`，目录结构和启动命令相同，但会多出 `offline-runtime/`。v0.2.4 的 Linux x64 正式归档已确认缺少可加载的 `node-pty` 原生绑定，ARM64 因相同打包逻辑也按受影响处理；依赖终端/PTY 的功能不可用。
 
-`offline-full` 是独立可选产物，不会放进普通 Setup 或便携包。Windows x64 本地实测：普通 ZIP 约 4.3 MiB、Setup 约 6.0 MiB、完整离线 ZIP 约 113.6 MiB；离线运行时解压后约 334 MiB。各平台的准确体积以 Release 资产为准。
+`offline-full` 是独立可选产物，不会放进普通 Setup 或便携包。Windows x64 v0.2.4 参考值：普通 ZIP 约 4.3 MiB、Setup 约 6.0 MiB、完整离线 ZIP 约 113.6 MiB；完整离线包解压后超过 350 MiB，并包含数万个文件。各平台的准确体积以 Release 资产为准。
 
 不同发行版的 WebKitGTK 包名不同。Ubuntu 24.04 可安装：
 
@@ -156,11 +162,16 @@ Node 是 DSH 的运行时。普通 Setup/ZIP 为了保持小体积，继续使�
 
 正式 Release 不携带 Wails DevTools，这是预期的生产安全边界，不是代理或 DSH 页面故障。源码调试时运行 `wails dev`；DevTools 默认不弹窗，Windows/Linux 按 `Ctrl+Shift+F12`、macOS 按 `Fn+Command+Shift+F12` 手动打开。需要调试独立可执行文件时使用 `wails build -debug`。具体命令见 [开发与跨平台构建](docs/BUILDING.md#本地开发与-devtools)。
 
+### 修复终端后，Agent 就能无限制操作电脑吗？
+
+不能。`node-pty` 只是让 DSH 的终端/Shell 通道能够正常工作，不会授予管理员、UAC 或 root 权限，也不会绕过 DSH 自身的工具审批和工作区策略。桌面宿主不提权、不关闭系统安全机制，并以启动它的当前用户身份运行；文件、命令和其他工具最终仍受 DSH 当前模式、所选工作区、系统文件权限和安全软件约束。
+
 更多排错步骤见 [故障排查](docs/TROUBLESHOOTING.md)。
 
 ## 开发、构建与发布
 
 - [文档导航](docs/README.md)
+- [已知问题与平台支持边界](docs/KNOWN_ISSUES.md)
 - [开发与跨平台构建](docs/BUILDING.md)
 - [架构与安全边界](docs/ARCHITECTURE.md)
 - [品牌与应用图标](docs/BRANDING.md)
@@ -176,7 +187,7 @@ Node 是 DSH 的运行时。普通 Setup/ZIP 为了保持小体积，继续使�
 
 1. 外部 Node + 固定 DSH 版本的可靠跨平台桌面壳；
 2. 工作目录和 DSH 版本可视化配置；
-3. 可复现的可选离线运行时及完整第三方许可证清单；
+3. v0.3.0 评估把数万个离线依赖文件封装为单一 tarball，启动时校验 SHA-256 后原子解压，并补齐完整第三方许可证清单；
 4. Windows 代码签名、macOS Developer ID/notarization 与更新通道。
 
 路线图不承诺重写 DSH Agent、会话系统或插件内核。

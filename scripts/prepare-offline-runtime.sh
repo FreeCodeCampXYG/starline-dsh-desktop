@@ -12,13 +12,12 @@ repository_root="$(cd "$script_directory/.." && pwd)"
 runtime_root="$repository_root/offline-runtime"
 locked_version="$(node -p "require('$runtime_root/package.json').dependencies['@deepseek-ai/dsh']")"
 node_version="$(tr -d '[:space:]' <"$runtime_root/node-version.txt")"
+verifier="$repository_root/scripts/verify-offline-runtime.mjs"
 
 if [ "$locked_version" != "$dsh_version" ]; then
 	echo "offline-runtime/package.json pins DSH $locked_version, expected $dsh_version." >&2
 	exit 1
 fi
-
-npm --prefix "$runtime_root" ci --omit=dev --ignore-scripts --workspaces=false
 
 node_source="$(command -v node)"
 actual_node_version="$(node --version | sed 's/^v//')"
@@ -28,6 +27,14 @@ if [ "$actual_node_version" != "$node_version" ]; then
 fi
 node_directory="$(dirname "$node_source")"
 node_root="$(cd "$node_directory/.." && pwd)"
+
+npm --prefix "$runtime_root" ci --omit=dev --ignore-scripts --workspaces=false
+"$node_source" "$verifier" preflight "$runtime_root"
+
+# npm ci keeps every lifecycle script disabled. Only the pinned and hash-checked
+# node-pty install/postinstall pair is allowed to run here.
+npm --prefix "$runtime_root" rebuild node-pty --foreground-scripts --ignore-scripts=false --workspaces=false
+"$node_source" "$runtime_root/node_modules/@deepseek-ai/dsh-subprocess-local/scripts/ensure-spawn-helper.mjs"
 
 cp "$node_source" "$runtime_root/node"
 chmod +x "$runtime_root/node"
@@ -47,4 +54,5 @@ fi
 printf '%s\n' "$dsh_version" >"$runtime_root/dsh-version.txt"
 
 "$runtime_root/node" "$runtime_root/node_modules/@deepseek-ai/dsh/lib/bin.js" --version
+"$runtime_root/node" "$verifier" verify "$runtime_root"
 echo "Prepared Unix offline runtime: $(du -sk "$runtime_root" | awk '{print $1}') KiB"

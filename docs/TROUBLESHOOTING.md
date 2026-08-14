@@ -1,5 +1,7 @@
 # 故障排查
 
+> 先查看 [已知问题与平台支持边界](KNOWN_ISSUES.md)。v0.2.4 的 macOS/Linux `offline-full` 能通过 Web 启动检查，但这不能证明 PTY、终端和 Shell 工具可用。
+
 ## 日志位置
 
 在应用中选择 **桌面工具 → 打开日志目录**。默认位置由系统用户缓存目录决定：
@@ -37,7 +39,7 @@ npx --version
 
 需要 Node `22.19+` 或 `24+`。Node 23 不在 DSH 支持范围内。图形应用继承的 PATH 可能与终端不同；macOS/Linux 从桌面启动时尤其需要确认 Node 安装在系统可见位置。
 
-如果电脑不能安装 Node 或访问 npm，请下载与操作系统及架构一致的 `offline-full` 包。离线包正常启动时，桌面顶部会显示“离线运行时”。
+如果电脑不能安装 Node 或访问 npm，可以下载与操作系统及架构一致的 `offline-full` 包。离线包正常启动时，桌面顶部会显示“离线运行时”。但 v0.2.4 的 macOS/Linux 离线包存在 PTY 原生依赖缺陷；如果工作流需要终端或 Shell，请不要把它作为完整替代方案。
 
 ## 离线运行时损坏或版本不一致
 
@@ -64,7 +66,7 @@ npx --yes --package=@deepseek-ai/dsh@0.1.0-rc.6 dsh web
 - npm 进程仍在首次安装依赖；
 - DSH 上游版本改变了启动行为；
 - 安全软件阻止 Node 监听 loopback；
-- 选中的端口在关闭临时 listener 后被其他进程抢占；
+- v0.2.4 选中的端口在关闭临时 listener 后被其他进程抢占；当前 `main` 已改为 DSH `--port 0`；
 - DSH 进程提前退出。
 
 请保留完整启动日志并重试一次。如果浏览器直接运行 DSH 正常而桌面端失败，向本仓库报告。
@@ -93,6 +95,14 @@ npx --yes --package=@deepseek-ai/dsh@0.1.0-rc.6 dsh web
 
 未签名/未 notarize 的构建可能被 Gatekeeper 阻止。开发者可在本机重新构建。不要建议普通用户永久关闭 Gatekeeper；正式分发应完成签名和公证。
 
+仅在确认文件来自本仓库 Release 并核对 SHA-256 后，使用 Finder 的“打开”或系统“隐私与安全性”确认。当前没有 DMG，也没有签名安装器。
+
+## macOS 离线包的终端或 Shell 工具失败
+
+v0.2.4 ARM64 `offline-full` 正式 ZIP 中，`offline-runtime/node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper` 的权限是 `0644`，不能作为可执行文件启动。Intel 包使用相同安装逻辑，当前也按受影响处理。
+
+典型表现包括终端/PTY 工具打不开、权限被拒绝，或者 Web UI 正常但调用 Shell 后失败。临时方案是改用普通包并让 npm 正常执行依赖安装脚本；完全离线且必须使用 PTY 时，请等待修复版本。不要用全局关闭系统安全策略的方式规避。
+
 ## Linux 缺少共享库
 
 检查：
@@ -102,6 +112,30 @@ ldd ./starline-dsh-desktop | grep 'not found'
 ```
 
 安装 GTK3 和 WebKitGTK 4.1 的运行库。不同发行版包名不同，Issue 中请注明发行版、版本和架构。
+
+当前 Linux 产物在 Ubuntu 24.04 原生 runner 上动态链接构建，不承诺在所有发行版上直接运行。项目尚未提供 AppImage、DEB 或 RPM。
+
+## Linux 提示找不到 `pty.node` 或加载 `node-pty` 失败
+
+v0.2.4 x64 `offline-full` 正式 TAR.GZ 中没有 Linux 可加载的 `node-pty` 原生绑定；ARM64 使用相同打包逻辑，当前也按受影响处理。重新解压不会补回该文件，Web 页面能打开也不能排除这一缺陷。
+
+若机器可以联网，改用普通包，并先准备原生模块构建工具：
+
+```bash
+sudo apt-get install python3 make g++
+```
+
+若机器必须离线且需要终端/PTY 功能，v0.2.4 没有可靠 Linux 产物，应等待新版本。
+
+## CI 显示成功，但功能仍失败
+
+当前 v0.2.4 Release 的 smoke test 主要验证 DSH CLI 版本、Web HTTP 200 和页面标题。这些检查没有真实启动平台 Shell，也没有证明所有原生 Node 扩展能加载。提交 Issue 时请同时说明：
+
+1. 下载的完整资产名和 SHA-256；
+2. 普通包还是 `offline-full`；
+3. 系统版本、CPU 架构和 Node 版本；
+4. 是启动页面失败，还是某个具体工具调用失败；
+5. 脱敏后的 Starline 日志及 DSH 错误信息。
 
 ## 应该向哪个仓库报告
 
