@@ -13,6 +13,13 @@
 
 - 配置保存增加跨进程原子锁和版本检查，多开实例不会静默覆盖彼此的代理设置。
 
+## [0.3.2] - 2026-08-14
+
+### 修复
+
+- 配置保存增加跨进程原子锁和版本检查，多开实例不会静默覆盖彼此的代理设置。
+- Windows 使用本机文件锁，macOS/Linux 使用 `flock`，并在过期实例写入时返回明确冲突提示。
+
 ## [0.3.1] - 2026-08-14
 
 ### 修复
@@ -105,7 +112,8 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.5...v0.3.0
 [0.2.5]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.4...v0.2.5
