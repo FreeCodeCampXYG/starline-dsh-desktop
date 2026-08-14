@@ -8,6 +8,12 @@
 
 - Windows 代码签名与 macOS Developer ID 签名、公证。
 
+## [0.2.1] - 2026-08-14
+
+### 修复
+
+- Windows runner 下载 Node.js LICENSE 时先统一为 UTF-8 LF，再执行固定哈希校验，避免 PowerShell 换行转换导致离线包构建误报。
+
 ## [0.2.0] - 2026-08-14
 
 ### 新增
@@ -32,6 +38,7 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/releases/tag/v0.1.0

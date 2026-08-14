@@ -62,7 +62,7 @@ go vet -tags webkit2_41 ./...
 安装 Go、Node.js、Wails、WebView2 和 NSIS，并确保 `makensis` 在 PATH：
 
 ```powershell
-.\scripts\build-windows.ps1 -Version 0.2.0
+.\scripts\build-windows.ps1 -Version 0.2.1
 ```
 
 额外构建 Windows x64 离线便携包：
@@ -94,7 +94,7 @@ go vet -tags webkit2_41 ./...
 手动构建：
 
 ```powershell
-wails build -clean -trimpath -platform windows/amd64 -nsis -installscope user -ldflags "-s -w -H=windowsgui -X main.version=0.2.0"
+wails build -clean -trimpath -platform windows/amd64 -nsis -installscope user -ldflags "-s -w -H=windowsgui -X main.version=0.2.1"
 ```
 
 Windows ARM64 必须在 ARM64 Windows 或受支持的原生 runner 构建。仓库 Release 使用 `windows-11-arm`，不把 x64 交叉编译结果当作完整平台验证。
@@ -105,7 +105,7 @@ Windows ARM64 必须在 ARM64 Windows 或受支持的原生 runner 构建。仓�
 
 ```bash
 npm --prefix frontend ci
-wails build -clean -trimpath -platform darwin/arm64 -ldflags "-s -w -X main.version=0.2.0"
+wails build -clean -trimpath -platform darwin/arm64 -ldflags "-s -w -X main.version=0.2.1"
 ```
 
 Intel 使用 `darwin/amd64`。GitHub Actions 分别使用 `macos-15-intel` 与 `macos-15` 原生 runner。
@@ -126,7 +126,7 @@ sudo apt-get install -y --no-install-recommends \
 
 ```bash
 npm --prefix frontend ci
-wails build -clean -trimpath -platform linux/amd64 -tags webkit2_41 -ldflags "-s -w -X main.version=0.2.0"
+wails build -clean -trimpath -platform linux/amd64 -tags webkit2_41 -ldflags "-s -w -X main.version=0.2.1"
 ```
 
 ARM64 使用 `linux/arm64`，GitHub Actions 在 `ubuntu-24.04-arm` 原生 runner 上构建。

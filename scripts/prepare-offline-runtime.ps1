@@ -36,6 +36,8 @@ elseif (-not (Test-Path -LiteralPath $licenseDestination -PathType Leaf)) {
     $licenseURL = "https://raw.githubusercontent.com/nodejs/node/v$nodeVersion/LICENSE"
     Invoke-WebRequest -UseBasicParsing -Uri $licenseURL -OutFile $licenseDestination -TimeoutSec 60
 }
+$licenseText = [IO.File]::ReadAllText($licenseDestination).Replace("`r`n", "`n")
+[IO.File]::WriteAllText($licenseDestination, $licenseText, [Text.UTF8Encoding]::new($false))
 $licenseHash = (Get-FileHash -LiteralPath $licenseDestination -Algorithm SHA256).Hash.ToLowerInvariant()
 if ($licenseHash -ne $expectedLicenseHash) {
     throw "Node license SHA-256 mismatch: $licenseHash"

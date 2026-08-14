@@ -1,7 +1,7 @@
 {
   "name": "starline-dsh-offline-runtime",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Pinned production dependency closure for Starline DSH Desktop offline-full artifacts.",
   "engines": {
     "node": "^22.19.0 || >=24.0.0"
