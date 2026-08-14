@@ -148,6 +148,10 @@ Node 是 DSH 的运行时。普通 Setup/ZIP 为了保持小体积，继续使�
 - 启动、代理、窗口、日志、安装包和进程回收：本仓库；
 - Agent、模型、会话、插件、轨迹或浏览器直接运行也存在的 UI 问题：[deepseek-harness](https://github.com/deepseek-ai/deepseek-harness/issues)。
 
+### 为什么正式安装包打不开 DevTools？
+
+正式 Release 不携带 Wails DevTools，这是预期的生产安全边界，不是代理或 DSH 页面故障。源码调试时运行 `wails dev`，检查器会自动打开；需要调试独立可执行文件时使用 `wails build -debug`。具体命令见 [开发与跨平台构建](docs/BUILDING.md#本地开发与-devtools)。
+
 更多排错步骤见 [故障排查](docs/TROUBLESHOOTING.md)。
 
 ## 开发、构建与发布
@@ -161,6 +165,7 @@ Node 是 DSH 的运行时。普通 Setup/ZIP 为了保持小体积，继续使�
 - [变更日志](CHANGELOG.md)
 - [安全策略](SECURITY.md)
 - [版权与第三方许可说明](NOTICE.md)
+- [作者与维护者](AUTHORS.md)
 
 ## 路线图
 
@@ -171,6 +176,14 @@ Node 是 DSH 的运行时。普通 Setup/ZIP 为了保持小体积，继续使�
 
 路线图不承诺重写 DSH Agent、会话系统或插件内核。
 
+## 作者与维护
+
+- 作者与主要维护者：[starline](https://github.com/FreeCodeCampXYG)
+- 联系邮箱：[1308947723@qq.com](mailto:1308947723@qq.com)
+- 贡献记录：[GitHub Contributors](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/graphs/contributors)
+
+作者职责、贡献者版权和第三方作者边界见 [AUTHORS.md](AUTHORS.md)。
+
 ## 许可证
 
 ```text
@@ -179,4 +192,4 @@ Copyright (c) 2026 starline and contributors
 
 本项目自有代码、构建脚本、项目自有前端和配套文档使用 [MIT License](LICENSE)。你可以使用、修改、分发、再许可和商业使用，但在软件副本或实质性部分中必须保留原版权声明与 MIT 许可声明。MIT 是版权许可，不是版权转让：starline 与贡献者仍保留各自作品的版权；软件按“原样”提供，不附带担保。
 
-DeepSeek Harness、Node.js、Wails、WebView/WebKit、GTK 及其他第三方依赖保留各自版权，并遵循各自许可证。`offline-full` 会保留包内随第三方组件分发的许可文件，但依赖锁文件不等于完整的法律清单。详细边界、贡献版权和商标说明见 [版权与第三方许可说明](NOTICE.md)。所有安装包和便携压缩包都会携带本项目的许可证与 NOTICE 说明，具体位置见 [发布流程](docs/RELEASING.md)。
+DeepSeek Harness、Node.js、Wails、WebView/WebKit、GTK 及其他第三方依赖保留各自版权，并遵循各自许可证。`offline-full` 会保留包内随第三方组件分发的许可文件，但依赖锁文件不等于完整的法律清单。详细边界、贡献版权和商标说明见 [版权与第三方许可说明](NOTICE.md)。所有安装包和便携压缩包都会携带本项目的许可证、NOTICE 与作者信息，具体位置见 [发布流程](docs/RELEASING.md)。

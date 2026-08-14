@@ -103,6 +103,7 @@ Section
     # Preserve the MIT notices in binary distributions; this is not an EULA.
     File /oname=LICENSE.txt "..\..\..\LICENSE"
     File /oname=NOTICE.md "..\..\..\NOTICE.md"
+    File /oname=AUTHORS.md "..\..\..\AUTHORS.md"
 
     CreateShortcut "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"
     CreateShortCut "$DESKTOP\${INFO_PRODUCTNAME}.lnk" "$INSTDIR\${PRODUCT_EXECUTABLE}"

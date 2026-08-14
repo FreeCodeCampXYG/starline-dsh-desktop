@@ -61,12 +61,14 @@ try {
     $uninstaller = Join-Path $customInstall 'uninstall.exe'
     $installedLicense = Join-Path $customInstall 'LICENSE.txt'
     $installedNotice = Join-Path $customInstall 'NOTICE.md'
+    $installedAuthors = Join-Path $customInstall 'AUTHORS.md'
     $recordedPath = (Get-ItemProperty -LiteralPath $uninstallKey -Name InstallLocation).InstallLocation
     if (
         -not (Test-Path -LiteralPath $installedBinary -PathType Leaf) -or
         -not (Test-Path -LiteralPath $uninstaller -PathType Leaf) -or
         -not (Test-Path -LiteralPath $installedLicense -PathType Leaf) -or
-        -not (Test-Path -LiteralPath $installedNotice -PathType Leaf)
+        -not (Test-Path -LiteralPath $installedNotice -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $installedAuthors -PathType Leaf)
     ) {
         $actualFiles = @(
             Get-ChildItem -LiteralPath $recordedPath -File -ErrorAction SilentlyContinue |
@@ -91,7 +93,7 @@ try {
         CustomInstallPath = $customInstall
         UnicodeAndSpaces  = 'passed'
         RememberedPath    = 'passed'
-        LicenseFiles      = 'passed'
+        MetadataFiles     = 'passed'
     }
 }
 finally {

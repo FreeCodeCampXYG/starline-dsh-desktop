@@ -45,7 +45,7 @@ Release workflow 会：
 4. 在每个 runner 安装锁定的 DSH 生产依赖，复制原生 Node 24.19.0，并执行 CLI smoke test；
 5. 同时生成轻量普通包和独立 `offline-full` 包；
 6. 生成每个产物的 `.sha256`；
-7. 确认普通包、离线包和安装目录均包含项目 `LICENSE` 与 `NOTICE.md`（macOS 位于应用包 `Contents/Resources/licenses/`）；
+7. 确认普通包、离线包和安装目录均包含项目 `LICENSE`、`NOTICE.md` 与 `AUTHORS.md`（macOS 位于应用包 `Contents/Resources/licenses/`）；
 8. 汇总为 `SHA256SUMS.txt`；
 9. 生成 GitHub Release notes；
 10. tag 带 `-` 时标记为 prerelease。
@@ -73,7 +73,7 @@ SHA256SUMS.txt
 
 普通包保持原有小体积。Windows x64 本地实测普通 ZIP 约 4.3 MiB、Setup 约 6.0 MiB、完整离线 ZIP 约 113.6 MiB，离线运行时解压后约 334 MiB。平台、架构与依赖选择不同，Release 前必须以实际资产大小为准。GitHub 单文件资产上限不是当前瓶颈，但六个平台会明显增加 Actions 时间、缓存和 Release 存储。
 
-MIT License 要求分发副本保留版权与许可声明。Windows Setup 会把 `LICENSE.txt` 与 `NOTICE.md` 安装到应用目录；Windows/Linux 压缩包在根目录携带 `LICENSE` 与 `NOTICE.md`；macOS 应用包在 `Contents/Resources/licenses/` 中携带 `LICENSE` 与 `NOTICE.md`。`offline-full` 还必须保留 Node.js、DeepSeek Harness 和 npm 依赖自身随包提供的许可证文件。发布前应抽查解包内容，不能只检查仓库根目录。
+MIT License 要求分发副本保留版权与许可声明。Windows Setup 会把 `LICENSE.txt`、`NOTICE.md` 与 `AUTHORS.md` 安装到应用目录；Windows/Linux 压缩包在根目录携带 `LICENSE`、`NOTICE.md` 与 `AUTHORS.md`；macOS 应用包在 `Contents/Resources/licenses/` 中携带对应文件。`offline-full` 还必须保留 Node.js、DeepSeek Harness 和 npm 依赖自身随包提供的许可证文件。发布前应抽查解包内容，不能只检查仓库根目录。
 
 ## 签名与公证
 

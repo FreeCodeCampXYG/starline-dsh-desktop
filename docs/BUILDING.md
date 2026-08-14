@@ -30,13 +30,24 @@ node offline-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js --version
 
 `offline-runtime/node_modules`、Node 可执行文件、Node 许可证副本和 `dsh-version.txt` 都是构建产物，不提交到仓库。
 
-## 本地开发
+## 本地开发与 DevTools
 
 ```bash
 wails dev
 ```
 
-前端开发服务器只服务宿主启动/设置界面；就绪后仍嵌入本机 DSH Web UI。
+开发模式会自动打开 WebView 检查器。前端开发服务器只服务宿主启动/设置界面；就绪后仍嵌入本机 DSH Web UI，可在检查器中选择对应 frame 查看 DSH 页面。
+
+如果需要调试独立可执行文件，构建 Wails 调试版本：
+
+```powershell
+wails build -clean -trimpath -debug -platform windows/amd64 -ldflags "-H=windowsgui -X main.version=dev"
+.\build\bin\starline-dsh-desktop.exe
+```
+
+macOS 和 Linux 将 `-platform` 分别改为当前机器的 `darwin/amd64`、`darwin/arm64`、`linux/amd64` 或 `linux/arm64`；Linux 继续添加 `-tags webkit2_41`。
+
+`options.Debug.OpenInspectorOnStartup` 只在 Wails 调试构建中生效。正式构建和 Release 工作流均不使用 `-debug` 或 `-devtools`，因此 Setup.exe、便携包和离线包不能在安装后临时开启检查器；需要排查时应从同一提交构建调试版本。项目不启用远程调试端口。
 
 ## 基础验证
 
@@ -62,7 +73,7 @@ go vet -tags webkit2_41 ./...
 安装 Go、Node.js、Wails、WebView2 和 NSIS，并确保 `makensis` 在 PATH：
 
 ```powershell
-.\scripts\build-windows.ps1 -Version 0.2.1
+.\scripts\build-windows.ps1 -Version 0.2.2
 ```
 
 额外构建 Windows x64 离线便携包：
@@ -94,7 +105,7 @@ go vet -tags webkit2_41 ./...
 手动构建：
 
 ```powershell
-wails build -clean -trimpath -platform windows/amd64 -nsis -installscope user -ldflags "-s -w -H=windowsgui -X main.version=0.2.1"
+wails build -clean -trimpath -platform windows/amd64 -nsis -installscope user -ldflags "-s -w -H=windowsgui -X main.version=0.2.2"
 ```
 
 Windows ARM64 必须在 ARM64 Windows 或受支持的原生 runner 构建。仓库 Release 使用 `windows-11-arm`，不把 x64 交叉编译结果当作完整平台验证。
@@ -105,7 +116,7 @@ Windows ARM64 必须在 ARM64 Windows 或受支持的原生 runner 构建。仓�
 
 ```bash
 npm --prefix frontend ci
-wails build -clean -trimpath -platform darwin/arm64 -ldflags "-s -w -X main.version=0.2.1"
+wails build -clean -trimpath -platform darwin/arm64 -ldflags "-s -w -X main.version=0.2.2"
 ```
 
 Intel 使用 `darwin/amd64`。GitHub Actions 分别使用 `macos-15-intel` 与 `macos-15` 原生 runner。
@@ -126,7 +137,7 @@ sudo apt-get install -y --no-install-recommends \
 
 ```bash
 npm --prefix frontend ci
-wails build -clean -trimpath -platform linux/amd64 -tags webkit2_41 -ldflags "-s -w -X main.version=0.2.1"
+wails build -clean -trimpath -platform linux/amd64 -tags webkit2_41 -ldflags "-s -w -X main.version=0.2.2"
 ```
 
 ARM64 使用 `linux/arm64`，GitHub Actions 在 `ubuntu-24.04-arm` 原生 runner 上构建。

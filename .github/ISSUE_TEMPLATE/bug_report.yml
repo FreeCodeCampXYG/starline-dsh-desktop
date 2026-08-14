@@ -41,7 +41,7 @@ body:
     attributes:
       label: 版本信息
       description: 请填写 Starline DSH Desktop、DSH、Node.js 和操作系统版本。
-      placeholder: Desktop 0.2.1; DSH 0.1.0-rc.6; Node 24.19.0; Windows 11 24H2
+      placeholder: Desktop 0.2.2; DSH 0.1.0-rc.6; Node 24.19.0; Windows 11 24H2
     validations:
       required: true
 

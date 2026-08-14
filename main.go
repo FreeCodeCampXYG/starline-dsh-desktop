@@ -36,10 +36,12 @@ func main() {
 		HideWindowOnClose: false,
 		BackgroundColour:  &options.RGBA{R: 8, G: 12, B: 20, A: 1},
 		AssetServer:       &assetserver.Options{Assets: assets},
-		Menu:              application.Menu(app),
-		OnStartup:         app.Startup,
-		OnShutdown:        app.Shutdown,
-		Bind:              []interface{}{app},
+		// 仅 Wails 调试构建会采用该选项，正式 Release 不包含 DevTools。
+		Debug:      options.Debug{OpenInspectorOnStartup: true},
+		Menu:       application.Menu(app),
+		OnStartup:  app.Startup,
+		OnShutdown: app.Shutdown,
+		Bind:       []interface{}{app},
 		Windows: &windows.Options{
 			WebviewIsTransparent: false,
 			WindowIsTranslucent:  false,

@@ -11,6 +11,7 @@
 | [开源工程参考](OPEN_SOURCE_REFERENCES.md) | 维护者 | 采用的上游做法和取舍依据 |
 | [贡献指南](../CONTRIBUTING.md) | 贡献者 | 改动范围、测试和 PR 证据 |
 | [安全策略](../SECURITY.md) | 使用者/研究者 | 私密报告与日志脱敏 |
+| [作者与维护者](../AUTHORS.md) | 所有人 | 项目作者、联系方式、维护职责与贡献记录 |
 | [版权与第三方许可说明](../NOTICE.md) | 使用者/分发者/贡献者 | MIT 权利义务、版权所有者与第三方边界 |
 | [变更日志](../CHANGELOG.md) | 所有人 | 已发布和未发布的用户可见变化 |
 
@@ -21,5 +22,5 @@
 3. 产物、标签或 Actions 变化时更新 `RELEASING.md`；
 4. 用户可见行为同时更新根 README 和 `TROUBLESHOOTING.md`；
 5. 不复制整段规范到多个文件，优先链接到唯一说明；
-6. 版权所有者、分发内容或第三方依赖变化时更新根目录 `LICENSE` 与 `NOTICE.md`；
+6. 作者、版权所有者、分发内容或第三方依赖变化时更新根目录 `AUTHORS.md`、`LICENSE` 与 `NOTICE.md`；
 7. 运行 `npm --prefix frontend run docs:check`，拒绝指向不存在文件的本地链接。

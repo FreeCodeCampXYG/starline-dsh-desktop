@@ -8,6 +8,15 @@
 
 - Windows 代码签名与 macOS Developer ID 签名、公证。
 
+## [0.2.2] - 2026-08-14
+
+### 新增
+
+- 新增 `AUTHORS.md`，公开项目作者、主要维护者、联系方式、维护职责与贡献记录入口。
+- README、Wails、前端和离线运行时补充统一的 starline 作者元数据。
+- Windows、macOS、Linux 的普通包、安装包与离线包随包提供作者信息。
+- Wails 调试构建自动打开 WebView 检查器，并补充正式 Release 默认关闭 DevTools 的调试说明。
+
 ## [0.2.1] - 2026-08-14
 
 ### 修复
@@ -38,7 +47,8 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/releases/tag/v0.1.0

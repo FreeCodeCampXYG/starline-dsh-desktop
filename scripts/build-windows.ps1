@@ -1,6 +1,6 @@
 param(
     [ValidatePattern('^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$')]
-    [string]$Version = '0.2.1',
+    [string]$Version = '0.2.2',
     [switch]$OfflineFull
 )
 
@@ -10,6 +10,7 @@ $distDirectory = Join-Path $projectRoot 'dist'
 $binaryPath = Join-Path $projectRoot 'build\bin\starline-dsh-desktop.exe'
 $licensePath = Join-Path $projectRoot 'LICENSE'
 $noticePath = Join-Path $projectRoot 'NOTICE.md'
+$authorsPath = Join-Path $projectRoot 'AUTHORS.md'
 $wailsConfigPath = Join-Path $projectRoot 'wails.json'
 $originalWailsConfig = [IO.File]::ReadAllText($wailsConfigPath)
 $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
@@ -54,7 +55,7 @@ try {
     New-Item -ItemType Directory -Force -Path $distDirectory | Out-Null
     $portablePath = Join-Path $distDirectory 'starline-dsh-desktop-windows-amd64.zip'
     $setupPath = Join-Path $distDirectory 'starline-dsh-desktop-windows-amd64-setup.exe'
-    Compress-Archive -LiteralPath @($binaryPath, $licensePath, $noticePath) -DestinationPath $portablePath -Force
+    Compress-Archive -LiteralPath @($binaryPath, $licensePath, $noticePath, $authorsPath) -DestinationPath $portablePath -Force
 
     $installers = @(Get-ChildItem -LiteralPath (Join-Path $projectRoot 'build\bin') -Filter '*-installer.exe')
     if ($installers.Count -ne 1) {
@@ -69,7 +70,7 @@ try {
         if (Test-Path -LiteralPath $offlinePath) {
             Remove-Item -LiteralPath $offlinePath -Force
         }
-        tar.exe -a -c -f $offlinePath -C (Split-Path -Parent $binaryPath) (Split-Path -Leaf $binaryPath) -C $projectRoot LICENSE NOTICE.md offline-runtime
+        tar.exe -a -c -f $offlinePath -C (Split-Path -Parent $binaryPath) (Split-Path -Leaf $binaryPath) -C $projectRoot LICENSE NOTICE.md AUTHORS.md offline-runtime
         if ($LASTEXITCODE -ne 0) {
             throw "Offline ZIP creation failed with exit code $LASTEXITCODE."
         }

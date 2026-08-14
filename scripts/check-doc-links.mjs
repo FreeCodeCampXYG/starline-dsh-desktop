@@ -17,7 +17,7 @@ const collectMarkdown = (path) => {
 };
 
 collectMarkdown(resolve(repositoryRoot, "docs"));
-for (const name of ["README.md", "CONTRIBUTING.md", "SECURITY.md", "NOTICE.md", "CHANGELOG.md"]) {
+for (const name of ["README.md", "CONTRIBUTING.md", "SECURITY.md", "AUTHORS.md", "NOTICE.md", "CHANGELOG.md"]) {
   markdownFiles.push(resolve(repositoryRoot, name));
 }
 
