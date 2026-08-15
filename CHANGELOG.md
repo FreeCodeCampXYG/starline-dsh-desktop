@@ -9,6 +9,8 @@
 - Windows 代码签名与 macOS Developer ID 签名、公证。
 - 多实例工作区锁与 MCP 编排服务。
 
+## [0.4.0] - 2026-08-16
+
 ### 新增
 
 - 桌面设置增加 npm 官方 DSH 手动更新检查：在线包明确确认后保存精确版本并重启，可恢复 Desktop 内置兼容版本；离线包只提示下载匹配的新资产。
@@ -129,7 +131,8 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.0...v0.3.1
