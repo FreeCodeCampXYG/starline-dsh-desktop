@@ -9,9 +9,17 @@
 - Windows 代码签名与 macOS Developer ID 签名、公证。
 - 多实例工作区锁与 MCP 编排服务。
 
-### 修复
+## [0.3.3] - 2026-08-16
 
-- 配置保存增加跨进程原子锁和版本检查，多开实例不会静默覆盖彼此的代理设置。
+### 改进
+
+- 正式 Wails 构建启用系统 WebView 默认右键菜单，为选择、复制和粘贴提供平台原生回退。
+- 离线运行时门禁增加真实 Sharp 图像转换、Koffi 动态库加载和本机函数调用；Windows 额外加载 `ole32.dll`，避免只加载模块却遗漏 FFI 运行失败。
+
+### 文档
+
+- 审计同类 DSH Desktop 的跨平台 Issue，明确 Electron 专属故障、本项目已规避路径、DSH 上游沙箱限制及 `danger-full-access` 与管理员权限的区别。
+- 历史证据说明对齐已发布的 v0.3.2，发布元数据升级到 v0.3.3，并保留原生 CI、公开 Release 和设备验证之间的证据边界。
 
 ## [0.3.2] - 2026-08-14
 
@@ -112,7 +120,8 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.2.5...v0.3.0

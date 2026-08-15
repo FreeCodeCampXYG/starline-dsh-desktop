@@ -11,7 +11,23 @@
 | 缺少设备验证 | 构建或 Web 启动检查成功，但没有代表性设备上的安装和功能证据 |
 | 产品限制 | 当前设计或分发方式明确不覆盖的能力，不等同于回归 Bug |
 
-## v0.2.4 平台矩阵
+## v0.3.2 当前发布证据
+
+[v0.3.2 Release](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/releases/tag/v0.3.2) 已提供六个平台的在线/离线产物和 SHA-256。发布工作流在各原生 runner 上准备离线运行时，真实调用 `node-pty.spawn()`，并在最终 ZIP/TAR.GZ 解包后复测；这属于原生 CI、归档和公开 Release 证据，不属于代表性设备测试。
+
+| 平台与产物 | 已确认 | 仍缺少的证据 |
+| --- | --- | --- |
+| Windows x64/ARM64 | 原生 runner 完成应用构建、NSIS/便携包生成；最终离线 ZIP 实际运行 Node、DSH、PTY、ripgrep，并加载 Sharp/Koffi | ARM64 实体设备；干净机器安装、首次启动、升级、卸载；SmartScreen 与安全软件差异 |
+| macOS Intel/Apple Silicon | 原生 runner 完成 `.app`、在线/离线 ZIP 和最终归档 PTY/helper 权限复测 | 代表性 Mac 首次启动、工作区、插件和升级；Developer ID 签名与公证 |
+| Linux x64/ARM64 | Ubuntu 24.04 原生 runner 完成动态链接应用、在线/离线 TAR.GZ 和最终归档原生工具复测 | 其他发行版/桌面环境、ARM64 实体设备、安装集成和 WebKitGTK 版本差异 |
+
+## v0.3.3 发布候选加固
+
+- 正式 WebView 启用默认右键菜单，复制按钮受上游权限或实现影响时仍可手工选择、复制和粘贴；尚缺六平台 GUI 设备验证。
+- 离线检查不再只 `require('sharp')` / `require('koffi')`：Sharp 必须实际生成 PNG，Koffi 必须加载本机动态库并调用进程 ID 函数；Windows 还会专门加载 `ole32.dll`，覆盖同类桌面端曾出现的 FFI 加载崩溃路径。
+- 这些改动只有在 v0.3.3 原生 CI、打包和 Release 完成后才能算发布能力，不反向改变 v0.3.2 资产。
+
+## v0.2.4 历史平台矩阵
 
 | 平台与产物 | 当前状态 | 缺陷、限制与证据边界 |
 | --- | --- | --- |
@@ -28,9 +44,9 @@
 
 上述 `offline-full` 缺陷来自跳过 npm 生命周期脚本：macOS 没有执行权限修复，Linux 没有执行原生模块构建。DSH CLI `--version`、Web HTTP 200 或页面标题检查只能证明“能够启动”，不能证明 PTY、浏览器自动化或其他原生扩展能工作。
 
-## 当前 main 的修复状态
+## v0.2.5 起的 PTY 修复状态
 
-当前源码已经加入修复候选，但不反向改变 v0.2.4 的已发布资产：
+v0.2.5 起已经加入以下修复，并在 v0.3.2 的六平台构建与最终归档检查中通过；这仍不反向改变 v0.2.4 的已发布资产：
 
 1. 仍使用 `npm ci --ignore-scripts` 默认禁止全部依赖脚本；
 2. 在执行任何白名单脚本前，核对 `node-pty@1.1.0` 与 `@deepseek-ai/dsh-subprocess-local@0.1.0-rc.6` 的锁文件 integrity、已安装版本、生命周期命令和已审查脚本 SHA-256；
@@ -40,7 +56,15 @@
 6. 最终 ZIP/TAR.GZ 重新解包后，使用归档内 Node 再执行同一功能测试；
 7. DSH 改为接收 `--port 0`，宿主只接受其日志中公布并通过 loopback 校验的实际 URL，不再自行预占后释放端口。
 
-只有新版本的六平台 CI 和最终归档检查全部成功后，Release notes 才能把 macOS/Linux 离线 PTY 标记为已修复。
+v0.3.2 已达到六平台原生 CI 和最终归档检查门槛；设备安装与真实用户工作流证据仍按上表保留为缺口。
+
+## 同类 DSH Desktop Issue 的适用边界
+
+对 [anywhere-labs/deepseek-harness-desktop Issues](https://github.com/anywhere-labs/deepseek-harness-desktop/issues) 的审计按架构归属处理，不把 Electron 补丁直接套进 Wails：
+
+- **本项目已规避的 Electron 专属故障**：本项目启动真实 Node，不会把 Electron `process.execPath` 当成 Node，因此不适用 [#71](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/71) 的 Electron runner 根因；离线包使用完整 npm 依赖树并做功能复测，避免 [#57](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/57) 的 staging 漏传递依赖；宿主不注入 Electron 原生目录选择能力，保留 DSH Web 浏览路径，不采用 [#29](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/29) 的 `SSH_CONNECTION=1` 伪装绕过；窗口使用原生标题栏和不透明 WebView，不复制 [#49](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/49)、[#79](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/79) 的自绘标题栏、透明和 vibrancy 组合。
+- **本项目可以加固的 WebView 行为**：iframe 已显式声明剪贴板权限；v0.3.3 额外启用 Wails 默认右键菜单，为 [#12](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/12)、[#14](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/14) 一类复制/粘贴失败提供手工回退。DSH 自身复制按钮是否在每个平台成功仍需设备验证，不能仅由静态配置推断。
+- **仍可能影响本项目的 DSH 上游问题**：Windows ACL 沙箱内部创建 PowerShell 的黑框和 `0xC0000142` 发生在 DSH 子进程内部，外壳只能隐藏自己直接启动的 Node/回收命令，参见 [#15](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/15)、[#84](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/84)；用户可以在 DSH 中显式选择 `danger-full-access` 作为当前用户权限下的诊断或高权限模式，但宿主不会在失败后自动放宽权限，也不会因此获得管理员令牌。MCP 延迟、重复插件注册和 profile 错误仍可能导致 readiness 前失败，参见 [#45](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/45)、[#8](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/8)；本项目提供五分钟有界等待、原始日志、重试和浏览器回退，不修改 DSH 插件图。
 
 ## v0.2.4 使用建议
 
@@ -74,9 +98,9 @@
 4. 测试打包前的 staging 目录后，还要重新解开最终 ZIP/TAR.GZ/安装包进行同样检查，确认权限和原生文件没有在归档阶段丢失。
 5. Windows ARM64、macOS Intel/ARM64、Linux x64/ARM64 的发布说明必须分别标注设备验证证据；绿色 CI 不自动等于完整支持。
 
-## v0.3.0 离线包候选方案
+## 后续离线包候选方案
 
-当前离线运行时包含约三万个松散依赖文件。v0.3.0 可以评估在构建阶段把经过功能验证的运行时封装为单一 tarball，并在首次启动时：
+当前离线运行时包含约三万个松散依赖文件。后续版本可以评估在构建阶段把经过功能验证的运行时封装为单一 tarball，并在首次启动时：
 
 1. 校验固定 SHA-256 和运行时版本；
 2. 解压到用户缓存目录中的唯一临时目录；

@@ -1,6 +1,6 @@
 # 故障排查
 
-> 先查看 [已知问题与平台支持边界](KNOWN_ISSUES.md)。v0.2.4 的 macOS/Linux `offline-full` 能通过 Web 启动检查，但这不能证明 PTY、终端和 Shell 工具可用。
+> 先查看 [已知问题与平台支持边界](KNOWN_ISSUES.md)。v0.3.2 已通过六平台原生 CI、PTY/原生依赖功能测试和最终归档复测，但这仍不能代替代表性设备上的安装、首次启动和真实工作流验证。
 
 ## 日志位置
 
@@ -39,7 +39,7 @@ npx --version
 
 需要 Node `22.19+` 或 `24+`。Node 23 不在 DSH 支持范围内。图形应用继承的 PATH 可能与终端不同；macOS/Linux 从桌面启动时尤其需要确认 Node 安装在系统可见位置。
 
-如果电脑不能安装 Node 或访问 npm，可以下载与操作系统及架构一致的 `offline-full` 包。离线包正常启动时，桌面顶部会显示“离线运行时”。但 v0.2.4 的 macOS/Linux 离线包存在 PTY 原生依赖缺陷；如果工作流需要终端或 Shell，请不要把它作为完整替代方案。
+如果电脑不能安装 Node 或访问 npm，可以下载与操作系统及架构一致的 `offline-full` 包。离线包正常启动时，桌面顶部会显示“离线运行时”。v0.3.2 已在原生 runner 和最终归档中复测 PTY 与关键原生依赖；未完成设备验证的平台仍应按 [平台矩阵](KNOWN_ISSUES.md#v032-当前发布证据) 谨慎使用。
 
 ## 离线运行时损坏或版本不一致
 
@@ -66,7 +66,7 @@ npx --yes --package=@deepseek-ai/dsh@0.1.0-rc.6 dsh web
 - npm 进程仍在首次安装依赖；
 - DSH 上游版本改变了启动行为；
 - 安全软件阻止 Node 监听 loopback；
-- v0.2.4 选中的端口在关闭临时 listener 后被其他进程抢占；当前 `main` 已改为 DSH `--port 0`；
+- 旧版 v0.2.4 可能在临时 listener 释放后发生端口竞争；v0.2.5 起已改为 DSH `--port 0`；
 - DSH 进程提前退出。
 
 请保留完整启动日志并重试一次。如果浏览器直接运行 DSH 正常而桌面端失败，向本仓库报告。
@@ -84,12 +84,29 @@ npx --yes --package=@deepseek-ai/dsh@0.1.0-rc.6 dsh web
 
 ## Windows 黑框闪烁
 
-当前版本使用 `CREATE_NO_WINDOW` 和隐藏窗口标志运行 Node 检查、DSH 与进程树回收。如果仍出现：
+当前版本使用 `CREATE_NO_WINDOW` 和隐藏窗口标志运行宿主直接创建的 Node 检查、DSH 与进程树回收。DSH Windows ACL 沙箱可能在更深层重新创建 PowerShell/控制台进程，这不受外壳启动标志控制；同类报告见 [#15](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/15)。如果仍出现：
 
 1. 确认使用最新 Release；
 2. 说明是启动、重启还是关闭时出现；
 3. 提供 Windows 版本和安装方式；
-4. 检查是否由杀毒软件、终端配置或其他 Node shim 创建。
+4. 区分是在 DSH 启动/关闭时闪一次，还是每次 Agent 执行 PowerShell 都闪；
+5. 检查是否由杀毒软件、终端配置、Node shim 或 DSH 沙箱子进程创建。
+
+## Windows PowerShell 返回 `0xC0000142`
+
+十进制退出码 `3221225794` 即 `0xC0000142`（`STATUS_DLL_INIT_FAILED`）。同类 rc.6 报告表明，某些 PowerShell 7 自包含/便携安装在 DSH Windows ACL 受限令牌下无法初始化，而 `danger-full-access` 能运行；参见 [上游同类 Issue #84](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/84)。这发生在 DSH 沙箱内部，不等于 Starline 启动 Node 失败。
+
+用户可以在官方 DSH 权限选择器中显式切换到 `danger-full-access`：它允许 PowerShell 使用当前 Windows 用户本来拥有的广泛文件/命令权限，适合确实需要大范围操作或诊断沙箱兼容性时使用，但会失去工作区隔离。宿主不会自动回退到该模式。它也不是“以管理员身份运行”，不会自动获得 UAC 管理员令牌。报告问题时请注明 Windows 版本、PowerShell 版本与实际路径、DSH 权限模式、十进制/十六进制退出码和脱敏日志。
+
+## 复制、右键菜单或文件夹选择异常
+
+- v0.3.3 在正式构建中启用 WebView 默认右键菜单，可用手工选择、复制和粘贴作为回退；v0.3.2 及更早资产不包含这一改动。
+- iframe 已声明 `clipboard-read` / `clipboard-write`，但 DSH 自身复制按钮的降级逻辑仍属于上游页面。若按钮无反馈，先测试右键复制、键盘快捷键以及“在浏览器中打开”，再分别报告结果。
+- Starline 不伪装 Electron Desktop，也不注入 DSH 原生目录选择器；工作区选择保留 Web 版浏览路径。不要设置 `SSH_CONNECTION=1` 伪装 SSH 环境作为长期修复。如果浏览器 `dsh web` 正常而内嵌页面失败，请附平台、WebView 版本和脱敏日志。
+
+## MCP 或插件配置后启动很久
+
+宿主最多等待五分钟，并在 DSH 提前退出或超时后显示日志入口。MCP 启动阻塞、profile 中重复插入已经由 bundle 自动注册的插件、无效 `cordis.patch.yml` 都可能让 DSH 在 readiness 前失败；同类案例见 [#45](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/45) 和 [#8](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/8)。先在浏览器直接运行同版本 `dsh web` 并检查同一份 profile；Starline 不自动删除或禁用用户插件。
 
 ## macOS 无法打开
 
@@ -99,9 +116,9 @@ npx --yes --package=@deepseek-ai/dsh@0.1.0-rc.6 dsh web
 
 ## macOS 离线包的终端或 Shell 工具失败
 
-v0.2.4 ARM64 `offline-full` 正式 ZIP 中，`offline-runtime/node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper` 的权限是 `0644`，不能作为可执行文件启动。Intel 包使用相同安装逻辑，当前也按受影响处理。
+v0.2.4 ARM64 `offline-full` 正式 ZIP 中，`offline-runtime/node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper` 的权限是 `0644`，不能作为可执行文件启动；Intel 包使用相同安装逻辑。v0.3.2 已在两个 macOS 原生 runner 和最终 ZIP 中检查 helper 可执行位并真实启动 PTY。
 
-典型表现包括终端/PTY 工具打不开、权限被拒绝，或者 Web UI 正常但调用 Shell 后失败。临时方案是改用普通包并让 npm 正常执行依赖安装脚本；完全离线且必须使用 PTY 时，请等待修复版本。不要用全局关闭系统安全策略的方式规避。
+如果 v0.3.2+ 仍出现终端/PTY 工具打不开或权限被拒绝，请提供完整资产名和 SHA-256；不要沿用 v0.2.4 的手工改权限结论，也不要全局关闭系统安全策略。
 
 ## Linux 缺少共享库
 
@@ -117,7 +134,7 @@ ldd ./starline-dsh-desktop | grep 'not found'
 
 ## Linux 提示找不到 `pty.node` 或加载 `node-pty` 失败
 
-v0.2.4 x64 `offline-full` 正式 TAR.GZ 中没有 Linux 可加载的 `node-pty` 原生绑定；ARM64 使用相同打包逻辑，当前也按受影响处理。重新解压不会补回该文件，Web 页面能打开也不能排除这一缺陷。
+v0.2.4 x64 `offline-full` 正式 TAR.GZ 中没有 Linux 可加载的 `node-pty` 原生绑定；ARM64 使用相同打包逻辑。v0.3.2 已在 Ubuntu 24.04 x64/ARM64 原生 runner 和最终 TAR.GZ 中检查并加载 `pty.node`，再真实启动 PTY。
 
 若机器可以联网，改用普通包，并先准备原生模块构建工具：
 
@@ -125,11 +142,11 @@ v0.2.4 x64 `offline-full` 正式 TAR.GZ 中没有 Linux 可加载的 `node-pty` 
 sudo apt-get install python3 make g++
 ```
 
-若机器必须离线且需要终端/PTY 功能，v0.2.4 没有可靠 Linux 产物，应等待新版本。
+若 v0.3.2+ 在目标发行版仍失败，优先检查 glibc、CPU 架构和动态库差异；Ubuntu 24.04 runner 成功不能证明所有发行版兼容。
 
 ## CI 显示成功，但功能仍失败
 
-当前 v0.2.4 Release 的 smoke test 主要验证 DSH CLI 版本、Web HTTP 200 和页面标题。这些检查没有真实启动平台 Shell，也没有证明所有原生 Node 扩展能加载。提交 Issue 时请同时说明：
+v0.3.2 Release 已增加真实 PTY/ripgrep 执行、Sharp/Koffi 加载和最终归档检查；v0.3.3 又把 Sharp/Koffi 提升为实际图像转换、动态库加载和本机函数调用。CI 仍不能证明 GUI 权限、WebView、安装器、安全软件和所有发行版表现。提交 Issue 时请同时说明：
 
 1. 下载的完整资产名和 SHA-256；
 2. 普通包还是 `offline-full`；

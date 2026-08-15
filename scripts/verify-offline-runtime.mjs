@@ -154,10 +154,51 @@ async function smokeTestPTY(runtimeRoot) {
   })
 }
 
+async function smokeTestSharp(sharp) {
+  const source = Buffer.from([12, 34, 56, 255])
+  const { data, info } = await sharp(source, {
+    raw: { width: 1, height: 1, channels: 4 },
+  }).png().toBuffer({ resolveWithObject: true })
+  if (info.format !== 'png' || info.width !== 1 || info.height !== 1) {
+    fail(`sharp image smoke test returned unexpected metadata: ${JSON.stringify(info)}`)
+  }
+  if (data.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') {
+    fail('sharp image smoke test did not produce a PNG payload')
+  }
+}
+
+function smokeTestKoffi(koffi) {
+  if (process.platform === 'win32') {
+    const ole32 = koffi.load('ole32.dll')
+    ole32.unload()
+  }
+
+  const libraryName = process.platform === 'win32'
+    ? 'kernel32.dll'
+    : process.platform === 'darwin'
+      ? '/usr/lib/libSystem.B.dylib'
+      : 'libc.so.6'
+  const prototype = process.platform === 'win32'
+    ? 'uint32_t GetCurrentProcessId(void)'
+    : 'int getpid(void)'
+  const library = koffi.load(libraryName)
+  try {
+    const getProcessID = library.func(prototype)
+    const nativeProcessID = getProcessID()
+    if (nativeProcessID !== process.pid) {
+      fail(`koffi process ID mismatch: expected ${process.pid}, received ${nativeProcessID}`)
+    }
+  } finally {
+    library.unload()
+  }
+}
+
 async function smokeTestNativeTools(runtimeRoot) {
   const runtimeRequire = createRequire(join(runtimeRoot, 'package.json'))
-  runtimeRequire('sharp')
-  runtimeRequire('koffi')
+  const sharp = runtimeRequire('sharp')
+  const koffi = runtimeRequire('koffi')
+  await smokeTestSharp(sharp)
+  smokeTestKoffi(koffi)
 
   const ripgrepEntry = runtimeRequire.resolve('@vscode/ripgrep')
   const { rgPath } = await import(pathToFileURL(ripgrepEntry).href)
@@ -170,7 +211,7 @@ async function smokeTestNativeTools(runtimeRoot) {
   if (result.error || result.status !== 0) {
     fail(`ripgrep smoke test failed: ${result.error || result.stderr || `exit ${result.status}`}`)
   }
-  console.log(`Verified sharp, koffi, and ripgrep: ${process.platform}/${process.arch}`)
+  console.log(`Verified sharp transform, koffi FFI, and ripgrep: ${process.platform}/${process.arch}`)
 }
 
 async function main() {

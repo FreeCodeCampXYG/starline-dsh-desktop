@@ -37,7 +37,7 @@ bash scripts/prepare-offline-runtime.sh 0.1.0-rc.6
 1. `npm ci --ignore-scripts` 安装锁定依赖；
 2. `verify-offline-runtime.mjs preflight` 核对包版本、lockfile integrity、生命周期命令和已审查脚本 SHA-256；
 3. 只重建 `node-pty`，再执行锁定 DSH 提供的 `ensure-spawn-helper.mjs`；
-4. 使用包内 Node 真实启动平台 Shell，并核对输出和退出码。
+4. 使用包内 Node 真实启动平台 Shell，并核对输出和退出码；同时实际执行 Sharp 图像转换、Koffi 动态库/函数调用和 ripgrep。
 
 新增或升级白名单包时必须重新审查脚本并显式更新校验值。CLI `--version` 成功只证明 JavaScript 入口可启动，不能替代功能测试。v0.2.4 已发布资产的影响范围见 [已知问题与平台支持边界](KNOWN_ISSUES.md)。
 
@@ -108,13 +108,13 @@ python scripts/generate-app-icons.py
 安装 Go、Node.js、Wails、WebView2 和 NSIS，并确保 `makensis` 在 PATH：
 
 ```powershell
-.\scripts\build-windows.ps1 -Version 0.3.1
+.\scripts\build-windows.ps1 -Version 0.3.3
 ```
 
 额外构建 Windows x64 离线便携包：
 
 ```powershell
-.\scripts\build-windows.ps1 -Version 0.3.1 -OfflineFull
+.\scripts\build-windows.ps1 -Version 0.3.3 -OfflineFull
 ```
 
 脚本依次执行：
@@ -140,7 +140,7 @@ python scripts/generate-app-icons.py
 手动构建：
 
 ```powershell
-wails build -clean -trimpath -platform windows/amd64 -nsis -installscope user -ldflags "-s -w -H=windowsgui -X main.version=0.3.1"
+wails build -clean -trimpath -platform windows/amd64 -nsis -installscope user -ldflags "-s -w -H=windowsgui -X main.version=0.3.3"
 ```
 
 Windows ARM64 必须在 ARM64 Windows 或受支持的原生 runner 构建。仓库 Release 使用 `windows-11-arm`，不把 x64 交叉编译结果当作完整平台验证。
@@ -151,7 +151,7 @@ Windows ARM64 必须在 ARM64 Windows 或受支持的原生 runner 构建。仓�
 
 ```bash
 npm --prefix frontend ci
-wails build -clean -trimpath -platform darwin/arm64 -ldflags "-s -w -X main.version=0.3.1"
+wails build -clean -trimpath -platform darwin/arm64 -ldflags "-s -w -X main.version=0.3.3"
 ```
 
 Intel 使用 `darwin/amd64`。GitHub Actions 分别使用 `macos-15-intel` 与 `macos-15` 原生 runner。
@@ -172,7 +172,7 @@ sudo apt-get install -y --no-install-recommends \
 
 ```bash
 npm --prefix frontend ci
-wails build -clean -trimpath -platform linux/amd64 -tags webkit2_41 -ldflags "-s -w -X main.version=0.3.1"
+wails build -clean -trimpath -platform linux/amd64 -tags webkit2_41 -ldflags "-s -w -X main.version=0.3.3"
 ```
 
 ARM64 使用 `linux/arm64`，GitHub Actions 在 `ubuntu-24.04-arm` 原生 runner 上构建。

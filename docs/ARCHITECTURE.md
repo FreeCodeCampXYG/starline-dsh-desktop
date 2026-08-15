@@ -76,6 +76,7 @@ Wails application
 ## 安全边界
 
 - iframe 只接收由宿主生成或从 DSH 日志中验证过的 loopback HTTP URL；
+- iframe 只显式开放剪贴板读写权限，不开放任意外部页面的 Wails 绑定；
 - 健康检查不使用系统代理，防止 loopback 请求泄漏；
 - `NO_PROXY` 始终合并 `127.0.0.1`、`localhost`、`::1`；
 - 自定义代理仅传递给 DSH/npm 子进程；
@@ -90,6 +91,11 @@ Wails application
 - `internal/application/tray_windows.go` 仅在 Windows 编译第三方托盘依赖，提供“显示窗口”“重启 DSH”和“退出”。
 - Windows 只有显式“退出”会设置 `quitRequested` 并调用 `runtime.Quit`，随后进入 `OnShutdown`，确保 DSH/Node 进程树和托盘句柄一起回收。
 - macOS/Linux 使用 `tray_unix.go` 空实现并允许原生关闭窗口直接退出，避开 macOS `AppDelegate` 重名和 Linux 无显示 CI 的 GTK 初始化问题。后续如引入与 Wails 原生菜单兼容的托盘实现，再恢复对应平台的隐藏行为。
+- 正式构建启用系统 WebView 默认右键菜单，为选择、复制和粘贴提供平台原生回退；不注入自定义菜单脚本到跨源 DSH iframe。
+
+## Web 与原生能力边界
+
+宿主刻意把 DSH 当作普通 loopback Web 应用，不设置 Electron 平台查询参数，不向页面注入 Electron preload，也不声明 DSH 的 native directory-picker capability。因此工作区选择、插件 UI 和剪贴板按钮继续遵循上游 Web profile；Starline 只提供 iframe 剪贴板权限、默认右键菜单和“在浏览器中打开”回退。这样避免把 Electron `process.execPath` 当 Node、原生目录选择 FFI 崩溃、自绘标题栏/插件按钮重叠等同类桌面端问题引入 Wails，同时意味着无法由外壳直接修补跨源 iframe 内的 DSH 业务代码。
 
 ## 进程回收
 
@@ -135,10 +141,12 @@ Wails application
 
 - 官方 DSH Web UI 通过 iframe 承载；若上游将来启用禁止嵌入的 CSP 或 `X-Frame-Options`，需要改用浏览器回退或与上游协调；
 - Web/CLI 启动检查不等于 Node 原生扩展或工具调用检查；平台缺陷、离线包 PTY 状态和设备证据统一记录在 [已知问题与平台支持边界](KNOWN_ISSUES.md)。
+- 离线门禁实际生成一张 Sharp PNG、通过 Koffi 加载平台动态库并调用本机进程 ID 函数、运行 ripgrep，并启动真实 PTY；Windows 还加载 `ole32.dll`，防止只 `require` 模块却遗漏运行时 FFI 崩溃。
 
 ## 工具与操作系统权限
 
 - Wails 宿主只负责启动 DSH，不为 DSH 工具提权，也不移除上游审批或工作区策略；
 - `node-pty` 提供终端传输能力，不等同于管理员、UAC、root、全盘文件访问或沙箱逃逸能力；
 - DSH 子进程继承当前桌面用户的操作系统权限和经过代理设置处理的环境变量；系统 ACL、macOS 隐私权限、Linux 文件模式和安全软件仍然生效；
+- 官方 DSH 页面仍可由用户显式选择 `danger-full-access`，以当前操作系统用户权限执行更广泛的 PowerShell/文件操作；宿主不自动切换权限模式，也不会把该模式等同于 Windows UAC 管理员权限；
 - 宿主只回收自己启动的 DSH 进程树，不以更高权限扫描或终止其他用户进程。

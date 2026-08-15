@@ -345,6 +345,7 @@ const openHelp = (): void => {
       <section><h3>首次启动</h3><p>普通包需要系统 Node.js 22.19+ 或 24+，并会通过 npx 下载固定版本的 DSH。<code>offline-full</code> 已包含 Node 与 DSH，不访问 npm registry；第一次选择工作区仍是 DSH 自身的正常初始化。</p></section>
       <section><h3>代理怎么填</h3><p>如果代理软件监听本机端口，选择“自定义代理”，填写 <code>http://127.0.0.1:端口</code>。例如端口 10808 就填 <code>http://127.0.0.1:10808</code>。</p></section>
       <section><h3>出错排查</h3><p>先打开日志检查 Node、npm 下载或网络错误；改完代理后保存，外壳会自动重启 DSH。模型服务的密钥仍在官方 DSH 页面中配置。</p></section>
+      <section><h3>PowerShell 与权限</h3><p>权限模式由官方 DSH 页面选择。<code>danger-full-access</code> 可以按当前 Windows 用户权限执行更广泛的命令和文件操作，但会失去工作区沙箱保护；宿主不会因命令失败自动切换。该模式也不等于“以管理员身份运行”，不会自动获得 UAC 管理员令牌。</p></section>
       <section><h3>普通包与离线包</h3><p>Setup.exe 和普通 ZIP 体积较小，需要系统 Node/npm。<code>offline-full</code> 是较大的便携包，内含固定 DSH 依赖，但模型服务、远程 MCP 和联网工具仍可能需要网络。</p></section>
     </div>
     <div class="dialog-actions">

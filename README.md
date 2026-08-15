@@ -12,9 +12,9 @@ Starline DSH Desktop 是 [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 
 > 本项目是独立社区项目，与 DeepSeek 官方无隶属、背书或商业关系。DSH 仍处于开发者预览阶段，上游版本可能发生破坏性变化。
 
-> **v0.2.4 平台提示：** Windows x64 `offline-full` 已完成真实 PTY 抽查；macOS `offline-full` 存在 `spawn-helper` 权限缺陷，Linux `offline-full` 缺少可加载的 `node-pty` 原生绑定。需要终端、Shell 或 Bash 工具的 macOS/Linux 用户应暂用普通包。详情和未完成的设备验证见 [已知问题与平台支持边界](docs/KNOWN_ISSUES.md)。
+> **v0.3.2 平台提示：** 六个平台的原生 CI、离线 PTY/ripgrep 执行、Sharp/Koffi 加载和最终归档复测均已通过；这证明构建与归档包含对应平台运行时，但不等同于代表性设备上的安装、首次启动、升级和卸载验证。详情见 [已知问题与平台支持边界](docs/KNOWN_ISSUES.md)。
 
-> 当前 `main`（v0.3.1）已修复 macOS/Linux 原生构建兼容性，并加入白名单原生依赖准备、六平台真实 PTY 测试、最终归档复测和平台化托盘生命周期管理；这些改动不会反向改变旧版本资产，请以对应版本 Release 的矩阵结果为准。
+> 当前 `main` 是 v0.3.3 发布候选，继续加强 WebView 手工复制回退和离线原生依赖功能门禁；旧版本资产不会被反向修改，请以对应版本 Release 的矩阵结果为准。
 
 ## 功能
 
@@ -24,6 +24,7 @@ Starline DSH Desktop 是 [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 - 代理可视化：继承环境、自定义 HTTP(S) 代理、禁用代理；
 - 本地 DSH 健康检查强制直连，不受外部代理影响；
 - 启动诊断、日志目录、浏览器打开和一键重启；
+- 正式构建启用系统 WebView 默认右键菜单，为选择、复制和粘贴提供手工回退入口；
 - 启动页与运行状态栏显示桌面端版本和 DSH 版本；
 - Windows 窗口右上角 X 隐藏到系统托盘，从托盘菜单选择“退出”才回收本应用创建的 DSH 进程树；macOS/Linux 暂按系统原生关闭行为退出，避免无托盘入口时进程残留；
 - 支持多开 DSH Web 实例；配置保存带跨进程原子锁和过期版本检查，避免多开时静默覆盖代理设置；
@@ -72,9 +73,9 @@ Release 页面会按平台分组并显示每个文件的实际体积，不需要
 
 ### Windows
 
-- `starline-dsh-desktop-v0.3.1-windows-x64-setup-online.exe`：常规 x64 在线小包，默认安装到当前用户目录；安装向导可选择其他本地可写目录；
-- `starline-dsh-desktop-v0.3.1-windows-x64-portable-online.zip`：x64 在线便携版，解压后运行；
-- `starline-dsh-desktop-v0.3.1-windows-x64-portable-offline-full.zip`：内含 Node 与固定 DSH 依赖的 x64 完整离线便携版；
+- `starline-dsh-desktop-v0.3.3-windows-x64-setup-online.exe`：常规 x64 在线小包，默认安装到当前用户目录；安装向导可选择其他本地可写目录；
+- `starline-dsh-desktop-v0.3.3-windows-x64-portable-online.zip`：x64 在线便携版，解压后运行；
+- `starline-dsh-desktop-v0.3.3-windows-x64-portable-offline-full.zip`：内含 Node 与固定 DSH 依赖的 x64 完整离线便携版；
 - Windows on ARM 设备选择文件名含 `windows-arm64` 的对应产物，不要下载 x64 包。
 
 安装包未签名时，SmartScreen 可能提示未知发布者。正式广泛分发前需要代码签名证书。
@@ -85,19 +86,19 @@ Release 页面会按平台分组并显示每个文件的实际体积，不需要
 
 Intel Mac 下载文件名含 `macos-intel-x64-app` 的 ZIP；M1/M2/M3/M4 等 Apple Silicon Mac 下载文件名含 `macos-apple-silicon-arm64-app` 的 ZIP。根据是否需要内置 Node/DSH 选择 `online` 或 `offline-full`，解压后将应用移动到 Applications。当前构建未进行 Developer ID 签名和 notarization，Gatekeeper 可能阻止首次打开。
 
-v0.2.4 的 macOS `offline-full` 包不支持依赖 PTY 的终端/Shell 工具：ARM64 正式归档已确认 `spawn-helper` 缺少可执行位，Intel 包因相同打包逻辑也按受影响处理。需要这些能力时请使用普通包；同时要求完全离线和 PTY 时请等待修复版本。
+v0.2.4 的 macOS `offline-full` 曾存在 `spawn-helper` 执行权限缺陷；v0.3.2 已在 Intel/Apple Silicon 原生 runner 和最终 ZIP 中复测 PTY。当前仍缺代表性 Mac 的安装、Gatekeeper、首次启动和实际工作流反馈，且所有 macOS 产物均未签名、未公证。
 
 ### Linux
 
 常见 Intel/AMD 电脑下载 `linux-x64`，ARM 设备下载 `linux-arm64`。在线小包示例：
 
 ```bash
-tar -xzf starline-dsh-desktop-v0.3.1-linux-x64-portable-online.tar.gz
+tar -xzf starline-dsh-desktop-v0.3.3-linux-x64-portable-online.tar.gz
 chmod +x starline-dsh-desktop
 ./starline-dsh-desktop
 ```
 
-离线机器可以选择同架构、文件名以 `portable-offline-full.tar.gz` 结尾的完整离线包，目录结构和启动命令相同，但会多出 `offline-runtime/`。v0.2.4 的 Linux x64 正式归档已确认缺少可加载的 `node-pty` 原生绑定，ARM64 因相同打包逻辑也按受影响处理；依赖终端/PTY 的功能不可用。
+离线机器可以选择同架构、文件名以 `portable-offline-full.tar.gz` 结尾的完整离线包，目录结构和启动命令相同，但会多出 `offline-runtime/`。v0.2.4 曾缺少 Linux `node-pty` 原生绑定；v0.3.2 已在 Ubuntu 24.04 x64/ARM64 原生 runner 和最终 TAR.GZ 中复测 PTY，但没有承诺兼容所有发行版或完成代表性设备验证。
 
 `offline-full` 是独立可选产物，不会放进普通 Setup 或便携包。Windows x64 v0.2.4 参考值：普通 ZIP 约 4.3 MiB、Setup 约 6.0 MiB、完整离线 ZIP 约 113.6 MiB；完整离线包解压后超过 350 MiB，并包含数万个文件。各平台的准确体积以 Release 资产为准。
 
@@ -143,13 +144,13 @@ Windows 窗口右上角 X 的行为是隐藏到系统托盘，因此 DSH/Node �
 Windows：
 
 ```powershell
-Get-FileHash .\starline-dsh-desktop-v0.3.1-windows-x64-setup-online.exe -Algorithm SHA256
+Get-FileHash .\starline-dsh-desktop-v0.3.3-windows-x64-setup-online.exe -Algorithm SHA256
 ```
 
 macOS/Linux：
 
 ```bash
-sha256sum -c starline-dsh-desktop-v0.3.1-linux-x64-portable-online.tar.gz.sha256
+sha256sum -c starline-dsh-desktop-v0.3.3-linux-x64-portable-online.tar.gz.sha256
 ```
 
 ## 常见问题
