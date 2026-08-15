@@ -11,9 +11,9 @@
 | 缺少设备验证 | 构建或 Web 启动检查成功，但没有代表性设备上的安装和功能证据 |
 | 产品限制 | 当前设计或分发方式明确不覆盖的能力，不等同于回归 Bug |
 
-## v0.3.3 当前发布证据
+## v0.4.0 当前发布证据
 
-[v0.3.3 Release](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/releases/tag/v0.3.3) 已提供六个平台的在线/离线产物和 SHA-256。发布工作流在各原生 runner 上准备离线运行时，真实调用 `node-pty.spawn()`，并在最终 ZIP/TAR.GZ 解包后复测；这属于原生 CI、归档和公开 Release 证据，不属于代表性设备测试。
+[v0.4.0 Release](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/releases/tag/v0.4.0) 已提供六个平台的在线/离线产物和 SHA-256。发布工作流在各原生 runner 上准备离线运行时，真实调用 `node-pty.spawn()`，并在最终 ZIP/TAR.GZ 解包后复测；这属于原生 CI、归档和公开 Release 证据，不属于代表性设备测试。
 
 | 平台与产物 | 已确认 | 仍缺少的证据 |
 | --- | --- | --- |
