@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	"starline-dsh-desktop/internal/dshversion"
 )
 
 const offlineRuntimeEnv = "DSH_DESKTOP_OFFLINE_ROOT"
@@ -23,6 +25,10 @@ type dshCommandSpec struct {
 
 // resolveDSHCommand 只在完整离线运行时不存在时回退到系统 Node/npx。
 func resolveDSHCommand(version string) (dshCommandSpec, error) {
+	version, err := dshversion.Normalize(version)
+	if err != nil {
+		return dshCommandSpec{}, err
+	}
 	root, found, err := findOfflineRuntime()
 	if err != nil {
 		return dshCommandSpec{}, err
@@ -47,6 +53,19 @@ func resolveDSHCommand(version string) (dshCommandSpec, error) {
 		mode:        "online",
 		label:       " npx",
 	}, nil
+}
+
+// BundledDSHVersion 返回当前可执行文件旁离线运行时的固定版本，不存在时不报错。
+func BundledDSHVersion() (string, bool, error) {
+	root, found, err := findOfflineRuntime()
+	if err != nil || !found {
+		return "", found, err
+	}
+	version, err := readBundledDSHVersion(root)
+	if err != nil {
+		return "", true, err
+	}
+	return version, true, nil
 }
 
 // onlineDSHPrefix 固定 DSH 版本并优先复用 npm 内容缓存；缓存缺失时仍允许正常下载。
@@ -92,12 +111,10 @@ func findOfflineRuntime() (string, bool, error) {
 }
 
 func offlineDSHCommand(root, requestedVersion string) (dshCommandSpec, error) {
-	versionPath := filepath.Join(root, "dsh-version.txt")
-	versionData, err := os.ReadFile(versionPath)
+	bundledVersion, err := readBundledDSHVersion(root)
 	if err != nil {
-		return dshCommandSpec{}, fmt.Errorf("离线运行时缺少版本文件：%w", err)
+		return dshCommandSpec{}, err
 	}
-	bundledVersion := strings.TrimSpace(string(versionData))
 	if bundledVersion != requestedVersion {
 		return dshCommandSpec{}, fmt.Errorf("离线运行时 DSH 版本为 %s，但当前请求 %s；请移除版本覆盖或下载匹配的离线包", bundledVersion, requestedVersion)
 	}
@@ -117,6 +134,19 @@ func offlineDSHCommand(root, requestedVersion string) (dshCommandSpec, error) {
 		mode:        "offline",
 		label:       "包内 DSH",
 	}, nil
+}
+
+func readBundledDSHVersion(root string) (string, error) {
+	versionPath := filepath.Join(root, "dsh-version.txt")
+	versionData, err := os.ReadFile(versionPath)
+	if err != nil {
+		return "", fmt.Errorf("离线运行时缺少版本文件：%w", err)
+	}
+	version, err := dshversion.Normalize(string(versionData))
+	if err != nil {
+		return "", fmt.Errorf("离线运行时版本文件无效：%w", err)
+	}
+	return version, nil
 }
 
 func offlineNodeName() string {

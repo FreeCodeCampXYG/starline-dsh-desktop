@@ -72,6 +72,21 @@ func TestOnlineDSHPrefixPrefersNPMCache(t *testing.T) {
 	}
 }
 
+func TestBundledDSHVersionReadsPinnedRuntime(t *testing.T) {
+	runtimeRoot := t.TempDir()
+	if err := os.WriteFile(filepath.Join(runtimeRoot, "dsh-version.txt"), []byte("0.1.0-rc.7\n"), 0o600); err != nil {
+		t.Fatalf("写入离线运行时版本失败：%v", err)
+	}
+	t.Setenv(offlineRuntimeEnv, runtimeRoot)
+	version, found, err := BundledDSHVersion()
+	if err != nil {
+		t.Fatalf("读取离线运行时版本失败：%v", err)
+	}
+	if !found || version != "0.1.0-rc.7" {
+		t.Fatalf("离线运行时版本不一致：found=%v version=%q", found, version)
+	}
+}
+
 func TestOfflineRuntimeStartsWeb(t *testing.T) {
 	if os.Getenv("DSH_DESKTOP_RUN_OFFLINE_INTEGRATION") != "1" {
 		t.Skip("set DSH_DESKTOP_RUN_OFFLINE_INTEGRATION=1 to run the packaged runtime")

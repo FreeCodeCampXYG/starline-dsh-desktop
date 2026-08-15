@@ -644,6 +644,56 @@ footer {
 	font-size: 12px;
 }
 
+.runtime-update-card {
+	display: grid;
+	gap: 12px;
+	margin-top: 8px;
+	padding: 16px;
+	border: 1px solid rgba(96, 121, 255, 0.24);
+	border-radius: 14px;
+	background: rgba(66, 89, 190, 0.08);
+}
+
+.runtime-update-card > div:first-child {
+	display: grid;
+	gap: 5px;
+}
+
+.runtime-update-card small,
+.update-result p {
+	margin: 0;
+	color: #8795af;
+	font-size: 11px;
+	line-height: 1.6;
+}
+
+.runtime-update-card > .button {
+	justify-self: start;
+}
+
+.update-result {
+	display: grid;
+	gap: 10px;
+	color: #aab7ce;
+	font-size: 12px;
+}
+
+.update-badges,
+.update-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.update-badges span {
+	padding: 4px 8px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 999px;
+	color: #becaff;
+	background: rgba(255, 255, 255, 0.035);
+	font: 11px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
 .dialog-actions {
 	display: flex;
 	justify-content: flex-end;

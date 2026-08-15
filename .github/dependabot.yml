@@ -14,6 +14,12 @@ updates:
     groups:
       frontend-dependencies:
         patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /offline-runtime
+    schedule:
+      interval: weekly
+    allow:
+      - dependency-name: "@deepseek-ai/dsh"
   - package-ecosystem: github-actions
     directory: /
     schedule:

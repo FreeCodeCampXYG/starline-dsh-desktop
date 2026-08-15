@@ -8,35 +8,46 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"starline-dsh-desktop/internal/dshversion"
 )
 
 const (
-	proxyModeInherit  = "inherit"
-	proxyModeCustom   = "custom"
-	proxyModeDisabled = "disabled"
+	ProxyModeInherit  = "inherit"
+	ProxyModeCustom   = "custom"
+	ProxyModeDisabled = "disabled"
 )
 
 // ErrConflict 表示另一个桌面实例已经修改了配置，当前实例不能覆盖它。
 var ErrConflict = errors.New("配置已被其他实例修改，请重新加载后再保存")
 
 type Settings struct {
-	ProxyMode string `json:"proxyMode"`
-	ProxyURL  string `json:"proxyUrl,omitempty"`
+	ProxyMode  string `json:"proxyMode"`
+	ProxyURL   string `json:"proxyUrl,omitempty"`
+	DSHVersion string `json:"dshVersion,omitempty"`
 }
 
 func Default() Settings {
-	return Settings{ProxyMode: proxyModeInherit}
+	return Settings{ProxyMode: ProxyModeInherit}
 }
 
 // Normalize 校验界面输入，并把省略协议的常见代理地址补成 HTTP URL。
 func Normalize(settings Settings) (Settings, error) {
 	settings.ProxyMode = strings.TrimSpace(settings.ProxyMode)
 	settings.ProxyURL = strings.TrimSpace(settings.ProxyURL)
+	settings.DSHVersion = strings.TrimSpace(settings.DSHVersion)
+	if settings.DSHVersion != "" {
+		version, err := dshversion.Normalize(settings.DSHVersion)
+		if err != nil {
+			return Settings{}, err
+		}
+		settings.DSHVersion = version
+	}
 	switch settings.ProxyMode {
-	case proxyModeInherit, proxyModeDisabled:
+	case ProxyModeInherit, ProxyModeDisabled:
 		settings.ProxyURL = ""
 		return settings, nil
-	case proxyModeCustom:
+	case ProxyModeCustom:
 		if settings.ProxyURL == "" {
 			return Settings{}, errors.New("自定义代理模式需要填写代理地址")
 		}

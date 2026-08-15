@@ -11,6 +11,19 @@ export type Status = {
 export type Settings = {
   proxyMode: "inherit" | "custom" | "disabled";
   proxyUrl?: string;
+  dshVersion?: string;
+};
+
+export type DSHUpdateInfo = {
+  currentVersion: string;
+  defaultVersion: string;
+  latestVersion: string;
+  runtimeMode: "auto" | "online" | "offline";
+  message: string;
+  updateAvailable: boolean;
+  canApply: boolean;
+  canReset: boolean;
+  usingCustomVersion: boolean;
 };
 
 type AppBindings = {
@@ -18,6 +31,9 @@ type AppBindings = {
   Retry(): Promise<Status>;
   GetSettings(): Promise<Settings>;
   SaveSettings(settings: Settings): Promise<Status>;
+  CheckDSHUpdate(): Promise<DSHUpdateInfo>;
+  ApplyLatestDSHUpdate(): Promise<Status>;
+  ResetDSHVersion(): Promise<Status>;
   OpenLogs(): Promise<void>;
   OpenInBrowser(): Promise<void>;
 };

@@ -4,6 +4,8 @@
 
 ## 发布模型
 
+Dependabot 每周只检查 `/offline-runtime` 中固定的 `@deepseek-ai/dsh` 直接依赖。自动 PR 只是版本提醒：不得自动合并或直接发布。升级 DSH 时必须审查锁文件、生命周期脚本与白名单哈希变化，并重新完成六平台原生依赖功能测试和最终归档复测；用户在线包手动选择的版本不改变 Release 内置兼容基线。
+
 - push/PR：运行质量门和六个原生平台构建；
 - 手动运行 Release workflow：只生成 Actions artifacts，不创建 GitHub Release；
 - 推送 `v*` tag：构建全部平台，成功后创建 GitHub Release；

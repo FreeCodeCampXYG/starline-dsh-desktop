@@ -62,13 +62,13 @@ Wails application
 4. 离线运行时必须同时包含匹配版本文件、Node 可执行文件和 DSH 入口，缺损或版本不一致时明确失败，不静默联网回退。
 5. 未发现离线运行时时，宿主查找系统 Node.js 并验证版本；Windows 直接让 Node 执行 `npx-cli.js`，Unix 使用 PATH 中的 `npx`。命令使用 `--prefer-offline` 优先复用 npm 内容缓存，但不直接信任 PATH 中版本未知的全局 `dsh`。
 6. 宿主向 DSH 传入 `--port 0`，由 DSH 保持 listener 所有权并选择可用 loopback 端口；宿主不再预占后释放端口。
-7. 子进程执行固定版本的 `@deepseek-ai/dsh`。普通包使用：
+7. 子进程执行精确版本的 `@deepseek-ai/dsh`：默认使用 Desktop 发布时验证的固定版本；在线包可在用户手动查询、确认 npm 官方 `latest` 后保存另一个精确版本，并可清除设置恢复默认。普通包使用：
 
    ```text
    npx --yes --prefer-offline --package=@deepseek-ai/dsh@<version> dsh web --host 127.0.0.1 --port 0
    ```
 
-   `offline-full` 直接执行 `offline-runtime/node[.exe] offline-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js web ...`，不调用 npm registry。
+   `offline-full` 直接执行 `offline-runtime/node[.exe] offline-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js web ...`，不调用 npm registry，也不允许界面原地替换包内依赖闭包。
 
 8. 宿主从 DSH 输出的 `dsh web: http://...` 行解析实际地址，只接受通过 loopback 安全校验的 HTTP URL，再使用禁用代理的 HTTP client 轮询并验证状态码和 DSH 页面标题。
 9. 就绪后前端先在遮罩后让 iframe 导航到该 loopback URL；iframe `load` 后主动显示原生窗口并淡入页面。启动失败或进程意外退出时跳过等待，立即显示顶部错误状态栏。
@@ -118,6 +118,14 @@ Wails application
 
 宿主当前不设置 `DSH_HOME`。桌面端与命令行 DSH 因而遵循上游默认用户数据目录，共享状态；`offline-full` 的“便携”只表示程序和运行时可以整体移动，不表示工作区、会话和账户配置也随包移动。
 
+## DSH 更新边界
+
+- `internal/updater` 只在用户点击时通过当前代理策略读取 `registry.npmjs.org` 的官方 `@deepseek-ai/dsh/latest` 元数据，限制响应大小、校验包名和 SemVer，并拒绝非官方重定向；检查本身不运行 npm、不下载软件包。
+- 在线包应用更新时由后端再次查询官方 `latest`，只把返回的精确版本写入用户配置，然后通过既有 npx 启动链重启；前端不能提交任意包名或版本。
+- 环境变量 `DSH_DESKTOP_DSH_VERSION` 继续作为显式开发覆盖且优先级最高；存在覆盖时，界面不修改实际版本。
+- `offline-full` 始终以包内 `dsh-version.txt` 为准，即使同一用户配置曾保存在线版本也不会产生离线运行时版本冲突。离线升级仍是新的 Desktop Release 和六平台原生依赖门禁。
+- 仓库 Dependabot 每周只检查 `offline-runtime` 的官方 DSH 直接依赖并提出 PR；它不自动合并、不发布，也不能代替原生 CI、最终归档和设备验证。
+
 ## 安装目录与路径语义
 
 - Windows Setup 的目录页允许选择任意当前用户可写目录，并通过注册表 `InstallLocation` 记住选择；
@@ -133,7 +141,7 @@ Wails application
 - 会话、轨迹、工具审批与插件协议；
 - 模型 provider、API Key 与账号系统；
 - DSH 工作区迁移；
-- npm 包本身的自动更新策略。
+- 无人值守地自动安装或自动降级 npm 包。
 
 如果功能需要复制上述模块，应先判断它是否应提交到 DSH 上游。
 

@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"sync"
@@ -9,7 +10,9 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"starline-dsh-desktop/internal/config"
+	"starline-dsh-desktop/internal/dshversion"
 	"starline-dsh-desktop/internal/launcher"
+	"starline-dsh-desktop/internal/updater"
 )
 
 const (
@@ -20,17 +23,31 @@ const (
 )
 
 type App struct {
-	ctx        context.Context
-	version    string
-	dshVersion string
+	ctx               context.Context
+	version           string
+	dshVersion        string
+	defaultDSHVersion string
 
 	mu              sync.Mutex
+	settingsMu      sync.Mutex
 	process         *launcher.Process
 	status          Status
 	settings        config.Settings
 	settingsLoadErr error
 	generation      uint64
 	quitRequested   bool
+}
+
+type DSHUpdateInfo struct {
+	CurrentVersion     string `json:"currentVersion"`
+	DefaultVersion     string `json:"defaultVersion"`
+	LatestVersion      string `json:"latestVersion"`
+	RuntimeMode        string `json:"runtimeMode"`
+	Message            string `json:"message"`
+	UpdateAvailable    bool   `json:"updateAvailable"`
+	CanApply           bool   `json:"canApply"`
+	CanReset           bool   `json:"canReset"`
+	UsingCustomVersion bool   `json:"usingCustomVersion"`
 }
 
 type Status struct {
@@ -46,12 +63,19 @@ type Status struct {
 // New 组装 Wails 适配层需要的状态；DSH 版本在启动时解析一次，运行期间保持稳定。
 func New(appVersion, defaultDSHVersion string) *App {
 	settings, settingsErr := config.Load()
-	dshVersion := resolveDSHVersion(defaultDSHVersion)
+	dshVersion := strings.TrimSpace(defaultDSHVersion)
+	resolvedVersion, versionErr := resolveDSHVersion(defaultDSHVersion, settings)
+	if versionErr == nil {
+		dshVersion = resolvedVersion
+	} else if settingsErr == nil {
+		settingsErr = versionErr
+	}
 	return &App{
-		version:         appVersion,
-		dshVersion:      dshVersion,
-		settings:        settings,
-		settingsLoadErr: settingsErr,
+		version:           appVersion,
+		dshVersion:        dshVersion,
+		defaultDSHVersion: strings.TrimSpace(defaultDSHVersion),
+		settings:          settings,
+		settingsLoadErr:   settingsErr,
 		status: Status{
 			State:       "idle",
 			Message:     "等待启动 DeepSeek Harness",
@@ -80,7 +104,7 @@ func (a *App) Startup(ctx context.Context) {
 		}
 	}()
 	if a.settingsLoadErr != nil {
-		a.fail("代理配置无法读取", a.settingsLoadErr)
+		a.fail("启动配置无效", a.settingsLoadErr)
 		return
 	}
 	a.restart()
@@ -150,19 +174,139 @@ func (a *App) GetSettings() config.Settings {
 
 // SaveSettings 持久化代理配置，并立即重启由外壳管理的 DSH 进程。
 func (a *App) SaveSettings(settings config.Settings) (Status, error) {
+	a.settingsMu.Lock()
+	defer a.settingsMu.Unlock()
+	a.mu.Lock()
+	expected := a.settings
+	a.mu.Unlock()
+	settings.DSHVersion = expected.DSHVersion
 	normalized, err := config.Normalize(settings)
 	if err != nil {
 		return a.GetStatus(), err
 	}
-	a.mu.Lock()
-	expected := a.settings
-	a.mu.Unlock()
 	if err := config.SaveIfUnchanged(expected, normalized); err != nil {
 		return a.GetStatus(), err
 	}
 	a.mu.Lock()
 	a.settings = normalized
 	a.settingsLoadErr = nil
+	a.mu.Unlock()
+	return a.restart(), nil
+}
+
+// CheckDSHUpdate 查询 npm 官方 latest；该操作不会下载 DSH 或修改设置。
+func (a *App) CheckDSHUpdate() (DSHUpdateInfo, error) {
+	a.mu.Lock()
+	ctx := a.ctx
+	currentVersion := a.dshVersion
+	defaultVersion := a.defaultDSHVersion
+	settings := a.settings
+	runtimeMode := a.status.RuntimeMode
+	a.mu.Unlock()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	release, err := updater.CheckDSHLatest(ctx, currentVersion, settings)
+	if err != nil {
+		return DSHUpdateInfo{}, err
+	}
+	info := DSHUpdateInfo{
+		CurrentVersion:     currentVersion,
+		DefaultVersion:     defaultVersion,
+		LatestVersion:      release.LatestVersion,
+		RuntimeMode:        runtimeMode,
+		UpdateAvailable:    release.UpdateAvailable,
+		CanReset:           settings.DSHVersion != "",
+		UsingCustomVersion: settings.DSHVersion != "",
+	}
+	switch {
+	case release.CurrentNewer:
+		info.Message = "当前 DSH 版本高于 npm 官方 latest，不建议自动降级。"
+	case !release.UpdateAvailable:
+		info.Message = "当前已是 npm 官方 latest。"
+	default:
+		canApply, reason, applyErr := canApplyDSHUpdate()
+		if applyErr != nil {
+			return DSHUpdateInfo{}, applyErr
+		}
+		info.CanApply = canApply
+		if canApply {
+			info.Message = "发现新的官方 DSH；应用后会通过 npx 下载并重启。"
+		} else {
+			info.Message = reason
+		}
+	}
+	return info, nil
+}
+
+// ApplyLatestDSHUpdate 再次向 npm 核对 latest，保存精确版本后重启在线运行时。
+func (a *App) ApplyLatestDSHUpdate() (Status, error) {
+	a.settingsMu.Lock()
+	defer a.settingsMu.Unlock()
+
+	a.mu.Lock()
+	ctx := a.ctx
+	currentVersion := a.dshVersion
+	expected := a.settings
+	a.mu.Unlock()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	canApply, reason, err := canApplyDSHUpdate()
+	if err != nil {
+		return a.GetStatus(), err
+	}
+	if !canApply {
+		return a.GetStatus(), errors.New(reason)
+	}
+	release, err := updater.CheckDSHLatest(ctx, currentVersion, expected)
+	if err != nil {
+		return a.GetStatus(), err
+	}
+	if !release.UpdateAvailable {
+		return a.GetStatus(), errors.New("当前已经是 npm 官方 latest，无需更新")
+	}
+	updated := expected
+	updated.DSHVersion = release.LatestVersion
+	updated, err = config.Normalize(updated)
+	if err != nil {
+		return a.GetStatus(), err
+	}
+	if err := config.SaveIfUnchanged(expected, updated); err != nil {
+		return a.GetStatus(), err
+	}
+	a.mu.Lock()
+	a.settings = updated
+	a.settingsLoadErr = nil
+	a.dshVersion = release.LatestVersion
+	a.mu.Unlock()
+	return a.restart(), nil
+}
+
+// ResetDSHVersion 清除手动选择，恢复桌面版本内置的兼容 DSH 版本。
+func (a *App) ResetDSHVersion() (Status, error) {
+	a.settingsMu.Lock()
+	defer a.settingsMu.Unlock()
+
+	a.mu.Lock()
+	expected := a.settings
+	a.mu.Unlock()
+	if expected.DSHVersion == "" {
+		return a.GetStatus(), errors.New("当前没有保存手动 DSH 版本")
+	}
+	updated := expected
+	updated.DSHVersion = ""
+	resolvedVersion, err := resolveDSHVersion(a.defaultDSHVersion, updated)
+	if err != nil {
+		return a.GetStatus(), err
+	}
+	if err := config.SaveIfUnchanged(expected, updated); err != nil {
+		return a.GetStatus(), err
+	}
+	a.mu.Lock()
+	a.settings = updated
+	a.settingsLoadErr = nil
+	a.dshVersion = resolvedVersion
 	a.mu.Unlock()
 	return a.restart(), nil
 }
@@ -183,21 +327,21 @@ func (a *App) OpenInBrowser() error {
 }
 
 // launch 完成端口选择、子进程启动和 HTTP 就绪探测。
-func (a *App) launch(generation uint64, settings config.Settings) {
+func (a *App) launch(generation uint64, settings config.Settings, dshVersion string) {
 	workingDir, err := os.Getwd()
 	if err != nil {
-		a.failIfCurrent(generation, "无法确定工作目录", err)
+		a.failIfCurrent(generation, dshVersion, "无法确定工作目录", err)
 		return
 	}
 
 	process, err := launcher.Start(a.ctx, launcher.Config{
-		Version:    a.dshVersion,
+		Version:    dshVersion,
 		WorkingDir: workingDir,
 		ProxyMode:  settings.ProxyMode,
 		ProxyURL:   settings.ProxyURL,
 	})
 	if err != nil {
-		a.failIfCurrent(generation, "DSH 启动失败", err)
+		a.failIfCurrent(generation, dshVersion, "DSH 启动失败", err)
 		return
 	}
 	runtimeMode := process.RuntimeMode()
@@ -213,7 +357,7 @@ func (a *App) launch(generation uint64, settings config.Settings) {
 
 	if err := process.WaitReady(a.ctx, 5*time.Minute); err != nil {
 		_ = process.Stop(3 * time.Second)
-		a.failIfCurrent(generation, "DSH 未能按时就绪", err)
+		a.failIfCurrent(generation, dshVersion, "DSH 未能按时就绪", err)
 		return
 	}
 
@@ -222,7 +366,7 @@ func (a *App) launch(generation uint64, settings config.Settings) {
 		URL:         process.URL(),
 		Message:     "DeepSeek Harness 已就绪",
 		Version:     a.version,
-		DSHVersion:  a.dshVersion,
+		DSHVersion:  dshVersion,
 		RuntimeMode: runtimeMode,
 	}
 	if !a.setStatusIfCurrent(generation, status) {
@@ -251,7 +395,7 @@ func (a *App) launch(generation uint64, settings config.Settings) {
 			Message:     "DeepSeek Harness 意外停止",
 			Detail:      detail,
 			Version:     a.version,
-			DSHVersion:  a.dshVersion,
+			DSHVersion:  dshVersion,
 			RuntimeMode: runtimeMode,
 		}
 		a.setStatus(stopped)
@@ -267,11 +411,12 @@ func (a *App) restart() Status {
 	process := a.process
 	a.process = nil
 	settings := a.settings
+	dshVersion := a.dshVersion
 	a.status = Status{
 		State:       "starting",
 		Message:     "正在启动 DeepSeek Harness…",
 		Version:     a.version,
-		DSHVersion:  a.dshVersion,
+		DSHVersion:  dshVersion,
 		RuntimeMode: "auto",
 	}
 	status := a.status
@@ -280,17 +425,17 @@ func (a *App) restart() Status {
 	if process != nil {
 		_ = process.Stop(3 * time.Second)
 	}
-	go a.launch(generation, settings)
+	go a.launch(generation, settings, dshVersion)
 	return status
 }
 
-func (a *App) failIfCurrent(generation uint64, message string, err error) {
+func (a *App) failIfCurrent(generation uint64, dshVersion, message string, err error) {
 	status := Status{
 		State:       "failed",
 		Message:     message,
 		Detail:      err.Error(),
 		Version:     a.version,
-		DSHVersion:  a.dshVersion,
+		DSHVersion:  dshVersion,
 		RuntimeMode: "auto",
 	}
 	if a.setStatusIfCurrent(generation, status) && a.ctx != nil {
@@ -335,9 +480,33 @@ func (a *App) emit(event string) {
 	}
 }
 
-func resolveDSHVersion(fallback string) string {
+func resolveDSHVersion(fallback string, settings config.Settings) (string, error) {
 	if value := strings.TrimSpace(os.Getenv("DSH_DESKTOP_DSH_VERSION")); value != "" {
-		return value
+		return dshversion.Normalize(value)
 	}
-	return fallback
+	bundledVersion, bundled, err := launcher.BundledDSHVersion()
+	if err != nil {
+		return "", err
+	}
+	if bundled {
+		return bundledVersion, nil
+	}
+	if settings.DSHVersion != "" {
+		return dshversion.Normalize(settings.DSHVersion)
+	}
+	return dshversion.Normalize(fallback)
+}
+
+func canApplyDSHUpdate() (bool, string, error) {
+	if strings.TrimSpace(os.Getenv("DSH_DESKTOP_DSH_VERSION")) != "" {
+		return false, "当前版本由 DSH_DESKTOP_DSH_VERSION 环境变量控制，请先移除该覆盖。", nil
+	}
+	bundledVersion, bundled, err := launcher.BundledDSHVersion()
+	if err != nil {
+		return false, "", err
+	}
+	if bundled {
+		return false, "当前是 offline-full 离线包（内置 DSH " + bundledVersion + "）；请下载包含新版本的 Starline 离线包，避免破坏原生依赖闭包。", nil
+	}
+	return true, "", nil
 }

@@ -82,6 +82,14 @@ npx --yes --package=@deepseek-ai/dsh@0.1.0-rc.6 dsh web
 
 `offline-full` 不访问 npm registry，但代理设置仍会传递给 DSH，用于模型 provider、远程 MCP、Web 工具等网络功能。
 
+## 手动检查或更新 DSH 失败
+
+1. 更新检查只访问 npm 官方 `@deepseek-ai/dsh/latest` 元数据，并沿用桌面端代理模式；如果 npm 下载同样失败，先修复代理或 registry 连通性。
+2. 点击“应用更新”后，后端会再次核对官方 `latest`，再保存精确版本并重启；如果另一个桌面实例同时修改了设置，会返回配置冲突而不是覆盖。
+3. 在线包更新后启动失败，可重新打开设置并选择“恢复默认版本”，回到当前 Desktop Release 已验证的 DSH。
+4. `offline-full` 会显示新版本但拒绝原地安装；请下载包含该 DSH 版本的新离线资产。手工删除或覆盖 `node_modules` 会破坏完整性与原生依赖门禁。
+5. 使用 `DSH_DESKTOP_DSH_VERSION` 时，环境变量优先于界面设置；移除覆盖并重新启动桌面端后，手动更新按钮才能改变实际版本。
+
 ## Windows 黑框闪烁
 
 当前版本使用 `CREATE_NO_WINDOW` 和隐藏窗口标志运行宿主直接创建的 Node 检查、DSH 与进程树回收。DSH Windows ACL 沙箱可能在更深层重新创建 PowerShell/控制台进程，这不受外壳启动标志控制；同类报告见 [#15](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/15)。如果仍出现：

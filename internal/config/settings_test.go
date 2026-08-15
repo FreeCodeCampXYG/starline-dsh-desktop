@@ -7,7 +7,7 @@ import (
 )
 
 func TestNormalizeSettingsCustomProxy(t *testing.T) {
-	settings, err := Normalize(Settings{ProxyMode: proxyModeCustom, ProxyURL: "127.0.0.1:10808"})
+	settings, err := Normalize(Settings{ProxyMode: ProxyModeCustom, ProxyURL: "127.0.0.1:10808"})
 	if err != nil {
 		t.Fatalf("normalizeSettings() 返回错误：%v", err)
 	}
@@ -17,14 +17,14 @@ func TestNormalizeSettingsCustomProxy(t *testing.T) {
 }
 
 func TestNormalizeSettingsRejectsUnsupportedProxy(t *testing.T) {
-	_, err := Normalize(Settings{ProxyMode: proxyModeCustom, ProxyURL: "socks5://127.0.0.1:10808"})
+	_, err := Normalize(Settings{ProxyMode: ProxyModeCustom, ProxyURL: "socks5://127.0.0.1:10808"})
 	if err == nil {
 		t.Fatal("预期拒绝不支持的 SOCKS5 代理")
 	}
 }
 
 func TestNormalizeSettingsClearsUnusedProxyURL(t *testing.T) {
-	settings, err := Normalize(Settings{ProxyMode: proxyModeDisabled, ProxyURL: "http://127.0.0.1:10808"})
+	settings, err := Normalize(Settings{ProxyMode: ProxyModeDisabled, ProxyURL: "http://127.0.0.1:10808"})
 	if err != nil {
 		t.Fatalf("normalizeSettings() 返回错误：%v", err)
 	}
@@ -35,7 +35,7 @@ func TestNormalizeSettingsClearsUnusedProxyURL(t *testing.T) {
 
 func TestSettingsRoundTripInChineseAndSpacePath(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "用户 配置", "代理设置", "settings.json")
-	want := Settings{ProxyMode: proxyModeCustom, ProxyURL: "http://127.0.0.1:10808"}
+	want := Settings{ProxyMode: ProxyModeCustom, ProxyURL: "http://127.0.0.1:10808", DSHVersion: "0.1.0-rc.7"}
 	if err := saveFile(path, want); err != nil {
 		t.Fatalf("中文路径保存配置失败：%v", err)
 	}
@@ -51,8 +51,8 @@ func TestSettingsRoundTripInChineseAndSpacePath(t *testing.T) {
 func TestSaveFileIfUnchangedRejectsStaleWriter(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "settings.json")
 	initial := Default()
-	updated := Settings{ProxyMode: proxyModeCustom, ProxyURL: "http://127.0.0.1:10808"}
-	other := Settings{ProxyMode: proxyModeDisabled}
+	updated := Settings{ProxyMode: ProxyModeCustom, ProxyURL: "http://127.0.0.1:10808", DSHVersion: "0.1.0-rc.7"}
+	other := Settings{ProxyMode: ProxyModeDisabled}
 
 	if err := saveFile(path, initial); err != nil {
 		t.Fatalf("初始配置保存失败：%v", err)
@@ -69,5 +69,12 @@ func TestSaveFileIfUnchangedRejectsStaleWriter(t *testing.T) {
 	}
 	if got != updated {
 		t.Fatalf("过期写入不应覆盖新配置：got %#v, want %#v", got, updated)
+	}
+}
+
+func TestNormalizeSettingsRejectsFloatingDSHVersion(t *testing.T) {
+	_, err := Normalize(Settings{ProxyMode: ProxyModeInherit, DSHVersion: "latest"})
+	if err == nil {
+		t.Fatal("配置不应接受未固定的 latest DSH 版本")
 	}
 }

@@ -20,6 +20,7 @@ Starline DSH Desktop 是 [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 
 - Windows、macOS、Linux 原生桌面窗口；
 - 固定 DSH 版本启动，避免 `latest` 漂移；
+- 手动检查 npm 官方 DSH 更新；在线包明确确认后可切换精确版本，并可恢复 Desktop 内置兼容版本；
 - 自动选择 loopback 端口并校验 DSH 页面指纹；
 - 代理可视化：继承环境、自定义 HTTP(S) 代理、禁用代理；
 - 本地 DSH 健康检查强制直连，不受外部代理影响；
@@ -56,7 +57,7 @@ Starline DSH Desktop (Go + Wails)
 | Linux | GTK3、WebKitGTK 4.1 及其运行库；普通包首次安装原生依赖时还可能需要 Python 3、make 和 C/C++ 编译器 |
 | 网络 | 普通包首次运行需要 npm registry；`offline-full` 不访问 npm，但模型服务等功能可能仍需网络 |
 
-当前默认启动 `@deepseek-ai/dsh@0.1.0-rc.6`。可用 `DSH_DESKTOP_DSH_VERSION` 临时覆盖，但正式 Release 仍以仓库固定版本为准。
+当前默认启动 `@deepseek-ai/dsh@0.1.0-rc.6`。截至 2026-08-16，npm 官方 `latest` 与 `next` 也都是该版本。桌面端不会后台自动升级；在线包可从“桌面工具 → 检查 DSH 更新”手动查询 npm 官方 `latest`，确认后把精确版本写入用户配置并重启，失败时可恢复当前 Desktop 内置兼容版本。`offline-full` 不原地替换包内依赖，必须下载包含新 DSH 且经过原生门禁的新离线包。`DSH_DESKTOP_DSH_VERSION` 仍可用于临时开发覆盖，并优先于界面设置。
 
 多开说明：每个桌面进程都会为 DSH 申请独立的动态 loopback 端口，因此可以同时打开多个 Web 实例。代理配置仍位于用户级共享配置文件；当另一个实例已经保存过新配置时，旧实例会收到冲突提示并拒绝覆盖，需要重新打开设置后再保存。不同实例如需完全隔离，应使用不同工作区。
 
@@ -119,7 +120,7 @@ sudo apt-get install libgtk-3-0 libwebkit2gtk-4.1-0
 
 预热最多等待 800 毫秒：DSH 很快就绪时直接显示已加载页面；较慢时会先显示稳定的“后台准备”界面，不会让窗口一直隐藏。启动失败或 DSH 意外退出时，错误摘要会固定显示在顶部，并提供详情、重试、代理设置和日志入口。
 
-普通包不会直接调用 PATH 中版本未知的全局 `dsh`，而是要求桌面端选定的固定版本（当前默认 `@deepseek-ai/dsh@0.1.0-rc.6`）。npx 会优先复用与该版本对应的 npm 缓存，因此日常重复启动不会重复下载完整包；缓存不存在或已被清理时才需要联网获取。
+普通包不会直接调用 PATH 中版本未知的全局 `dsh`，而是要求桌面端选定的精确版本（默认 `@deepseek-ai/dsh@0.1.0-rc.6`，或用户手动确认的 npm 官方 `latest`）。npx 会优先复用与该版本对应的 npm 缓存，因此日常重复启动不会重复下载完整包；缓存不存在或已被清理时才需要联网获取。更新检查沿用“继承环境 / 自定义 HTTP(S) 代理 / 禁用代理”设置，只读取官方 registry 元数据，不会在检查阶段下载 DSH。
 
 Windows 窗口右上角 X 的行为是隐藏到系统托盘，因此 DSH/Node 会继续运行，方便从托盘快速恢复窗口。需要释放端口、文件句柄和子进程时，请右击托盘图标并选择“退出”；宿主只回收自己创建的 DSH/Node 进程树，不扫描或终止其他 DSH 实例。macOS/Linux 当前使用系统原生关闭行为直接退出，托盘能力待后续采用与 Wails 原生菜单兼容的实现。
 
@@ -162,6 +163,10 @@ DSH 已有完整 Web UI。复制会话、SSE、工具审批和插件 UI 会产�
 ### 为什么普通包仍需要 Node.js？
 
 Node 是 DSH 的运行时。普通 Setup/ZIP 为了保持小体积，继续使用系统 Node 与 npx；可选的 `offline-full` 则重新分发固定 Node 可执行文件和锁定的 DSH 生产依赖。离线包免除 npm 下载，但不会让模型 provider、远程 MCP、Web 工具或更新功能自动离线。
+
+### 为什么不直接后台自动更新 DSH？
+
+DSH 仍处于预发布阶段，并包含 PTY、Sharp、Koffi、ripgrep 等平台相关依赖。后台追随 `latest` 会让同一个 Desktop 版本在不同日期启动不同代码，也会绕过六个平台的原生依赖和最终归档门禁。因此用户端只提供显式手动更新和回退；仓库通过 Dependabot 每周检查官方 DSH 新版本，维护者仍需让候选版本经过 GitHub Actions 六平台验证后，才能更新 `offline-full` 基线。
 
 ### 启动后让我选择工作区正常吗？
 
