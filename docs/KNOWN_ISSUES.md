@@ -11,17 +11,17 @@
 | 缺少设备验证 | 构建或 Web 启动检查成功，但没有代表性设备上的安装和功能证据 |
 | 产品限制 | 当前设计或分发方式明确不覆盖的能力，不等同于回归 Bug |
 
-## v0.4.0 当前发布证据
+## v0.5.0 发布候选证据
 
-[v0.4.0 Release](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/releases/tag/v0.4.0) 已提供六个平台的在线/离线产物和 SHA-256。发布工作流在各原生 runner 上准备离线运行时，真实调用 `node-pty.spawn()`，并在最终 ZIP/TAR.GZ 解包后复测；这属于原生 CI、归档和公开 Release 证据，不属于代表性设备测试。
+提交 `35efa5b` 的 [CI 运行 31927510392](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/runs/31927510392) 和手动 [0.5.0-dev Release 预演 31927517803](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/runs/31927517803) 已通过六个平台的原生构建、在线/离线打包与 SHA-256 检查。发布工作流在各原生 runner 上准备离线运行时，真实调用 `node-pty.spawn()`，并在最终 ZIP/TAR.GZ 解包后复测；这属于原生 CI 与归档证据，不属于正式 Release 或代表性设备测试。
 
 | 平台与产物 | 已确认 | 仍缺少的证据 |
 | --- | --- | --- |
 | Windows x64/ARM64 | 原生 runner 完成应用构建、NSIS/便携包生成；最终离线 ZIP 实际运行 Node、DSH、PTY、ripgrep，并加载 Sharp/Koffi | ARM64 实体设备；干净机器安装、首次启动、升级、卸载；SmartScreen 与安全软件差异 |
 | macOS Intel/Apple Silicon | 原生 runner 完成 `.app`、在线/离线 ZIP 和最终归档 PTY/helper 权限复测 | 代表性 Mac 首次启动、工作区、插件和升级；Developer ID 签名与公证 |
-| Linux x64/ARM64 | Ubuntu 24.04 原生 runner 完成动态链接应用、在线/离线 TAR.GZ 和最终归档原生工具复测 | 其他发行版/桌面环境、ARM64 实体设备、安装集成和 WebKitGTK 版本差异 |
+| Linux x64/ARM64 | Ubuntu 24.04 原生 runner 完成动态链接应用、在线 DEB、在线/离线 TAR.GZ、最终归档原生工具复测，以及 DEB 的 control/架构/ELF/动态库检查和 apt 安装/卸载 | 代表性 Ubuntu 桌面设备的 GUI、应用菜单、首次启动、升级和卸载；ARM64 实体设备 |
 
-当前 `main` 已为下一版本增加 Ubuntu 24.04 x64/ARM64 在线 DEB；CI 运行 `31927510392` 和手动 Release 预演 `31927517803` 已确认 control/架构/ELF/动态库检查、apt 安装/卸载及六平台打包通过，但仍没有代表性 Ubuntu 设备的 GUI、应用菜单和升级验证。v0.4.0 历史 Release 不包含 DEB。支持边界固定为 [系统要求与兼容基线](SYSTEM_REQUIREMENTS.md)，不再把旧 Ubuntu 或其他发行版列为理论兼容目标。
+v0.5.0 发布候选增加 Ubuntu 24.04 x64/ARM64 在线 DEB；上述预演已确认 control/架构/ELF/动态库检查、apt 安装/卸载及六平台打包通过，但正式 Release 与代表性 Ubuntu 设备的 GUI、应用菜单和升级验证仍需分别完成。v0.4.0 历史 Release 不包含 DEB。支持边界固定为 [系统要求与兼容基线](SYSTEM_REQUIREMENTS.md)，不再把旧 Ubuntu 或其他发行版列为理论兼容目标。
 
 ## v0.3.3 发布加固
 
@@ -85,7 +85,7 @@ v0.3.2 已达到六平台原生 CI 和最终归档检查门槛；设备安装与
 ## 跨平台产品限制与风险
 
 - **未签名**：Windows 无代码签名；macOS 无 Developer ID 签名和 notarization。
-- **Linux 分发范围有限**：v0.4.0 仅提供动态链接 TAR.GZ；下一版本计划增加 Ubuntu 24.04 在线 DEB，但仍没有 AppImage、RPM 或软件仓库更新通道，也不支持旧 Ubuntu/其他发行版。
+- **Linux 分发范围有限**：v0.5.0 增加 Ubuntu 24.04 x64/ARM64 在线 DEB，并继续提供动态链接 TAR.GZ；仍没有 AppImage、RPM 或软件仓库更新通道，也不支持旧 Ubuntu/其他发行版。
 - **没有自动更新器**：新版本需要用户自行下载并校验。
 - **v0.2.4 端口交接存在小窗口**：该版本让系统选择空闲端口后先关闭临时 listener，再把端口交给 DSH；当前 `main` 已改为 `--port 0` 并解析 DSH 实际公布的地址。
 - **DSH 用户数据不是便携隔离数据**：宿主当前不覆盖 `DSH_HOME`，桌面端和命令行 DSH 使用上游默认用户目录；移动便携包不会自动搬走工作区和会话状态。

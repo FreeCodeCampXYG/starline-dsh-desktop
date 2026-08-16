@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+### 计划
+
+- Windows 代码签名与 macOS Developer ID 签名、公证。
+- 多实例工作区锁与 MCP 编排服务。
+
+## [0.5.0] - 2026-08-16
+
 ### 新增
 
 - Linux x64 与 ARM64 增加 Ubuntu 24.04 在线 DEB，安装应用菜单、图标与许可证，并在原生 Actions 中检查包元数据、架构、ELF 和动态库解析。
@@ -12,11 +19,6 @@
 
 - 明确 Windows 10 22H2、macOS 13.5、Ubuntu Desktop 24.04 的保守支持基线，旧系统和其他 Linux 发行版不再列为支持目标。
 - Release 页面从 tag 内版本化的系统要求文件自动生成固定要求，避免后续 README 变化反向影响历史版本说明。
-
-### 计划
-
-- Windows 代码签名与 macOS Developer ID 签名、公证。
-- 多实例工作区锁与 MCP 编排服务。
 
 ## [0.4.0] - 2026-08-16
 
@@ -140,7 +142,8 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.1...v0.3.2

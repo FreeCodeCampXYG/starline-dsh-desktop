@@ -39,7 +39,7 @@ npx --version
 
 需要 Node `22.19+` 或 `24+`。Node 23 不在 DSH 支持范围内。图形应用继承的 PATH 可能与终端不同；macOS/Linux 从桌面启动时尤其需要确认 Node 安装在系统可见位置。
 
-如果电脑不能安装 Node 或访问 npm，可以下载与操作系统及架构一致的 `offline-full` 包。离线包正常启动时，桌面顶部会显示“离线运行时”。v0.3.2 已在原生 runner 和最终归档中复测 PTY 与关键原生依赖；未完成设备验证的平台仍应按 [平台矩阵](KNOWN_ISSUES.md#v032-当前发布证据) 谨慎使用。
+如果电脑不能安装 Node 或访问 npm，可以下载与操作系统及架构一致的 `offline-full` 包。离线包正常启动时，桌面顶部会显示“离线运行时”。v0.5.0 发布候选已在原生 runner 和最终归档中复测 PTY 与关键原生依赖；未完成设备验证的平台仍应按 [平台矩阵](KNOWN_ISSUES.md#v050-发布候选证据) 谨慎使用。
 
 ## 离线运行时损坏或版本不一致
 
@@ -138,7 +138,7 @@ ldd ./starline-dsh-desktop | grep 'not found'
 
 安装 GTK3 和 WebKitGTK 4.1 的运行库。不同发行版包名不同，Issue 中请注明发行版、版本和架构。
 
-当前 Linux 产物在 Ubuntu 24.04 原生 runner 上动态链接构建，仅支持 Ubuntu Desktop 24.04 LTS。v0.4.0 历史 Release 仍只有 TAR.GZ；含 DEB 改动的下一版本会提供 x64/ARM64 在线 DEB，但没有 AppImage、RPM 或软件仓库更新通道。
+当前 Linux 产物在 Ubuntu 24.04 原生 runner 上动态链接构建，仅支持 Ubuntu Desktop 24.04 LTS。v0.5.0 增加 x64/ARM64 在线 DEB，并继续提供便携 TAR.GZ；没有 AppImage、RPM 或软件仓库更新通道。
 
 DEB 应使用 apt 安装，以便解析系统库依赖：
 

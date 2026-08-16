@@ -12,9 +12,9 @@ Starline DSH Desktop 是 [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 
 > 本项目是独立社区项目，与 DeepSeek 官方无隶属、背书或商业关系。DSH 仍处于开发者预览阶段，上游版本可能发生破坏性变化。
 
-> **v0.4.0 平台提示：** 功能提交已通过六个平台的原生 CI、离线 PTY/ripgrep 执行、Sharp/Koffi 功能检查和最终归档复测；这证明构建与归档包含对应平台运行时，但不等同于代表性设备上的安装、首次启动、升级和卸载验证。详情见 [已知问题与平台支持边界](docs/KNOWN_ISSUES.md)。
+> **v0.5.0 平台提示：** 发布候选已通过六个平台的原生 CI、离线 PTY/ripgrep 执行、Sharp/Koffi 功能检查、最终归档复测，以及 Ubuntu 24.04 x64/ARM64 DEB 的 apt 安装与卸载门禁；这不等同于代表性设备上的首次启动、升级和完整工作流验证。详情见 [已知问题与平台支持边界](docs/KNOWN_ISSUES.md)。
 
-> 当前版本线是 v0.4.0，新增 DSH 官方版本手动检查、在线包确认更新与恢复内置兼容版本；旧版本资产不会被反向修改，请以对应版本 Release 的矩阵结果为准。
+> 当前版本线是 v0.5.0，新增 Ubuntu 24.04 x64/ARM64 在线 DEB，并把各版本的系统要求固定写入对应 Release；旧版本资产不会被反向修改，请以对应版本 Release 的矩阵结果为准。
 
 ## 功能
 
@@ -78,9 +78,9 @@ Release 页面会按平台分组并显示每个文件的实际体积，不需要
 
 ### Windows
 
-- `starline-dsh-desktop-v0.4.0-windows-x64-setup-online.exe`：常规 x64 在线小包，默认安装到当前用户目录；安装向导可选择其他本地可写目录；
-- `starline-dsh-desktop-v0.4.0-windows-x64-portable-online.zip`：x64 在线便携版，解压后运行；
-- `starline-dsh-desktop-v0.4.0-windows-x64-portable-offline-full.zip`：内含 Node 与固定 DSH 依赖的 x64 完整离线便携版；
+- `starline-dsh-desktop-v0.5.0-windows-x64-setup-online.exe`：常规 x64 在线小包，默认安装到当前用户目录；安装向导可选择其他本地可写目录；
+- `starline-dsh-desktop-v0.5.0-windows-x64-portable-online.zip`：x64 在线便携版，解压后运行；
+- `starline-dsh-desktop-v0.5.0-windows-x64-portable-offline-full.zip`：内含 Node 与固定 DSH 依赖的 x64 完整离线便携版；
 - Windows on ARM 设备选择文件名含 `windows-arm64` 的对应产物，不要下载 x64 包。
 
 安装包未签名时，SmartScreen 可能提示未知发布者。正式广泛分发前需要代码签名证书。
@@ -95,7 +95,7 @@ v0.2.4 的 macOS `offline-full` 曾存在 `spawn-helper` 执行权限缺陷；v0
 
 ### Linux
 
-仅支持 Ubuntu Desktop 24.04 LTS。常见 Intel/AMD 电脑下载 `linux-x64`，ARM 设备下载 `linux-arm64`。含本次改动的下一版本会同时提供在线 DEB 和便携 TAR.GZ；当前已发布的 v0.4.0 仍只有 TAR.GZ。DEB 安装示例：
+仅支持 Ubuntu Desktop 24.04 LTS。常见 Intel/AMD 电脑下载 `linux-x64`，ARM 设备下载 `linux-arm64`。v0.5.0 同时提供在线 DEB 和便携 TAR.GZ；v0.4.0 及更早版本仍只有 TAR.GZ。DEB 安装示例：
 
 ```bash
 sudo apt install ./starline-dsh-desktop-v<版本>-linux-x64-deb-online.deb
@@ -104,7 +104,7 @@ sudo apt install ./starline-dsh-desktop-v<版本>-linux-x64-deb-online.deb
 DEB 会安装应用菜单入口、图标和许可证，并让 apt 检查 glibc 2.39、GTK3、WebKitGTK 4.1 等系统依赖；它仍是在线小包，Node.js 可能来自 nvm、Volta 等用户级管理器，所以应用启动时会实际检查 Node `22.19+` 或 `24+`。便携包示例：
 
 ```bash
-tar -xzf starline-dsh-desktop-v0.4.0-linux-x64-portable-online.tar.gz
+tar -xzf starline-dsh-desktop-v0.5.0-linux-x64-portable-online.tar.gz
 chmod +x starline-dsh-desktop
 ./starline-dsh-desktop
 ```
@@ -155,13 +155,13 @@ Windows 窗口右上角 X 的行为是隐藏到系统托盘，因此 DSH/Node �
 Windows：
 
 ```powershell
-Get-FileHash .\starline-dsh-desktop-v0.4.0-windows-x64-setup-online.exe -Algorithm SHA256
+Get-FileHash .\starline-dsh-desktop-v0.5.0-windows-x64-setup-online.exe -Algorithm SHA256
 ```
 
 macOS/Linux：
 
 ```bash
-sha256sum -c starline-dsh-desktop-v0.4.0-linux-x64-portable-online.tar.gz.sha256
+sha256sum -c starline-dsh-desktop-v0.5.0-linux-x64-portable-online.tar.gz.sha256
 ```
 
 ## 常见问题
