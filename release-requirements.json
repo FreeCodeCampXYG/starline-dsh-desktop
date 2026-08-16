@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "revision": "2026-08-16",
+  "platforms": [
+    {
+      "platform": "Windows x64 / ARM64",
+      "supportedBaseline": "Windows 10 22H2（OS build 19045）或 Windows 11",
+      "requiredRuntime": "Microsoft Edge WebView2 Runtime"
+    },
+    {
+      "platform": "macOS Intel / Apple Silicon",
+      "supportedBaseline": "macOS 13.5 或更高版本",
+      "requiredRuntime": "系统 WebKit；在线包还需满足 Node.js 要求"
+    },
+    {
+      "platform": "Linux x64 / ARM64",
+      "supportedBaseline": "Ubuntu Desktop 24.04 LTS；GA 内核基线 Linux 6.8 或更新版本",
+      "requiredRuntime": "glibc 2.39+、GTK3、WebKitGTK 4.1"
+    }
+  ],
+  "onlineRuntime": "Node.js 22.19+ 或 24+，并提供 npm/npx；首次启动可能访问 npm registry",
+  "offlineRuntime": "内置固定 Node.js 与 DSH 依赖；模型服务、远程 MCP、Web 工具和更新仍可能需要网络",
+  "unsupported": "不支持 Windows 10 22H2 之前版本、macOS 13.5 之前版本、Ubuntu 22.04 及更早版本；其他 Linux 发行版不在当前支持范围内",
+  "linuxDeb": {
+    "architectures": [
+      "amd64",
+      "arm64"
+    ],
+    "depends": [
+      "libc6 (>= 2.39)",
+      "libgtk-3-0t64",
+      "libwebkit2gtk-4.1-0",
+      "ca-certificates"
+    ],
+    "suggests": [
+      "nodejs",
+      "npm"
+    ]
+  }
+}

@@ -177,7 +177,17 @@ wails build -clean -trimpath -platform linux/amd64 -tags webkit2_41 -ldflags "-s
 
 ARM64 使用 `linux/arm64`，GitHub Actions 在 `ubuntu-24.04-arm` 原生 runner 上构建。
 
-当前 Linux 产物是动态链接的 TAR.GZ，不宣称跨所有发行版通用。发布前应至少在 Ubuntu 24.04 上验证，并记录其他发行版反馈。
+Linux 应用是动态链接产物，仅支持 Ubuntu Desktop 24.04 LTS；不宣称跨发行版通用。在线 DEB 使用：
+
+```bash
+bash scripts/package-linux-deb.sh \
+  0.5.0-dev \
+  amd64 \
+  build/bin/starline-dsh-desktop \
+  dist/starline-dsh-desktop-v0.5.0-dev-linux-x64-deb-online.deb
+```
+
+脚本从 `release-requirements.json` 读取包依赖，创建 `/usr/bin`、应用菜单、图标和许可证布局，再检查 control 字段、DEB 架构、ELF 架构与动态库解析。Actions 随后使用 apt 实际安装、核对架构并卸载。正式证据只来自 Ubuntu 24.04 x64/ARM64 原生 Actions；用户要求不在本机编译、安装依赖或制作正式包。
 
 ## GitHub Actions 构建矩阵
 
@@ -187,8 +197,8 @@ ARM64 使用 `linux/arm64`，GitHub Actions 在 `ubuntu-24.04-arm` 原生 runner
 | Windows ARM64 | `windows-11-arm` | `windows/arm64` | Setup.exe + ZIP + offline-full ZIP |
 | macOS Intel | `macos-15-intel` | `darwin/amd64` | app ZIP + offline-full app ZIP |
 | macOS Apple Silicon | `macos-15` | `darwin/arm64` | app ZIP + offline-full app ZIP |
-| Linux x64 | `ubuntu-24.04` | `linux/amd64` | TAR.GZ + offline-full TAR.GZ |
-| Linux ARM64 | `ubuntu-24.04-arm` | `linux/arm64` | TAR.GZ + offline-full TAR.GZ |
+| Linux x64 | `ubuntu-24.04` | `linux/amd64` | DEB + TAR.GZ + offline-full TAR.GZ |
+| Linux ARM64 | `ubuntu-24.04-arm` | `linux/arm64` | DEB + TAR.GZ + offline-full TAR.GZ |
 
 各目标在对应架构的原生 runner 上构建。矩阵 `fail-fast: false`，一个平台失败时其他平台仍给出结果，但 tag Release 必须等待全部目标成功。
 

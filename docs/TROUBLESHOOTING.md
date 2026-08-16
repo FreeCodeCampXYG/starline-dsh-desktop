@@ -138,7 +138,15 @@ ldd ./starline-dsh-desktop | grep 'not found'
 
 安装 GTK3 和 WebKitGTK 4.1 的运行库。不同发行版包名不同，Issue 中请注明发行版、版本和架构。
 
-当前 Linux 产物在 Ubuntu 24.04 原生 runner 上动态链接构建，不承诺在所有发行版上直接运行。项目尚未提供 AppImage、DEB 或 RPM。
+当前 Linux 产物在 Ubuntu 24.04 原生 runner 上动态链接构建，仅支持 Ubuntu Desktop 24.04 LTS。v0.4.0 历史 Release 仍只有 TAR.GZ；含 DEB 改动的下一版本会提供 x64/ARM64 在线 DEB，但没有 AppImage、RPM 或软件仓库更新通道。
+
+DEB 应使用 apt 安装，以便解析系统库依赖：
+
+```bash
+sudo apt install ./starline-dsh-desktop-v<版本>-linux-x64-deb-online.deb
+```
+
+DEB 不内置 Node。安装后若提示找不到 Node，请安装 Node.js `22.19+` 或 `24+`，并确认桌面会话能够看到对应 PATH；Node 由 nvm/Volta 等用户级工具管理时，dpkg 无法代替应用做版本检查。
 
 ## Linux 提示找不到 `pty.node` 或加载 `node-pty` 失败
 

@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Version embedded in the artifacts (for example 0.2.0-dev)
+        description: Version embedded in the artifacts (for example 0.5.0-dev)
         required: true
-        default: 0.4.0-dev
+        default: 0.5.0-dev
 
 permissions:
   contents: read
@@ -45,10 +45,12 @@ jobs:
             os: ubuntu-24.04
             platform: linux/amd64
             asset: linux-x64
+            deb_arch: amd64
           - name: Linux ARM64
             os: ubuntu-24.04-arm
             platform: linux/arm64
             asset: linux-arm64
+            deb_arch: arm64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 50
     steps:
@@ -235,8 +237,19 @@ jobs:
           mkdir -p release
           base="starline-dsh-desktop-v${{ steps.version.outputs.value }}-${{ matrix.asset }}"
           artifact="release/${base}-portable-online.tar.gz"
+          deb_artifact="release/${base}-deb-online.deb"
           offline_artifact="release/${base}-portable-offline-full.tar.gz"
           tar -czf "$artifact" -C build/bin starline-dsh-desktop -C ../.. LICENSE NOTICE.md AUTHORS.md
+          bash scripts/package-linux-deb.sh \
+            '${{ steps.version.outputs.value }}' \
+            '${{ matrix.deb_arch }}' \
+            build/bin/starline-dsh-desktop \
+            "$deb_artifact"
+          sudo apt-get install -y "$PWD/$deb_artifact"
+          test "$(dpkg-query -W -f='${Architecture}' starline-dsh-desktop)" = '${{ matrix.deb_arch }}'
+          test -x /usr/bin/starline-dsh-desktop
+          sudo apt-get remove -y starline-dsh-desktop
+          test ! -e /usr/bin/starline-dsh-desktop
           offline_stage="$RUNNER_TEMP/${base}-portable-offline-full"
           mkdir -p "$offline_stage"
           cp build/bin/starline-dsh-desktop "$offline_stage/"
@@ -247,7 +260,7 @@ jobs:
           tar -xzf "$offline_artifact" -C "$verify_root"
           verify_runtime="$verify_root/offline-runtime"
           "$verify_runtime/node" scripts/verify-offline-runtime.mjs verify "$verify_runtime"
-          for package in "$artifact" "$offline_artifact"; do
+          for package in "$artifact" "$deb_artifact" "$offline_artifact"; do
             sha256sum "$package" | sed 's#release/##' > "$package.sha256"
           done
 

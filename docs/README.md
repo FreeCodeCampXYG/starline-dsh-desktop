@@ -4,6 +4,7 @@
 
 | 文档 | 面向对象 | 维护范围 |
 | --- | --- | --- |
+| [系统要求与兼容基线](SYSTEM_REQUIREMENTS.md) | 使用者/维护者 | 每个版本固定的最低系统、内核/构建基线与运行时依赖 |
 | [已知问题与平台支持边界](KNOWN_ISSUES.md) | 使用者/维护者 | 各平台已确认缺陷、推断风险、设备验证缺口与临时规避方案 |
 | [架构说明](ARCHITECTURE.md) | 开发者 | 分层、启动序列、信任边界、目录职责 |
 | [品牌与应用图标](BRANDING.md) | 使用者/维护者 | 图标含义、权利边界、资源格式与再生成 |
@@ -23,7 +24,7 @@
 2. 文件职责、启动序列或边界变化时更新 `ARCHITECTURE.md`；
 3. 命令、工具版本或目录变化时更新 `BUILDING.md`；
 4. 图标含义、源文件或生成方式变化时更新 `BRANDING.md`；
-5. 产物、标签或 Actions 变化时更新 `RELEASING.md`；
+5. 产物、标签或 Actions 变化时更新 `RELEASING.md`；系统基线变化还必须同步 `release-requirements.json` 与 `SYSTEM_REQUIREMENTS.md`；
 6. 用户可见行为同时更新根 README 和 `TROUBLESHOOTING.md`；
 7. 不复制整段规范到多个文件，优先链接到唯一说明；
 8. 作者、版权所有者、分发内容或第三方依赖变化时更新根目录 `AUTHORS.md`、`LICENSE` 与 `NOTICE.md`；

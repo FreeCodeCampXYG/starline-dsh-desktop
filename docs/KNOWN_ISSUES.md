@@ -21,6 +21,8 @@
 | macOS Intel/Apple Silicon | 原生 runner 完成 `.app`、在线/离线 ZIP 和最终归档 PTY/helper 权限复测 | 代表性 Mac 首次启动、工作区、插件和升级；Developer ID 签名与公证 |
 | Linux x64/ARM64 | Ubuntu 24.04 原生 runner 完成动态链接应用、在线/离线 TAR.GZ 和最终归档原生工具复测 | 其他发行版/桌面环境、ARM64 实体设备、安装集成和 WebKitGTK 版本差异 |
 
+当前 `main` 已为下一版本增加 Ubuntu 24.04 x64/ARM64 在线 DEB 打包和 control/架构/ELF/动态库检查，但在对应 Actions 完成前仅属于待验证实现；v0.4.0 历史 Release 不包含 DEB。支持边界固定为 [系统要求与兼容基线](SYSTEM_REQUIREMENTS.md)，不再把旧 Ubuntu 或其他发行版列为理论兼容目标。
+
 ## v0.3.3 发布加固
 
 - 正式 WebView 启用默认右键菜单，复制按钮受上游权限或实现影响时仍可手工选择、复制和粘贴；尚缺六平台 GUI 设备验证。
@@ -75,7 +77,7 @@ v0.3.2 已达到六平台原生 CI 和最终归档检查门槛；设备安装与
 - Linux 普通包在 Ubuntu/Debian 系统上的运行与原生模块构建依赖可参考：
 
   ```bash
-  sudo apt-get install python3 make g++ libgtk-3-0 libwebkit2gtk-4.1-0
+  sudo apt-get install python3 make g++ libgtk-3-0t64 libwebkit2gtk-4.1-0
   ```
 
   其他发行版请使用等价软件包，并在 Issue 中注明发行版、版本、架构和 WebKitGTK 版本。
@@ -83,7 +85,7 @@ v0.3.2 已达到六平台原生 CI 和最终归档检查门槛；设备安装与
 ## 跨平台产品限制与风险
 
 - **未签名**：Windows 无代码签名；macOS 无 Developer ID 签名和 notarization。
-- **Linux 分发范围有限**：仅提供动态链接 TAR.GZ，没有 AppImage、DEB、RPM 或软件仓库更新通道。
+- **Linux 分发范围有限**：v0.4.0 仅提供动态链接 TAR.GZ；下一版本计划增加 Ubuntu 24.04 在线 DEB，但仍没有 AppImage、RPM 或软件仓库更新通道，也不支持旧 Ubuntu/其他发行版。
 - **没有自动更新器**：新版本需要用户自行下载并校验。
 - **v0.2.4 端口交接存在小窗口**：该版本让系统选择空闲端口后先关闭临时 listener，再把端口交给 DSH；当前 `main` 已改为 `--port 0` 并解析 DSH 实际公布的地址。
 - **DSH 用户数据不是便携隔离数据**：宿主当前不覆盖 `DSH_HOME`，桌面端和命令行 DSH 使用上游默认用户目录；移动便携包不会自动搬走工作区和会话状态。

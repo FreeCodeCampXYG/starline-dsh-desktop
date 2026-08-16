@@ -53,6 +53,7 @@ body:
         - Windows Setup.exe
         - Portable ZIP
         - macOS ZIP
+        - Linux DEB
         - Linux TAR.GZ
         - Source build / wails dev
     validations:

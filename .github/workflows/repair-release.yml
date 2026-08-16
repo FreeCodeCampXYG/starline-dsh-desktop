@@ -24,7 +24,7 @@ jobs:
       - name: Checkout release metadata
         uses: actions/checkout@v7
         with:
-          ref: main
+          ref: ${{ inputs.tag }}
           persist-credentials: false
 
       - name: Setup Node.js

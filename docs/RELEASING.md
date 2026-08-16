@@ -28,9 +28,9 @@ Dependabot 每周只检查 `/offline-runtime` 中固定的 `@deepseek-ai/dsh` �
 3. 确认 `offline-runtime/package-lock.json` 与 `main.go` 默认 DSH 版本一致；
 4. 在每个目标原生 runner 上让包内 `node-pty` 实际启动平台 Shell，并验证输出和退出码；仅有 CLI/Web smoke test 不通过此门槛；
 5. 检查原生扩展平台/架构、macOS 可执行位以及 Linux `pty.node`，并对重新解开的最终归档重复检查；
-6. 本机至少执行基础测试与一个平台生产构建；
+6. 执行基础测试与原生平台生产构建；当前项目按维护约束全部在 GitHub Actions 完成，不在本机安装依赖或编译；
 7. CI 六个平台全部通过，且没有把“构建成功”代替上述功能测试；
-8. 检查 README、变更记录和 [已知问题](KNOWN_ISSUES.md)，分别写明已确认、同逻辑推断和缺少设备验证的范围；
+8. 检查 README、变更记录、`release-requirements.json`、[系统要求](SYSTEM_REQUIREMENTS.md)和[已知问题](KNOWN_ISSUES.md)，分别写明受支持基线、已确认、同逻辑推断和缺少设备验证的范围；
 9. 确认没有 API Key、Token、Cookie、私有代理地址或构建缓存；
 10. 确认签名状态。未签名时必须保留 Release 警告。
 
@@ -50,13 +50,15 @@ Release workflow 会：
 3. 在六个原生 runner 构建；
 4. 默认禁止全部依赖脚本，只在完整校验后执行白名单中的 `node-pty` 重建和 DSH 官方 helper 权限修复；
 5. 使用包内 Node 真实启动平台 Shell，并执行 DSH CLI/Web smoke test；
-6. 同时生成轻量普通包和独立 `offline-full` 包；
-7. 重新解开最终离线 ZIP/TAR.GZ，再次检查原生文件、权限和真实 PTY；
-8. 生成每个产物的 `.sha256`；
-9. 确认普通包、离线包和安装目录均包含项目 `LICENSE`、`NOTICE.md` 与 `AUTHORS.md`（macOS 位于应用包 `Contents/Resources/licenses/`）；
-10. 汇总为 `SHA256SUMS.txt`，校验预期资产、独立校验文件与合并清单完全一致；
-11. 从 `CHANGELOG.md` 的当前版本段生成 Release 正文，并按平台显示下载用途与实际体积；缺少版本日志时停止发布；
-12. 创建 GitHub Release；tag 带 `-` 时标记为 prerelease。
+6. 同时生成轻量普通包和独立 `offline-full` 包；Linux 额外生成 x64/ARM64 在线 DEB；
+7. 在 Ubuntu 24.04 原生 runner 检查 DEB 元数据、架构、ELF 和动态库，并通过 apt 实际安装、核对、卸载；
+8. 重新解开最终离线 ZIP/TAR.GZ，再次检查原生文件、权限和真实 PTY；
+9. 生成每个产物的 `.sha256`；
+10. 确认普通包、离线包和安装目录均包含项目 `LICENSE`、`NOTICE.md` 与 `AUTHORS.md`（macOS 位于应用包 `Contents/Resources/licenses/`）；
+11. 汇总为 `SHA256SUMS.txt`，校验预期资产、独立校验文件与合并清单完全一致；
+12. 从 `CHANGELOG.md` 的当前版本段生成 Release 正文，并按平台显示下载用途与实际体积；缺少版本日志时停止发布；
+13. 从该 tag 的 `release-requirements.json` 和固定 Node 版本生成“本版本固定系统要求”；要求文件无效时停止发布；
+14. 创建 GitHub Release；tag 带 `-` 时标记为 prerelease。
 
 ## 产物清单
 
@@ -71,17 +73,19 @@ starline-dsh-desktop-v<version>-macos-intel-x64-app-online.zip
 starline-dsh-desktop-v<version>-macos-intel-x64-app-offline-full.zip
 starline-dsh-desktop-v<version>-macos-apple-silicon-arm64-app-online.zip
 starline-dsh-desktop-v<version>-macos-apple-silicon-arm64-app-offline-full.zip
+starline-dsh-desktop-v<version>-linux-x64-deb-online.deb
 starline-dsh-desktop-v<version>-linux-x64-portable-online.tar.gz
 starline-dsh-desktop-v<version>-linux-x64-portable-offline-full.tar.gz
+starline-dsh-desktop-v<version>-linux-arm64-deb-online.deb
 starline-dsh-desktop-v<version>-linux-arm64-portable-online.tar.gz
 starline-dsh-desktop-v<version>-linux-arm64-portable-offline-full.tar.gz
 *.sha256
 SHA256SUMS.txt
 ```
 
-命名语法固定为 `<产品>-v<版本>-<系统>-<CPU>-<形态>-<联网模式>.<扩展名>`。其中 `x64` 与 `arm64` 明确处理器架构，`setup`/`portable`/`app` 明确安装形态，`online` 与 `offline-full` 明确是否携带完整 Node/DSH 运行时。不要再用体积或模糊的 `amd64`/`arm64` 后缀让用户自行猜测用途。
+命名语法固定为 `<产品>-v<版本>-<系统>-<CPU>-<形态>-<联网模式>.<扩展名>`。其中 `x64` 与 `arm64` 明确处理器架构，`setup`/`deb`/`portable`/`app` 明确安装形态，`online` 与 `offline-full` 明确是否携带完整 Node/DSH 运行时。不要再用体积或模糊的 `amd64`/`arm64` 后缀让用户自行猜测用途。
 
-Release 正文不是 GitHub 自动生成的单行 `Full Changelog`。`scripts/generate-release-notes.mjs` 必须读取与 tag 完全相同的 `CHANGELOG.md` 版本段，检查以上 14 个主资产及其校验文件，并以实际字节数生成分平台下载表。发布前应检查下载表、版本变化和签名警告是否完整显示。
+Release 正文不是 GitHub 自动生成的单行 `Full Changelog`。`scripts/generate-release-notes.mjs` 必须读取与 tag 完全相同的 `CHANGELOG.md` 版本段和 `release-requirements.json`，检查以上 16 个主资产及其校验文件，并以实际字节数生成分平台下载表和固定系统要求。完整 Release 应有 16 个主资产、16 个独立校验文件和 `SHA256SUMS.txt`，合计 33 个资产。
 
 普通包保持原有小体积。Windows x64 v0.2.4 参考值为普通 ZIP 约 4.3 MiB、Setup 约 6.0 MiB、完整离线 ZIP 约 113.6 MiB；完整离线包解压后超过 350 MiB。平台、架构与依赖选择不同，Release 前必须以实际资产大小为准。GitHub 单文件资产上限不是当前瓶颈，但六个平台会明显增加 Actions 时间、缓存和 Release 存储。
 

@@ -4,6 +4,15 @@
 
 ## [Unreleased]
 
+### 新增
+
+- Linux x64 与 ARM64 增加 Ubuntu 24.04 在线 DEB，安装应用菜单、图标与许可证，并在原生 Actions 中检查包元数据、架构、ELF 和动态库解析。
+
+### 文档
+
+- 明确 Windows 10 22H2、macOS 13.5、Ubuntu Desktop 24.04 的保守支持基线，旧系统和其他 Linux 发行版不再列为支持目标。
+- Release 页面从 tag 内版本化的系统要求文件自动生成固定要求，避免后续 README 变化反向影响历史版本说明。
+
 ### 计划
 
 - Windows 代码签名与 macOS Developer ID 签名、公证。

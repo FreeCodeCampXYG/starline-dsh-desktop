@@ -106,11 +106,13 @@ jobs:
             platform: linux/amd64
             build_tags: webkit2_41
             extra_ldflags: ""
+            deb_arch: amd64
           - name: Linux ARM64
             os: ubuntu-24.04-arm
             platform: linux/arm64
             build_tags: webkit2_41
             extra_ldflags: ""
+            deb_arch: arm64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     steps:
@@ -154,6 +156,22 @@ jobs:
             args+=(-tags "${{ matrix.build_tags }}")
           fi
           wails "${args[@]}"
+
+      - name: Package and inspect Linux DEB
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          deb_path="$RUNNER_TEMP/starline-dsh-desktop-ci-${{ matrix.deb_arch }}.deb"
+          bash scripts/package-linux-deb.sh \
+            0.0.0-ci \
+            '${{ matrix.deb_arch }}' \
+            build/bin/starline-dsh-desktop \
+            "$deb_path"
+          sudo apt-get install -y "$deb_path"
+          test "$(dpkg-query -W -f='${Architecture}' starline-dsh-desktop)" = '${{ matrix.deb_arch }}'
+          test -x /usr/bin/starline-dsh-desktop
+          sudo apt-get remove -y starline-dsh-desktop
+          test ! -e /usr/bin/starline-dsh-desktop
 
       - name: Prepare and function-test Windows offline runtime
         if: runner.os == 'Windows'

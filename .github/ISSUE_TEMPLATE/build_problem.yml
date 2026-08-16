@@ -27,6 +27,7 @@ body:
         - Frontend typecheck or build
         - Wails application build
         - NSIS installer build
+        - DEB package build
         - Archive or checksum generation
         - GitHub Actions
     validations:

@@ -29,7 +29,7 @@ Starline DSH Desktop 是 [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 - 启动页与运行状态栏显示桌面端版本和 DSH 版本；
 - Windows 窗口右上角 X 隐藏到系统托盘，从托盘菜单选择“退出”才回收本应用创建的 DSH 进程树；macOS/Linux 暂按系统原生关闭行为退出，避免无托盘入口时进程残留；
 - 支持多开 DSH Web 实例；配置保存带跨进程原子锁和过期版本检查，避免多开时静默覆盖代理设置；
-- Windows Setup.exe 与便携 ZIP；macOS ZIP；Linux TAR.GZ；
+- Windows Setup.exe 与便携 ZIP；macOS ZIP；Linux DEB 与 TAR.GZ；
 - x64 与 ARM64 原生 GitHub Actions 构建。
 
 ## 截图中的两层界面
@@ -48,14 +48,18 @@ Starline DSH Desktop (Go + Wails)
 
 ## 系统要求
 
+项目按完整依赖链设置保守支持边界，不以“某个依赖理论上还能运行”扩大兼容范围。详细解释见 [系统要求与兼容基线](docs/SYSTEM_REQUIREMENTS.md)；每个 tag 的 Release 页面也会固定写入该版本自己的要求。
+
 | 项目 | 要求 |
 | --- | --- |
 | Node.js | 普通包需要 `22.19+` 或 `24+`；`offline-full` 已内置固定 Node 24 |
 | npm / npx | 普通包需要；`offline-full` 启动时不使用 npm/npx |
-| Windows | Windows 10/11，WebView2 Runtime |
-| macOS | Intel 或 Apple Silicon，使用系统 WebKit |
-| Linux | GTK3、WebKitGTK 4.1 及其运行库；普通包首次安装原生依赖时还可能需要 Python 3、make 和 C/C++ 编译器 |
+| Windows | Windows 10 22H2（OS build 19045）或 Windows 11，WebView2 Runtime |
+| macOS | 13.5+，Intel 或 Apple Silicon，使用系统 WebKit |
+| Linux | 仅支持 Ubuntu Desktop 24.04 LTS x64/ARM64；Linux 6.8 为 GA 基线，并要求 glibc 2.39+、GTK3、WebKitGTK 4.1 |
 | 网络 | 普通包首次运行需要 npm registry；`offline-full` 不访问 npm，但模型服务等功能可能仍需网络 |
+
+Windows 10 22H2 之前版本、macOS 13.5 之前版本、Ubuntu 22.04 及更早版本不受支持；其他 Linux 发行版当前也不在支持范围内。旧 Ubuntu 即使升级到较新 HWE 内核，glibc 与 WebKitGTK 仍可能不满足要求，因此不能只按内核号判断。
 
 当前默认启动 `@deepseek-ai/dsh@0.1.0-rc.6`。截至 2026-08-16，npm 官方 `latest` 与 `next` 也都是该版本。桌面端不会后台自动升级；在线包可从“桌面工具 → 检查 DSH 更新”手动查询 npm 官方 `latest`，确认后把精确版本写入用户配置并重启，失败时可恢复当前 Desktop 内置兼容版本。`offline-full` 不原地替换包内依赖，必须下载包含新 DSH 且经过原生门禁的新离线包。`DSH_DESKTOP_DSH_VERSION` 仍可用于临时开发覆盖，并优先于界面设置。
 
@@ -66,7 +70,7 @@ Starline DSH Desktop (Go + Wails)
 发行文件统一使用 `<产品>-v<版本>-<系统>-<CPU>-<形态>-<联网模式>.<扩展名>`：
 
 - `x64` 适用于常见 Intel/AMD 电脑，`arm64` 只用于 ARM 设备；macOS 进一步写明 `intel-x64` 或 `apple-silicon-arm64`；
-- `setup` 是 Windows 安装向导，`portable` 是解压即用的便携包，`app` 是 macOS 应用包；
+- `setup` 是 Windows 安装向导，`deb` 是 Ubuntu 安装包，`portable` 是解压即用的便携包，`app` 是 macOS 应用包；
 - `online` 是体积较小的普通包，需要系统 Node.js/npx，首次启动可能访问 npm registry；
 - `offline-full` 内置固定 Node.js 与 DSH 生产依赖，文件明显更大，但启动 DSH 时不访问 npm。
 
@@ -91,7 +95,13 @@ v0.2.4 的 macOS `offline-full` 曾存在 `spawn-helper` 执行权限缺陷；v0
 
 ### Linux
 
-常见 Intel/AMD 电脑下载 `linux-x64`，ARM 设备下载 `linux-arm64`。在线小包示例：
+仅支持 Ubuntu Desktop 24.04 LTS。常见 Intel/AMD 电脑下载 `linux-x64`，ARM 设备下载 `linux-arm64`。含本次改动的下一版本会同时提供在线 DEB 和便携 TAR.GZ；当前已发布的 v0.4.0 仍只有 TAR.GZ。DEB 安装示例：
+
+```bash
+sudo apt install ./starline-dsh-desktop-v<版本>-linux-x64-deb-online.deb
+```
+
+DEB 会安装应用菜单入口、图标和许可证，并让 apt 检查 glibc 2.39、GTK3、WebKitGTK 4.1 等系统依赖；它仍是在线小包，Node.js 可能来自 nvm、Volta 等用户级管理器，所以应用启动时会实际检查 Node `22.19+` 或 `24+`。便携包示例：
 
 ```bash
 tar -xzf starline-dsh-desktop-v0.4.0-linux-x64-portable-online.tar.gz
@@ -99,14 +109,14 @@ chmod +x starline-dsh-desktop
 ./starline-dsh-desktop
 ```
 
-离线机器可以选择同架构、文件名以 `portable-offline-full.tar.gz` 结尾的完整离线包，目录结构和启动命令相同，但会多出 `offline-runtime/`。v0.2.4 曾缺少 Linux `node-pty` 原生绑定；v0.3.2 已在 Ubuntu 24.04 x64/ARM64 原生 runner 和最终 TAR.GZ 中复测 PTY，但没有承诺兼容所有发行版或完成代表性设备验证。
+离线机器可以选择同架构、文件名以 `portable-offline-full.tar.gz` 结尾的完整离线包，目录结构和启动命令相同，但会多出 `offline-runtime/`。离线包继续使用 TAR.GZ，不把数万个 Node 依赖写进系统 DEB。v0.2.4 曾缺少 Linux `node-pty` 原生绑定；v0.3.2 已在 Ubuntu 24.04 x64/ARM64 原生 runner 和最终 TAR.GZ 中复测 PTY，但仍未完成代表性设备验证。
 
 `offline-full` 是独立可选产物，不会放进普通 Setup 或便携包。Windows x64 v0.2.4 参考值：普通 ZIP 约 4.3 MiB、Setup 约 6.0 MiB、完整离线 ZIP 约 113.6 MiB；完整离线包解压后超过 350 MiB，并包含数万个文件。各平台的准确体积以 Release 资产为准。
 
-不同发行版的 WebKitGTK 包名不同。Ubuntu 24.04 可安装：
+Ubuntu 24.04 便携包可安装以下运行库；DEB 通过包依赖让 apt 处理它们：
 
 ```bash
-sudo apt-get install libgtk-3-0 libwebkit2gtk-4.1-0
+sudo apt-get install libgtk-3-0t64 libwebkit2gtk-4.1-0
 ```
 
 ## 第一次启动

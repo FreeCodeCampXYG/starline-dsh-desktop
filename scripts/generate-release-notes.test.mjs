@@ -32,8 +32,10 @@ test('generates a grouped release page from the exact changelog version', async 
     'macos-intel-x64-app-offline-full.zip',
     'macos-apple-silicon-arm64-app-online.zip',
     'macos-apple-silicon-arm64-app-offline-full.zip',
+    'linux-x64-deb-online.deb',
     'linux-x64-portable-online.tar.gz',
     'linux-x64-portable-offline-full.tar.gz',
+    'linux-arm64-deb-online.deb',
     'linux-arm64-portable-online.tar.gz',
     'linux-arm64-portable-offline-full.tar.gz',
   ]
@@ -88,6 +90,11 @@ test('generates a grouped release page from the exact changelog version', async 
   assert.match(notes, /\| Windows \| x64（Intel \/ AMD） \|/)
   assert.match(notes, /windows-x64-setup-online\.exe/)
   assert.match(notes, /macos-apple-silicon-arm64-app-offline-full\.zip/)
+  assert.match(notes, /linux-x64-deb-online\.deb/)
+  assert.match(notes, /本版本固定系统要求/)
+  assert.match(notes, /Ubuntu Desktop 24\.04 LTS/)
+  assert.match(notes, /Node\.js 24\.19\.0/)
+  assert.match(notes, /Ubuntu 22\.04 及更早版本/)
   assert.match(notes, /这是本次应显示的修改日志/)
   assert.doesNotMatch(notes, /这段旧日志不应显示/)
   assert.match(notes, /1 KiB/)
