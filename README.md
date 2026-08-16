@@ -12,7 +12,7 @@ Starline DSH Desktop 是 [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 
 > 本项目是独立社区项目，与 DeepSeek 官方无隶属、背书或商业关系。DSH 仍处于开发者预览阶段，上游版本可能发生破坏性变化。
 
-> **v0.5.0 平台提示：** 发布候选已通过六个平台的原生 CI、离线 PTY/ripgrep 执行、Sharp/Koffi 功能检查、最终归档复测，以及 Ubuntu 24.04 x64/ARM64 DEB 的 apt 安装与卸载门禁；这不等同于代表性设备上的首次启动、升级和完整工作流验证。详情见 [已知问题与平台支持边界](docs/KNOWN_ISSUES.md)。
+> **v0.5.0 平台提示：** [正式 Release](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/releases/tag/v0.5.0) 已通过六个平台的原生 CI、离线 PTY/ripgrep 执行、Sharp/Koffi 功能检查、最终归档复测，以及 Ubuntu 24.04 x64/ARM64 DEB 的 apt 安装与卸载门禁；这不等同于代表性设备上的首次启动、升级和完整工作流验证。详情见 [已知问题与平台支持边界](docs/KNOWN_ISSUES.md)。
 
 > 当前版本线是 v0.5.0，新增 Ubuntu 24.04 x64/ARM64 在线 DEB，并把各版本的系统要求固定写入对应 Release；旧版本资产不会被反向修改，请以对应版本 Release 的矩阵结果为准。
 

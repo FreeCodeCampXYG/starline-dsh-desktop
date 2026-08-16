@@ -11,9 +11,9 @@
 | 缺少设备验证 | 构建或 Web 启动检查成功，但没有代表性设备上的安装和功能证据 |
 | 产品限制 | 当前设计或分发方式明确不覆盖的能力，不等同于回归 Bug |
 
-## v0.5.0 发布候选证据
+## v0.5.0 当前发布证据
 
-提交 `35efa5b` 的 [CI 运行 31927510392](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/runs/31927510392) 和手动 [0.5.0-dev Release 预演 31927517803](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/runs/31927517803) 已通过六个平台的原生构建、在线/离线打包与 SHA-256 检查。发布工作流在各原生 runner 上准备离线运行时，真实调用 `node-pty.spawn()`，并在最终 ZIP/TAR.GZ 解包后复测；这属于原生 CI 与归档证据，不属于正式 Release 或代表性设备测试。
+提交 `70c805a` 的 [CI 运行 31928652053](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/runs/31928652053) 已通过质量门和六平台原生构建；[v0.5.0 Release 工作流 31929012111](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/runs/31929012111) 已通过六平台打包并发布 [33 个正式资产](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/releases/tag/v0.5.0)。发布工作流在各原生 runner 上准备离线运行时，真实调用 `node-pty.spawn()`，并在最终 ZIP/TAR.GZ 解包后复测；这属于原生 CI、归档和公开 Release 证据，不属于代表性设备测试。
 
 | 平台与产物 | 已确认 | 仍缺少的证据 |
 | --- | --- | --- |
@@ -21,7 +21,7 @@
 | macOS Intel/Apple Silicon | 原生 runner 完成 `.app`、在线/离线 ZIP 和最终归档 PTY/helper 权限复测 | 代表性 Mac 首次启动、工作区、插件和升级；Developer ID 签名与公证 |
 | Linux x64/ARM64 | Ubuntu 24.04 原生 runner 完成动态链接应用、在线 DEB、在线/离线 TAR.GZ、最终归档原生工具复测，以及 DEB 的 control/架构/ELF/动态库检查和 apt 安装/卸载 | 代表性 Ubuntu 桌面设备的 GUI、应用菜单、首次启动、升级和卸载；ARM64 实体设备 |
 
-v0.5.0 发布候选增加 Ubuntu 24.04 x64/ARM64 在线 DEB；上述预演已确认 control/架构/ELF/动态库检查、apt 安装/卸载及六平台打包通过，但正式 Release 与代表性 Ubuntu 设备的 GUI、应用菜单和升级验证仍需分别完成。v0.4.0 历史 Release 不包含 DEB。支持边界固定为 [系统要求与兼容基线](SYSTEM_REQUIREMENTS.md)，不再把旧 Ubuntu 或其他发行版列为理论兼容目标。
+v0.5.0 已增加 Ubuntu 24.04 x64/ARM64 在线 DEB；正式工作流确认 control/架构/ELF/动态库检查、apt 安装/卸载及六平台打包通过，但仍缺少代表性 Ubuntu 设备的 GUI、应用菜单、首次启动、升级和卸载验证。v0.4.0 历史 Release 不包含 DEB。支持边界固定为 [系统要求与兼容基线](SYSTEM_REQUIREMENTS.md)，不再把旧 Ubuntu 或其他发行版列为理论兼容目标。
 
 ## v0.3.3 发布加固
 
