@@ -21,7 +21,7 @@
 | macOS Intel/Apple Silicon | 原生 runner 完成 `.app`、在线/离线 ZIP 和最终归档 PTY/helper 权限复测 | 代表性 Mac 首次启动、工作区、插件和升级；Developer ID 签名与公证 |
 | Linux x64/ARM64 | Ubuntu 24.04 原生 runner 完成动态链接应用、在线/离线 TAR.GZ 和最终归档原生工具复测 | 其他发行版/桌面环境、ARM64 实体设备、安装集成和 WebKitGTK 版本差异 |
 
-当前 `main` 已为下一版本增加 Ubuntu 24.04 x64/ARM64 在线 DEB 打包和 control/架构/ELF/动态库检查，但在对应 Actions 完成前仅属于待验证实现；v0.4.0 历史 Release 不包含 DEB。支持边界固定为 [系统要求与兼容基线](SYSTEM_REQUIREMENTS.md)，不再把旧 Ubuntu 或其他发行版列为理论兼容目标。
+当前 `main` 已为下一版本增加 Ubuntu 24.04 x64/ARM64 在线 DEB；CI 运行 `31927510392` 和手动 Release 预演 `31927517803` 已确认 control/架构/ELF/动态库检查、apt 安装/卸载及六平台打包通过，但仍没有代表性 Ubuntu 设备的 GUI、应用菜单和升级验证。v0.4.0 历史 Release 不包含 DEB。支持边界固定为 [系统要求与兼容基线](SYSTEM_REQUIREMENTS.md)，不再把旧 Ubuntu 或其他发行版列为理论兼容目标。
 
 ## v0.3.3 发布加固
 
