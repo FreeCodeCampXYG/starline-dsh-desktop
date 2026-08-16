@@ -105,7 +105,7 @@ Categories=Development;Utility;
 StartupNotify=true
 DESKTOP
 
-deb_version="${version//-/~}"
+deb_version="${version//-/\~}"
 installed_size="$(du -sk "$stage/usr" | cut -f1)"
 cat > "$stage/DEBIAN/control" <<CONTROL
 Package: starline-dsh-desktop
