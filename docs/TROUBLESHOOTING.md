@@ -82,13 +82,14 @@ npx --yes --package=@deepseek-ai/dsh@0.1.0-rc.6 dsh web
 
 `offline-full` 不访问 npm registry，但代理设置仍会传递给 DSH，用于模型 provider、远程 MCP、Web 工具等网络功能。
 
-## 手动检查或更新 DSH 失败
+## 自动检查或更新 DSH 失败
 
-1. 更新检查只访问 npm 官方 `@deepseek-ai/dsh/latest` 元数据，并沿用桌面端代理模式；如果 npm 下载同样失败，先修复代理或 registry 连通性。
-2. 点击“应用更新”后，后端会再次核对官方 `latest`，再保存精确版本并重启；如果另一个桌面实例同时修改了设置，会返回配置冲突而不是覆盖。
+1. 启动后的自动检查和手动刷新只访问 npm 官方 DSH dist-tags 端点，同时显示 `latest` 与 `next`；请求沿用 inherit/custom/disabled 代理模式，但失败不会阻塞当前 DSH 启动。
+2. 点击应用通道后，后端会再次核对官方 dist-tag，再保存精确版本并重启；`next` 属于预览通道。如果另一个桌面实例同时修改了设置，会返回配置冲突而不是覆盖。
 3. 在线包更新后启动失败，可重新打开设置并选择“恢复默认版本”，回到当前 Desktop Release 已验证的 DSH。
 4. `offline-full` 会显示新版本但拒绝原地安装；请下载包含该 DSH 版本的新离线资产。手工删除或覆盖 `node_modules` 会破坏完整性与原生依赖门禁。
-5. 使用 `DSH_DESKTOP_DSH_VERSION` 时，环境变量优先于界面设置；移除覆盖并重新启动桌面端后，手动更新按钮才能改变实际版本。
+5. 使用 `DSH_DESKTOP_DSH_VERSION` 时，环境变量优先于界面设置；移除覆盖并重新启动桌面端后，更新按钮才能改变实际版本。
+6. v0.5.1 及更早版本的在线命令强制 `--prefer-offline`，可能让刚发布的精确版本命中陈旧 npm packument 并误报 `ETARGET`；v0.5.2 起改用 npm 默认元数据校验和内容缓存策略。
 
 ## Windows 黑框闪烁
 

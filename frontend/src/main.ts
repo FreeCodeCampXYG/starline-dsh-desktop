@@ -48,6 +48,9 @@ const initialStatus: Status = {
 
 let currentStatus = initialStatus;
 let renderSequence = 0;
+let dshUpdateInfo: DSHUpdateInfo | null = null;
+let dshUpdateError = "";
+let dshUpdateRequest: Promise<DSHUpdateInfo> | null = null;
 
 const runtimeLabel = (status: Status): string => {
   if (status.runtimeMode === "offline") return "包内离线运行时";
@@ -55,12 +58,52 @@ const runtimeLabel = (status: Status): string => {
   return "正在检测运行时";
 };
 
+const syncUpdateIndicator = (): void => {
+  const summary = dshUpdateInfo
+    ? `latest ${dshUpdateInfo.latestVersion}${dshUpdateInfo.nextVersion ? ` · next ${dshUpdateInfo.nextVersion}` : " · next 未发布"}`
+    : dshUpdateError
+      ? "版本检查失败"
+      : "正在检查版本…";
+  root.querySelectorAll<HTMLElement>(".runtime-update-indicator").forEach((indicator) => {
+    indicator.hidden = !dshUpdateInfo && !dshUpdateError;
+    indicator.textContent = summary;
+    indicator.classList.toggle("has-update", Boolean(dshUpdateInfo?.latestUpdateAvailable || dshUpdateInfo?.nextUpdateAvailable));
+    indicator.classList.toggle("has-error", Boolean(dshUpdateError));
+  });
+  root.querySelectorAll<HTMLElement>(".dsh-update-menu-label").forEach((label) => {
+    label.textContent = dshUpdateInfo ? `DSH 更新 · ${summary}` : dshUpdateError ? "DSH 更新 · 检查失败" : "检查 DSH 更新";
+  });
+};
+
+const checkDSHUpdates = (force = false): Promise<DSHUpdateInfo> => {
+  if (!force && dshUpdateInfo) return Promise.resolve(dshUpdateInfo);
+  if (dshUpdateRequest) return dshUpdateRequest;
+  dshUpdateError = "";
+  syncUpdateIndicator();
+  const request = backend().CheckDSHUpdate()
+    .then((info) => {
+      dshUpdateInfo = info;
+      syncUpdateIndicator();
+      return info;
+    })
+    .catch((error: unknown) => {
+      dshUpdateError = error instanceof Error ? error.message : String(error);
+      syncUpdateIndicator();
+      throw error;
+    })
+    .finally(() => {
+      dshUpdateRequest = null;
+    });
+  dshUpdateRequest = request;
+  return request;
+};
+
 const renderDesktopMenu = (includeBrowser: boolean): string => `
   <details class="shell-menu">
     <summary>${icons.shell}<span>桌面工具</span></summary>
     <div class="shell-menu-popover">
       <button data-action="settings">${icons.settings}<span>代理与启动设置</span></button>
-      <button data-action="dsh-update">${icons.update}<span>检查 DSH 更新</span></button>
+      <button data-action="dsh-update">${icons.update}<span class="dsh-update-menu-label">检查 DSH 更新</span></button>
       <button data-action="restart">${icons.restart}<span>重新启动 DSH</span></button>
       <button data-action="logs">${icons.logs}<span>打开日志目录</span></button>
       ${includeBrowser ? `<button data-action="browser">${icons.browser}<span>在浏览器中打开</span></button>` : ""}
@@ -75,7 +118,10 @@ const renderRuntimeBar = (status: Status, includeBrowser: boolean): string => `
       <span></span>
       DSH ${escapeHTML(status.dshVersion)} · Desktop ${escapeHTML(status.version)} · ${runtimeLabel(status)}
     </div>
-    ${renderDesktopMenu(includeBrowser)}
+    <div class="runtime-tools">
+      <button type="button" class="runtime-update-indicator" data-action="dsh-update" hidden></button>
+      ${renderDesktopMenu(includeBrowser)}
+    </div>
   </div>
 `;
 
@@ -244,10 +290,11 @@ const bindCommonActions = (): void => {
   root.querySelector<HTMLButtonElement>("[data-action='settings']")?.addEventListener("click", () => {
     void openSettings();
   });
-  root.querySelector<HTMLButtonElement>("[data-action='dsh-update']")?.addEventListener("click", () => {
+  root.querySelectorAll<HTMLButtonElement>("[data-action='dsh-update']").forEach((button) => button.addEventListener("click", () => {
     void openSettings(true);
-  });
+  }));
   root.querySelector<HTMLButtonElement>("[data-action='help']")?.addEventListener("click", openHelp);
+  syncUpdateIndicator();
 };
 
 const closeDialog = (): void => {
@@ -283,7 +330,7 @@ const openSettings = async (checkUpdate = false): Promise<void> => {
       <div><p class="eyebrow">STARTUP SETTINGS</p><h2>代理与启动设置</h2></div>
       <button class="icon-button" data-dialog-close aria-label="关闭">×</button>
     </header>
-    <p class="dialog-intro">代理只传给 DSH/npm 子进程和手动版本检查；外壳访问本地 DSH 时始终绕过代理。保存代理后会立即重启 DSH。</p>
+    <p class="dialog-intro">代理只用于 DSH/npm 子进程和官方版本检查；外壳访问本地 DSH 时始终绕过代理。保存代理后会立即重启 DSH。</p>
     <form class="settings-form">
       <label class="mode-option">
         <input type="radio" name="proxy-mode" value="inherit" ${settings.proxyMode === "inherit" ? "checked" : ""}>
@@ -304,10 +351,10 @@ const openSettings = async (checkUpdate = false): Promise<void> => {
       </label>
       <section class="runtime-update-card">
         <div>
-          <strong>官方 DSH 手动更新</strong>
-          <small>当前 ${escapeHTML(currentStatus.dshVersion)}；默认兼容版本由 Desktop ${escapeHTML(currentStatus.version)} 固定。不会后台自动升级。</small>
+          <strong>官方 DSH 更新通道</strong>
+          <small>启动后会通过当前代理设置自动检查 latest 与 next，但不会静默切换运行版本。当前 ${escapeHTML(currentStatus.dshVersion)}；Desktop ${escapeHTML(currentStatus.version)} 默认兼容版本保持不变。</small>
         </div>
-        <button type="button" class="button secondary" data-action="dsh-update-check">${icons.update}<span>检查 npm 官方 latest</span></button>
+        <button type="button" class="button secondary" data-action="dsh-update-check">${icons.update}<span>刷新 npm latest / next</span></button>
         <div class="update-result" role="status" aria-live="polite"></div>
       </section>
       <p class="form-error" role="alert"></p>
@@ -340,29 +387,40 @@ const openSettings = async (checkUpdate = false): Promise<void> => {
     if (!updateOutput) return;
     const badges = [
       `<span>当前 ${escapeHTML(info.currentVersion)}</span>`,
-      `<span>官方 ${escapeHTML(info.latestVersion)}</span>`,
+      `<span>latest ${escapeHTML(info.latestVersion)}</span>`,
+      `<span>next ${escapeHTML(info.nextVersion ?? "未发布")}</span>`,
     ].join("");
-    const applyButton = info.updateAvailable && info.canApply
-      ? `<button type="button" class="button primary" data-action="dsh-update-apply">更新到 ${escapeHTML(info.latestVersion)} 并重启</button>`
+    const latestButton = info.latestUpdateAvailable && info.canApply
+      ? `<button type="button" class="button primary" data-action="dsh-update-apply" data-channel="latest" data-version="${escapeHTML(info.latestVersion)}">应用 latest ${escapeHTML(info.latestVersion)}</button>`
+      : "";
+    const nextButton = info.nextUpdateAvailable && info.canApply && info.nextVersion && info.nextVersion !== info.latestVersion
+      ? `<button type="button" class="button secondary" data-action="dsh-update-apply" data-channel="next" data-version="${escapeHTML(info.nextVersion)}">试用 next ${escapeHTML(info.nextVersion)}</button>`
       : "";
     const resetButton = info.canReset
       ? `<button type="button" class="button secondary" data-action="dsh-update-reset">恢复默认 ${escapeHTML(info.defaultVersion)}</button>`
       : "";
-    updateOutput.innerHTML = `<div class="update-badges">${badges}</div><p>${escapeHTML(info.message)}</p><div class="update-actions">${applyButton}${resetButton}</div>`;
-    updateOutput.querySelector<HTMLButtonElement>("[data-action='dsh-update-apply']")?.addEventListener("click", (event) => {
-      if (!window.confirm(`将 DSH 从 ${info.currentVersion} 更新到 ${info.latestVersion}。该版本尚未随当前 Desktop Release 完成六平台验证，是否继续？`)) return;
+    updateOutput.innerHTML = `<div class="update-badges">${badges}</div><p>${escapeHTML(info.message)}</p><div class="update-actions">${latestButton}${nextButton}${resetButton}</div>`;
+    updateOutput.querySelectorAll<HTMLButtonElement>("[data-action='dsh-update-apply']").forEach((applyButton) => applyButton.addEventListener("click", (event) => {
+      const channel = applyButton.dataset.channel as "latest" | "next";
+      const targetVersion = applyButton.dataset.version ?? "";
+      const warning = channel === "next"
+        ? `next 是预览通道，版本 ${targetVersion} 尚未随当前 Desktop Release 完成六平台验证。仍要从 ${info.currentVersion} 切换并重启吗？`
+        : `将 DSH 从 ${info.currentVersion} 更新到 npm latest ${targetVersion} 并重启。是否继续？`;
+      if (!window.confirm(warning)) return;
       const button = event.currentTarget as HTMLButtonElement;
       button.disabled = true;
-      void backend().ApplyLatestDSHUpdate()
+      void backend().ApplyDSHUpdate(channel)
         .then((status) => {
+          dshUpdateInfo = null;
           closeDialog();
           render(status);
+          void checkDSHUpdates(true).catch(() => undefined);
         })
         .catch((error: unknown) => {
           button.disabled = false;
           setUpdateMessage(error instanceof Error ? error.message : String(error));
         });
-    });
+    }));
     updateOutput.querySelector<HTMLButtonElement>("[data-action='dsh-update-reset']")?.addEventListener("click", (event) => {
       if (!window.confirm(`恢复 Desktop 内置兼容版本 ${info.defaultVersion} 并重启 DSH？`)) return;
       const button = event.currentTarget as HTMLButtonElement;
@@ -380,8 +438,8 @@ const openSettings = async (checkUpdate = false): Promise<void> => {
   };
   const runUpdateCheck = (): void => {
     if (checkUpdateButton) checkUpdateButton.disabled = true;
-    if (updateOutput) updateOutput.textContent = "正在查询 npm 官方 latest…";
-    void backend().CheckDSHUpdate()
+    if (updateOutput) updateOutput.textContent = "正在通过当前代理设置查询 npm 官方 latest / next…";
+    void checkDSHUpdates(true)
       .then(renderUpdateInfo)
       .catch((error: unknown) => {
         if (updateOutput) updateOutput.textContent = error instanceof Error ? error.message : String(error);
@@ -391,7 +449,8 @@ const openSettings = async (checkUpdate = false): Promise<void> => {
       });
   };
   checkUpdateButton?.addEventListener("click", runUpdateCheck);
-  if (checkUpdate) runUpdateCheck();
+  if (dshUpdateInfo && !checkUpdate) renderUpdateInfo(dshUpdateInfo);
+  else runUpdateCheck();
   form?.addEventListener("submit", (event) => {
     event.preventDefault();
     const mode = form.querySelector<HTMLInputElement>("input[name='proxy-mode']:checked")?.value as Settings["proxyMode"];
@@ -423,7 +482,7 @@ const openHelp = (): void => {
       <section><h3>出错排查</h3><p>先打开日志检查 Node、npm 下载或网络错误；改完代理后保存，外壳会自动重启 DSH。模型服务的密钥仍在官方 DSH 页面中配置。</p></section>
       <section><h3>PowerShell 与权限</h3><p>权限模式由官方 DSH 页面选择。<code>danger-full-access</code> 可以按当前 Windows 用户权限执行更广泛的命令和文件操作，但会失去工作区沙箱保护；宿主不会因命令失败自动切换。该模式也不等于“以管理员身份运行”，不会自动获得 UAC 管理员令牌。</p></section>
       <section><h3>普通包与离线包</h3><p>Setup.exe 和普通 ZIP 体积较小，需要系统 Node/npm。<code>offline-full</code> 是较大的便携包，内含固定 DSH 依赖，但模型服务、远程 MCP 和联网工具仍可能需要网络。</p></section>
-      <section><h3>DSH 更新</h3><p>“桌面工具 → 检查 DSH 更新”只在你点击时查询 npm 官方 <code>latest</code>。在线包可以明确确认后切换并随时恢复 Desktop 内置兼容版本；离线包必须下载匹配的新 <code>offline-full</code>，不会原地替换未经六平台验证的原生依赖。</p></section>
+      <section><h3>DSH 更新</h3><p>应用启动后会使用“代理与启动设置”自动查询 npm 官方 <code>latest</code> 与 <code>next</code>，顶栏只提示版本，不会静默切换。在线包可确认应用稳定或预览通道并随时恢复 Desktop 内置兼容版本；切换时只回收本应用持有的 DSH 子进程树。离线包必须下载匹配的新 <code>offline-full</code>，不会原地替换原生依赖闭包。</p></section>
     </div>
     <div class="dialog-actions">
       <button class="button secondary" data-action="help-logs">${icons.logs}<span>打开日志目录</span></button>
@@ -450,7 +509,10 @@ onCommandEvent("shell:open-settings", () => void openSettings());
 onCommandEvent("shell:open-help", openHelp);
 void backend()
   .GetStatus()
-  .then(render)
+  .then((status) => {
+    render(status);
+    void checkDSHUpdates().catch(() => undefined);
+  })
   .catch((error: unknown) => {
     render({
       ...initialStatus,

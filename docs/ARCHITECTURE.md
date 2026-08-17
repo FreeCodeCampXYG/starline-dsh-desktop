@@ -60,19 +60,19 @@ Wails application
 2. Go 宿主读取用户代理配置。
 3. 宿主优先查找与可执行文件同包的 `offline-runtime/`；macOS 在应用包 `Contents/Resources` 中查找。
 4. 离线运行时必须同时包含匹配版本文件、Node 可执行文件和 DSH 入口，缺损或版本不一致时明确失败，不静默联网回退。
-5. 未发现离线运行时时，宿主查找系统 Node.js 并验证版本；Windows 直接让 Node 执行 `npx-cli.js`，Unix 使用 PATH 中的 `npx`。命令使用 `--prefer-offline` 优先复用 npm 内容缓存，但不直接信任 PATH 中版本未知的全局 `dsh`。
+5. 未发现离线运行时时，宿主查找系统 Node.js 并验证版本；Windows 直接让 Node 执行 `npx-cli.js`，Unix 使用 PATH 中的 `npx`。npm 使用默认元数据校验和内容缓存策略，不直接信任 PATH 中版本未知的全局 `dsh`。
 6. 宿主向 DSH 传入 `--port 0`，由 DSH 保持 listener 所有权并选择可用 loopback 端口；宿主不再预占后释放端口。
-7. 子进程执行精确版本的 `@deepseek-ai/dsh`：默认使用 Desktop 发布时验证的固定版本；在线包可在用户手动查询、确认 npm 官方 `latest` 后保存另一个精确版本，并可清除设置恢复默认。普通包使用：
+7. 子进程执行精确版本的 `@deepseek-ai/dsh`：默认使用 Desktop 发布时验证的固定版本；前端启动后通过 Go 后端和当前代理模式自动查询 npm 官方 `latest`/`next`，只显示通道状态。在线包经用户确认后再次核对 dist-tag、保存对应精确版本，并可清除设置恢复默认。普通包使用：
 
    ```text
-   npx --yes --prefer-offline --package=@deepseek-ai/dsh@<version> dsh web --host 127.0.0.1 --port 0
+   npx --yes --package=@deepseek-ai/dsh@<version> dsh web --host 127.0.0.1 --port 0
    ```
 
    `offline-full` 直接执行 `offline-runtime/node[.exe] offline-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js web ...`，不调用 npm registry，也不允许界面原地替换包内依赖闭包。
 
 8. 宿主从 DSH 输出的 `dsh web: http://...` 行解析实际地址，只接受通过 loopback 安全校验的 HTTP URL，再使用禁用代理的 HTTP client 轮询并验证状态码和 DSH 页面标题。
 9. 宿主只在该 DSH 子进程的 `PATH` 前置临时命令目录；Agent 调用 `dsh plugin` 且完全遗漏 `--profile` 时，兼容入口按当前桌面 profile 补为 `web`，再转发给同一固定版本运行时。显式 profile、其他 DSH 命令、系统 PATH 和全局 npm shim 均不修改，DSH 退出后临时目录删除。
-9. 就绪后前端先在遮罩后让 iframe 导航到该 loopback URL；iframe `load` 后主动显示原生窗口并淡入页面。启动失败或进程意外退出时跳过等待，立即显示顶部错误状态栏。
+10. 就绪后前端先在遮罩后让 iframe 导航到该 loopback URL；iframe `load` 后主动显示原生窗口并淡入页面。启动失败或进程意外退出时跳过等待，立即显示顶部错误状态栏。
 
 ## 安全边界
 
@@ -80,7 +80,7 @@ Wails application
 - iframe 只显式开放剪贴板读写权限，不开放任意外部页面的 Wails 绑定；
 - 健康检查不使用系统代理，防止 loopback 请求泄漏；
 - `NO_PROXY` 始终合并 `127.0.0.1`、`localhost`、`::1`；
-- 自定义代理仅传递给 DSH/npm 子进程；
+- 自定义代理仅用于官方 dist-tag 检查并传递给 DSH/npm 子进程；
 - 配置不存储模型 API Key；
 - 日志文件权限使用用户私有权限，并最多保留最近 10 份；
 - 退出时只回收宿主持有的子进程树，不按进程名全局扫描；
@@ -121,8 +121,8 @@ Wails application
 
 ## DSH 更新边界
 
-- `internal/updater` 只在用户点击时通过当前代理策略读取 `registry.npmjs.org` 的官方 `@deepseek-ai/dsh/latest` 元数据，限制响应大小、校验包名和 SemVer，并拒绝非官方重定向；检查本身不运行 npm、不下载软件包。
-- 在线包应用更新时由后端再次查询官方 `latest`，只把返回的精确版本写入用户配置，然后通过既有 npx 启动链重启；前端不能提交任意包名或版本。
+- `internal/updater` 在前端启动后及用户手动刷新时通过当前代理策略读取 `registry.npmjs.org` 的固定 DSH dist-tags 端点，限制响应大小、校验 `latest`/`next` SemVer、拒绝非官方重定向，并在请求结束后关闭 HTTP 空闲连接；检查本身不运行 npm、不下载软件包，失败也不阻塞 DSH。
+- 在线包应用更新时由后端再次查询指定的 `latest` 或 `next`，只把返回的精确版本写入用户配置，然后同步回收宿主持有的旧 DSH 子进程树并通过既有 npx 启动链重启；前端不能提交任意包名、版本或其他通道。
 - 环境变量 `DSH_DESKTOP_DSH_VERSION` 继续作为显式开发覆盖且优先级最高；存在覆盖时，界面不修改实际版本。
 - `offline-full` 始终以包内 `dsh-version.txt` 为准，即使同一用户配置曾保存在线版本也不会产生离线运行时版本冲突。离线升级仍是新的 Desktop Release 和六平台原生依赖门禁。
 - 仓库 Dependabot 每周只检查 `offline-runtime` 的官方 DSH 直接依赖并提出 PR；它不自动合并、不发布，也不能代替原生 CI、最终归档和设备验证。

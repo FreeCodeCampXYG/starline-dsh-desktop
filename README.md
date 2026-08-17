@@ -12,15 +12,15 @@ Starline DSH Desktop 是 [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 
 > 本项目是独立社区项目，与 DeepSeek 官方无隶属、背书或商业关系。DSH 仍处于开发者预览阶段，上游版本可能发生破坏性变化。
 
-> **v0.5.1 发布候选提示：** DSH 插件 profile 兼容修复已通过六个平台原生 CI；正式资产仍需对应 tag 的 Release 工作流完成离线运行时、最终归档和 DEB 门禁。绿色 CI 不等同于代表性设备上的首次启动、升级和完整工作流验证，详情见 [已知问题与平台支持边界](docs/KNOWN_ISSUES.md)。
+> **v0.5.2 发布候选提示：** 本版增加 npm `latest`/`next` 自动检查与显式切换，并修复新 DSH 版本首次启动时的陈旧 npm 元数据问题；正式证据仍以对应 tag 的六平台 Release 工作流为准。绿色 CI 不等同于代表性设备上的首次启动、升级和完整工作流验证，详情见 [已知问题与平台支持边界](docs/KNOWN_ISSUES.md)。
 
-> 当前版本线是 v0.5.1，修复 Agent 遗漏 `dsh plugin --profile` 时的命令兼容问题；旧版本资产不会被反向修改，请以对应版本 Release 的矩阵结果为准。
+> 当前版本线是 v0.5.2；旧版本资产不会被反向修改，请以对应版本 Release 的矩阵结果为准。
 
 ## 功能
 
 - Windows、macOS、Linux 原生桌面窗口；
 - 固定 DSH 版本启动，避免 `latest` 漂移；
-- 手动检查 npm 官方 DSH 更新；在线包明确确认后可切换精确版本，并可恢复 Desktop 内置兼容版本；
+- 启动后通过当前代理设置自动检查 npm 官方 `latest` 与 `next`；在线包明确确认后可切换对应精确版本，并可恢复 Desktop 内置兼容版本；
 - 自动选择 loopback 端口并校验 DSH 页面指纹；
 - 代理可视化：继承环境、自定义 HTTP(S) 代理、禁用代理；
 - 本地 DSH 健康检查强制直连，不受外部代理影响；
@@ -62,7 +62,7 @@ Starline DSH Desktop (Go + Wails)
 
 Windows 10 22H2 之前版本、macOS 13.5 之前版本、Ubuntu 22.04 及更早版本不受支持；其他 Linux 发行版当前也不在支持范围内。旧 Ubuntu 即使升级到较新 HWE 内核，glibc 与 WebKitGTK 仍可能不满足要求，因此不能只按内核号判断。
 
-当前默认启动 `@deepseek-ai/dsh@0.1.0-rc.6`。截至 2026-08-16，npm 官方 `latest` 与 `next` 也都是该版本。桌面端不会后台自动升级；在线包可从“桌面工具 → 检查 DSH 更新”手动查询 npm 官方 `latest`，确认后把精确版本写入用户配置并重启，失败时可恢复当前 Desktop 内置兼容版本。`offline-full` 不原地替换包内依赖，必须下载包含新 DSH 且经过原生门禁的新离线包。`DSH_DESKTOP_DSH_VERSION` 仍可用于临时开发覆盖，并优先于界面设置。
+当前默认启动 `@deepseek-ai/dsh@0.1.0-rc.6`。桌面端启动后会按 inherit/custom/disabled 代理模式自动查询 npm 官方 `latest` 与 `next` 并显示版本，但不会静默切换；在线包由用户确认通道后保存精确版本、回收当前 DSH 子进程树并重启。`offline-full` 不原地替换包内依赖，必须下载包含新 DSH 且经过原生门禁的新离线包。`DSH_DESKTOP_DSH_VERSION` 仍可用于临时开发覆盖，并优先于界面设置。
 
 多开说明：每个桌面进程都会为 DSH 申请独立的动态 loopback 端口，因此可以同时打开多个 Web 实例。代理配置仍位于用户级共享配置文件；当另一个实例已经保存过新配置时，旧实例会收到冲突提示并拒绝覆盖，需要重新打开设置后再保存。不同实例如需完全隔离，应使用不同工作区。
 
@@ -79,9 +79,9 @@ Release 页面会按平台分组并显示每个文件的实际体积，不需要
 
 ### Windows
 
-- `starline-dsh-desktop-v0.5.1-windows-x64-setup-online.exe`：常规 x64 在线小包，默认安装到当前用户目录；安装向导可选择其他本地可写目录；
-- `starline-dsh-desktop-v0.5.1-windows-x64-portable-online.zip`：x64 在线便携版，解压后运行；
-- `starline-dsh-desktop-v0.5.1-windows-x64-portable-offline-full.zip`：内含 Node 与固定 DSH 依赖的 x64 完整离线便携版；
+- `starline-dsh-desktop-v0.5.2-windows-x64-setup-online.exe`：常规 x64 在线小包，默认安装到当前用户目录；安装向导可选择其他本地可写目录；
+- `starline-dsh-desktop-v0.5.2-windows-x64-portable-online.zip`：x64 在线便携版，解压后运行；
+- `starline-dsh-desktop-v0.5.2-windows-x64-portable-offline-full.zip`：内含 Node 与固定 DSH 依赖的 x64 完整离线便携版；
 - Windows on ARM 设备选择文件名含 `windows-arm64` 的对应产物，不要下载 x64 包。
 
 安装包未签名时，SmartScreen 可能提示未知发布者。正式广泛分发前需要代码签名证书。
@@ -105,7 +105,7 @@ sudo apt install ./starline-dsh-desktop-v<版本>-linux-x64-deb-online.deb
 DEB 会安装应用菜单入口、图标和许可证，并让 apt 检查 glibc 2.39、GTK3、WebKitGTK 4.1 等系统依赖；它仍是在线小包，Node.js 可能来自 nvm、Volta 等用户级管理器，所以应用启动时会实际检查 Node `22.19+` 或 `24+`。便携包示例：
 
 ```bash
-tar -xzf starline-dsh-desktop-v0.5.1-linux-x64-portable-online.tar.gz
+tar -xzf starline-dsh-desktop-v0.5.2-linux-x64-portable-online.tar.gz
 chmod +x starline-dsh-desktop
 ./starline-dsh-desktop
 ```
@@ -142,7 +142,7 @@ Windows 窗口右上角 X 的行为是隐藏到系统托盘，因此 DSH/Node �
 | 模式 | 行为 | 适用场景 |
 | --- | --- | --- |
 | 继承系统环境 | 保留启动应用时的 `HTTP_PROXY` / `HTTPS_PROXY` 等变量 | 已在系统或启动脚本配置代理 |
-| 自定义代理 | 覆盖 DSH/npm 子进程代理 | VPN 客户端只开放本机 HTTP 端口 |
+| 自定义代理 | 覆盖 DSH/npm 子进程和 DSH 更新检查代理 | VPN 客户端只开放本机 HTTP 端口 |
 | 禁用代理 | 移除继承的代理变量 | 网络可直连，或继承到错误代理 |
 
 自定义地址支持 `http://` 与 `https://`。直接填写 `127.0.0.1:10808` 时会规范化为 `http://127.0.0.1:10808`。保存后 DSH 自动重启。
@@ -156,13 +156,13 @@ Windows 窗口右上角 X 的行为是隐藏到系统托盘，因此 DSH/Node �
 Windows：
 
 ```powershell
-Get-FileHash .\starline-dsh-desktop-v0.5.1-windows-x64-setup-online.exe -Algorithm SHA256
+Get-FileHash .\starline-dsh-desktop-v0.5.2-windows-x64-setup-online.exe -Algorithm SHA256
 ```
 
 macOS/Linux：
 
 ```bash
-sha256sum -c starline-dsh-desktop-v0.5.1-linux-x64-portable-online.tar.gz.sha256
+sha256sum -c starline-dsh-desktop-v0.5.2-linux-x64-portable-online.tar.gz.sha256
 ```
 
 ## 常见问题
@@ -175,9 +175,9 @@ DSH 已有完整 Web UI。复制会话、SSE、工具审批和插件 UI 会产�
 
 Node 是 DSH 的运行时。普通 Setup/ZIP 为了保持小体积，继续使用系统 Node 与 npx；可选的 `offline-full` 则重新分发固定 Node 可执行文件和锁定的 DSH 生产依赖。离线包免除 npm 下载，但不会让模型 provider、远程 MCP、Web 工具或更新功能自动离线。
 
-### 为什么不直接后台自动更新 DSH？
+### DSH 会自动更新吗？
 
-DSH 仍处于预发布阶段，并包含 PTY、Sharp、Koffi、ripgrep 等平台相关依赖。后台追随 `latest` 会让同一个 Desktop 版本在不同日期启动不同代码，也会绕过六个平台的原生依赖和最终归档门禁。因此用户端只提供显式手动更新和回退；仓库通过 Dependabot 每周检查官方 DSH 新版本，维护者仍需让候选版本经过 GitHub Actions 六平台验证后，才能更新 `offline-full` 基线。
+应用会在启动后自动检查并告知 npm `latest` 与 `next`，网络请求沿用当前代理设置，失败不会阻塞 DSH。为避免预发布版本和原生依赖在后台静默漂移，切换通道仍需用户确认；应用后保存的是精确版本。`offline-full` 的固定基线仍必须经过 GitHub Actions 六平台原生依赖与最终归档门禁，不能在用户电脑上原地替换。
 
 ### 启动后让我选择工作区正常吗？
 

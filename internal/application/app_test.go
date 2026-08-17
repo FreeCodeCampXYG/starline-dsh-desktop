@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"starline-dsh-desktop/internal/config"
+	"starline-dsh-desktop/internal/updater"
 )
 
 func TestBeforeClosePlatformPolicy(t *testing.T) {
@@ -58,5 +59,29 @@ func TestResolveDSHVersionUsesSavedOnlineVersion(t *testing.T) {
 	}
 	if got != "0.1.0-rc.7" {
 		t.Fatalf("保存的 DSH 版本未生效：%q", got)
+	}
+}
+
+func TestSelectDSHUpdateTarget(t *testing.T) {
+	release := updater.DSHRelease{
+		LatestVersion:         "0.1.0-rc.7",
+		NextVersion:           "0.1.0-rc.8",
+		LatestUpdateAvailable: true,
+		NextUpdateAvailable:   true,
+	}
+	for _, test := range []struct {
+		channel string
+		want    string
+	}{
+		{channel: "latest", want: "0.1.0-rc.7"},
+		{channel: "next", want: "0.1.0-rc.8"},
+	} {
+		got, err := selectDSHUpdateTarget(release, test.channel)
+		if err != nil || got != test.want {
+			t.Fatalf("selectDSHUpdateTarget(%q) = %q, %v", test.channel, got, err)
+		}
+	}
+	if _, err := selectDSHUpdateTarget(release, "preview"); err == nil {
+		t.Fatal("不应接受未知更新通道")
 	}
 }

@@ -58,17 +58,19 @@ func TestResolveDSHCommandRejectsOfflineVersionMismatch(t *testing.T) {
 	}
 }
 
-func TestOnlineDSHPrefixPrefersNPMCache(t *testing.T) {
+func TestOnlineDSHPrefixLetsNPMRefreshMetadata(t *testing.T) {
 	prefix := onlineDSHPrefix([]string{"npx-cli.js"}, "0.1.0-rc.6")
 	want := []string{
 		"npx-cli.js",
 		"--yes",
-		"--prefer-offline",
 		"--package=@deepseek-ai/dsh@0.1.0-rc.6",
 		"dsh",
 	}
 	if strings.Join(prefix, "\x00") != strings.Join(want, "\x00") {
 		t.Fatalf("onlineDSHPrefix() = %#v, want %#v", prefix, want)
+	}
+	if strings.Contains(strings.Join(prefix, " "), "--prefer-offline") {
+		t.Fatal("在线启动不应强制使用可能陈旧的 npm packument")
 	}
 }
 

@@ -18,9 +18,11 @@ export type DSHUpdateInfo = {
   currentVersion: string;
   defaultVersion: string;
   latestVersion: string;
+  nextVersion?: string;
   runtimeMode: "auto" | "online" | "offline";
   message: string;
-  updateAvailable: boolean;
+  latestUpdateAvailable: boolean;
+  nextUpdateAvailable: boolean;
   canApply: boolean;
   canReset: boolean;
   usingCustomVersion: boolean;
@@ -32,7 +34,7 @@ type AppBindings = {
   GetSettings(): Promise<Settings>;
   SaveSettings(settings: Settings): Promise<Status>;
   CheckDSHUpdate(): Promise<DSHUpdateInfo>;
-  ApplyLatestDSHUpdate(): Promise<Status>;
+  ApplyDSHUpdate(channel: "latest" | "next"): Promise<Status>;
   ResetDSHVersion(): Promise<Status>;
   OpenLogs(): Promise<void>;
   OpenInBrowser(): Promise<void>;

@@ -39,15 +39,17 @@ type App struct {
 }
 
 type DSHUpdateInfo struct {
-	CurrentVersion     string `json:"currentVersion"`
-	DefaultVersion     string `json:"defaultVersion"`
-	LatestVersion      string `json:"latestVersion"`
-	RuntimeMode        string `json:"runtimeMode"`
-	Message            string `json:"message"`
-	UpdateAvailable    bool   `json:"updateAvailable"`
-	CanApply           bool   `json:"canApply"`
-	CanReset           bool   `json:"canReset"`
-	UsingCustomVersion bool   `json:"usingCustomVersion"`
+	CurrentVersion        string `json:"currentVersion"`
+	DefaultVersion        string `json:"defaultVersion"`
+	LatestVersion         string `json:"latestVersion"`
+	NextVersion           string `json:"nextVersion,omitempty"`
+	RuntimeMode           string `json:"runtimeMode"`
+	Message               string `json:"message"`
+	LatestUpdateAvailable bool   `json:"latestUpdateAvailable"`
+	NextUpdateAvailable   bool   `json:"nextUpdateAvailable"`
+	CanApply              bool   `json:"canApply"`
+	CanReset              bool   `json:"canReset"`
+	UsingCustomVersion    bool   `json:"usingCustomVersion"`
 }
 
 type Status struct {
@@ -194,7 +196,7 @@ func (a *App) SaveSettings(settings config.Settings) (Status, error) {
 	return a.restart(), nil
 }
 
-// CheckDSHUpdate 查询 npm 官方 latest；该操作不会下载 DSH 或修改设置。
+// CheckDSHUpdate 查询 npm 官方 latest/next；自动检查只提示，不下载 DSH 或修改设置。
 func (a *App) CheckDSHUpdate() (DSHUpdateInfo, error) {
 	a.mu.Lock()
 	ctx := a.ctx
@@ -206,41 +208,45 @@ func (a *App) CheckDSHUpdate() (DSHUpdateInfo, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	release, err := updater.CheckDSHLatest(ctx, currentVersion, settings)
+	release, err := updater.CheckDSHChannels(ctx, currentVersion, settings)
+	if err != nil {
+		return DSHUpdateInfo{}, err
+	}
+	canApply, reason, err := canApplyDSHUpdate()
 	if err != nil {
 		return DSHUpdateInfo{}, err
 	}
 	info := DSHUpdateInfo{
-		CurrentVersion:     currentVersion,
-		DefaultVersion:     defaultVersion,
-		LatestVersion:      release.LatestVersion,
-		RuntimeMode:        runtimeMode,
-		UpdateAvailable:    release.UpdateAvailable,
-		CanReset:           settings.DSHVersion != "",
-		UsingCustomVersion: settings.DSHVersion != "",
+		CurrentVersion:        currentVersion,
+		DefaultVersion:        defaultVersion,
+		LatestVersion:         release.LatestVersion,
+		NextVersion:           release.NextVersion,
+		RuntimeMode:           runtimeMode,
+		LatestUpdateAvailable: release.LatestUpdateAvailable,
+		NextUpdateAvailable:   release.NextUpdateAvailable,
+		CanApply:              canApply,
+		CanReset:              settings.DSHVersion != "",
+		UsingCustomVersion:    settings.DSHVersion != "",
 	}
 	switch {
-	case release.CurrentNewer:
-		info.Message = "当前 DSH 版本高于 npm 官方 latest，不建议自动降级。"
-	case !release.UpdateAvailable:
-		info.Message = "当前已是 npm 官方 latest。"
+	case !canApply:
+		info.Message = reason
+	case release.LatestUpdateAvailable:
+		info.Message = "发现新的 npm latest；确认后会保存精确版本、回收当前 DSH 子进程树并重启。"
+	case release.NextUpdateAvailable:
+		info.Message = "当前已跟上 npm latest；next 预览通道有更新，可自行确认试用。"
+	case release.CurrentNewerThanLatest:
+		info.Message = "当前 DSH 版本高于 npm latest，不会自动降级。"
+	case release.NextVersion == "":
+		info.Message = "当前已是 npm latest；官方暂未发布 next 标签。"
 	default:
-		canApply, reason, applyErr := canApplyDSHUpdate()
-		if applyErr != nil {
-			return DSHUpdateInfo{}, applyErr
-		}
-		info.CanApply = canApply
-		if canApply {
-			info.Message = "发现新的官方 DSH；应用后会通过 npx 下载并重启。"
-		} else {
-			info.Message = reason
-		}
+		info.Message = "当前 DSH 已跟上 npm latest 与 next。"
 	}
 	return info, nil
 }
 
-// ApplyLatestDSHUpdate 再次向 npm 核对 latest，保存精确版本后重启在线运行时。
-func (a *App) ApplyLatestDSHUpdate() (Status, error) {
+// ApplyDSHUpdate 再次核对指定通道，保存精确版本后回收旧子进程并重启在线运行时。
+func (a *App) ApplyDSHUpdate(channel string) (Status, error) {
 	a.settingsMu.Lock()
 	defer a.settingsMu.Unlock()
 
@@ -259,15 +265,16 @@ func (a *App) ApplyLatestDSHUpdate() (Status, error) {
 	if !canApply {
 		return a.GetStatus(), errors.New(reason)
 	}
-	release, err := updater.CheckDSHLatest(ctx, currentVersion, expected)
+	release, err := updater.CheckDSHChannels(ctx, currentVersion, expected)
 	if err != nil {
 		return a.GetStatus(), err
 	}
-	if !release.UpdateAvailable {
-		return a.GetStatus(), errors.New("当前已经是 npm 官方 latest，无需更新")
+	targetVersion, err := selectDSHUpdateTarget(release, channel)
+	if err != nil {
+		return a.GetStatus(), err
 	}
 	updated := expected
-	updated.DSHVersion = release.LatestVersion
+	updated.DSHVersion = targetVersion
 	updated, err = config.Normalize(updated)
 	if err != nil {
 		return a.GetStatus(), err
@@ -278,9 +285,30 @@ func (a *App) ApplyLatestDSHUpdate() (Status, error) {
 	a.mu.Lock()
 	a.settings = updated
 	a.settingsLoadErr = nil
-	a.dshVersion = release.LatestVersion
+	a.dshVersion = targetVersion
 	a.mu.Unlock()
 	return a.restart(), nil
+}
+
+// selectDSHUpdateTarget 只接受已知 npm 通道，并禁止无意义降级或重复重启。
+func selectDSHUpdateTarget(release updater.DSHRelease, channel string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(channel)) {
+	case "latest":
+		if !release.LatestUpdateAvailable {
+			return "", errors.New("当前版本不低于 npm 官方 latest，无需更新")
+		}
+		return release.LatestVersion, nil
+	case "next":
+		if release.NextVersion == "" {
+			return "", errors.New("npm 官方当前没有 next 版本")
+		}
+		if !release.NextUpdateAvailable {
+			return "", errors.New("当前版本不低于 npm 官方 next，无需更新")
+		}
+		return release.NextVersion, nil
+	default:
+		return "", errors.New("未知的 DSH 更新通道，只支持 latest 或 next")
+	}
 }
 
 // ResetDSHVersion 清除手动选择，恢复桌面版本内置的兼容 DSH 版本。

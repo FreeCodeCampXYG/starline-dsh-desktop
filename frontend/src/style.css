@@ -235,6 +235,39 @@ footer {
   box-shadow: 0 0 12px rgba(48, 211, 160, 0.75);
 }
 
+.runtime-tools {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  gap: 8px;
+}
+
+.runtime-update-indicator {
+  max-width: min(360px, 42vw);
+  padding: 3px 8px;
+  overflow: hidden;
+  border: 1px solid rgba(126, 148, 255, 0.22);
+  border-radius: 7px;
+  color: #aab8d5;
+  background: rgba(126, 148, 255, 0.07);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.runtime-update-indicator.has-update {
+  border-color: rgba(48, 211, 160, 0.34);
+  color: #9ce8d0;
+  background: rgba(48, 211, 160, 0.08);
+}
+
+.runtime-update-indicator.has-error {
+  border-color: rgba(255, 113, 123, 0.3);
+  color: #e5a0a7;
+  background: rgba(255, 113, 123, 0.07);
+}
+
 .runtime-state.state-idle span,
 .runtime-state.state-starting span {
   background: #7890ff;
@@ -449,7 +482,7 @@ footer {
   z-index: 12;
   top: 31px;
   right: 0;
-  width: 190px;
+	width: 270px;
   padding: 6px;
   border: 1px solid rgba(153, 176, 255, 0.18);
   border-radius: 11px;

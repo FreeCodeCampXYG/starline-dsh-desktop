@@ -1,10 +1,10 @@
 # 发布流程
 
-> v0.5.1 发布候选中的 DSH 插件 profile 兼容修复已通过六平台原生 CI；正式资产还必须通过 tag 触发的最终离线归档功能复测和 Ubuntu 24.04 x64/ARM64 DEB 安装门禁。证据边界与 v0.2.4 历史缺陷见 [已知问题与平台支持边界](KNOWN_ISSUES.md)；任何修复都发布递增版本，不移动已有公开 tag。
+> v0.5.2 的 DSH `latest`/`next` 自动检查、通道切换和 npm 陈旧元数据修复必须通过 tag 触发的六平台原生构建、最终离线归档功能复测和 Ubuntu 24.04 x64/ARM64 DEB 安装门禁。证据边界与历史缺陷见 [已知问题与平台支持边界](KNOWN_ISSUES.md)；任何修复都发布递增版本，不移动已有公开 tag。
 
 ## 发布模型
 
-Dependabot 每周只检查 `/offline-runtime` 中固定的 `@deepseek-ai/dsh` 直接依赖。自动 PR 只是版本提醒：不得自动合并或直接发布。升级 DSH 时必须审查锁文件、生命周期脚本与白名单哈希变化，并重新完成六平台原生依赖功能测试和最终归档复测；用户在线包手动选择的版本不改变 Release 内置兼容基线。
+Dependabot 每周只检查 `/offline-runtime` 中固定的 `@deepseek-ai/dsh` 直接依赖。自动 PR 只是版本提醒：不得自动合并或直接发布。升级离线 DSH 时必须审查锁文件、生命周期脚本与白名单哈希变化，并重新完成六平台原生依赖功能测试和最终归档复测；用户在线包自动发现并显式选择的 `latest`/`next` 精确版本不改变 Release 内置兼容基线。
 
 - push/PR：运行质量门和六个原生平台构建；
 - 手动运行 Release workflow：只生成 Actions artifacts，不创建 GitHub Release；

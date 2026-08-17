@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Version embedded in the artifacts (for example 0.5.1-dev)
+        description: Version embedded in the artifacts (for example 0.5.2-dev)
         required: true
-        default: 0.5.1-dev
+        default: 0.5.2-dev
 
 permissions:
   contents: read

@@ -16,33 +16,35 @@ import (
 )
 
 const (
-	dshPackageName    = "@deepseek-ai/dsh"
-	registryLatestURL = "https://registry.npmjs.org/@deepseek-ai%2fdsh/latest"
-	maxMetadataBytes  = 1 << 20
+	registryDistTagsURL = "https://registry.npmjs.org/-/package/@deepseek-ai%2Fdsh/dist-tags"
+	maxMetadataBytes    = 64 << 10
 )
 
 type DSHRelease struct {
-	CurrentVersion  string `json:"currentVersion"`
-	LatestVersion   string `json:"latestVersion"`
-	UpdateAvailable bool   `json:"updateAvailable"`
-	CurrentNewer    bool   `json:"currentNewer"`
+	CurrentVersion         string `json:"currentVersion"`
+	LatestVersion          string `json:"latestVersion"`
+	NextVersion            string `json:"nextVersion,omitempty"`
+	LatestUpdateAvailable  bool   `json:"latestUpdateAvailable"`
+	NextUpdateAvailable    bool   `json:"nextUpdateAvailable"`
+	CurrentNewerThanLatest bool   `json:"currentNewerThanLatest"`
 }
 
-type registryMetadata struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
+type registryDistTags struct {
+	Latest string `json:"latest"`
+	Next   string `json:"next"`
 }
 
-// CheckDSHLatest 仅在用户主动请求时查询 npm 官方 latest，不修改任何本地状态。
-func CheckDSHLatest(ctx context.Context, currentVersion string, settings config.Settings) (DSHRelease, error) {
+// CheckDSHChannels 查询 npm 官方 latest/next；调用方决定自动提示或应用，不修改本地状态。
+func CheckDSHChannels(ctx context.Context, currentVersion string, settings config.Settings) (DSHRelease, error) {
 	client, err := registryClient(settings)
 	if err != nil {
 		return DSHRelease{}, err
 	}
-	return checkDSHLatest(ctx, client, registryLatestURL, currentVersion)
+	defer client.CloseIdleConnections()
+	return checkDSHChannels(ctx, client, registryDistTagsURL, currentVersion)
 }
 
-func checkDSHLatest(ctx context.Context, client *http.Client, endpoint, currentVersion string) (DSHRelease, error) {
+func checkDSHChannels(ctx context.Context, client *http.Client, endpoint, currentVersion string) (DSHRelease, error) {
 	currentVersion, err := dshversion.Normalize(currentVersion)
 	if err != nil {
 		return DSHRelease{}, err
@@ -52,6 +54,8 @@ func checkDSHLatest(ctx context.Context, client *http.Client, endpoint, currentV
 		return DSHRelease{}, fmt.Errorf("无法创建 DSH 更新请求：%w", err)
 	}
 	request.Header.Set("Accept", "application/json")
+	request.Header.Set("Cache-Control", "no-cache")
+	request.Header.Set("Pragma", "no-cache")
 	request.Header.Set("User-Agent", "Starline-DSH-Desktop")
 	response, err := client.Do(request)
 	if err != nil {
@@ -68,27 +72,38 @@ func checkDSHLatest(ctx context.Context, client *http.Client, endpoint, currentV
 	if len(body) > maxMetadataBytes {
 		return DSHRelease{}, errors.New("npm DSH 版本信息超过安全大小限制")
 	}
-	var metadata registryMetadata
-	if err := json.Unmarshal(body, &metadata); err != nil {
+	var tags registryDistTags
+	if err := json.Unmarshal(body, &tags); err != nil {
 		return DSHRelease{}, fmt.Errorf("npm DSH 版本信息格式无效：%w", err)
 	}
-	if metadata.Name != dshPackageName {
-		return DSHRelease{}, fmt.Errorf("npm 返回了意外的软件包：%s", metadata.Name)
-	}
-	latestVersion, err := dshversion.Normalize(metadata.Version)
+	latestVersion, err := dshversion.Normalize(tags.Latest)
 	if err != nil {
-		return DSHRelease{}, fmt.Errorf("npm 返回了无效的 DSH 版本：%w", err)
+		return DSHRelease{}, fmt.Errorf("npm latest 返回了无效的 DSH 版本：%w", err)
 	}
-	comparison, err := dshversion.Compare(latestVersion, currentVersion)
+	latestComparison, err := dshversion.Compare(latestVersion, currentVersion)
 	if err != nil {
 		return DSHRelease{}, err
 	}
-	return DSHRelease{
-		CurrentVersion:  currentVersion,
-		LatestVersion:   latestVersion,
-		UpdateAvailable: comparison > 0,
-		CurrentNewer:    comparison < 0,
-	}, nil
+	release := DSHRelease{
+		CurrentVersion:         currentVersion,
+		LatestVersion:          latestVersion,
+		LatestUpdateAvailable:  latestComparison > 0,
+		CurrentNewerThanLatest: latestComparison < 0,
+	}
+	if strings.TrimSpace(tags.Next) == "" {
+		return release, nil
+	}
+	nextVersion, err := dshversion.Normalize(tags.Next)
+	if err != nil {
+		return DSHRelease{}, fmt.Errorf("npm next 返回了无效的 DSH 版本：%w", err)
+	}
+	nextComparison, err := dshversion.Compare(nextVersion, currentVersion)
+	if err != nil {
+		return DSHRelease{}, err
+	}
+	release.NextVersion = nextVersion
+	release.NextUpdateAvailable = nextComparison > 0
+	return release, nil
 }
 
 func registryClient(settings config.Settings) (*http.Client, error) {

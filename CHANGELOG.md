@@ -9,6 +9,22 @@
 - Windows 代码签名与 macOS Developer ID 签名、公证。
 - 多实例工作区锁与 MCP 编排服务。
 
+## [0.5.2] - 2026-08-17
+
+### 新增
+
+- 应用启动后使用当前代理模式在后台查询 npm 官方 `latest` 与 `next`，在顶栏和设置中同时显示两个通道；检查失败不阻塞当前 DSH 启动。
+- 在线包可分别确认应用 `latest` 或 `next`，后端会再次核对官方 dist-tag 并只保存对应的精确 SemVer；预览通道不会静默安装。
+
+### 修复
+
+- 在线 npx 启动移除强制 `--prefer-offline`，避免刚发布的精确版本因陈旧 npm packument 被误报为 `ETARGET`，同时保留 npm 默认内容缓存。
+- 版本检查完成后主动关闭 HTTP 空闲连接；更新重启继续同步回收本应用持有的 DSH 子进程树，避免反复检查或切换累积资源。
+
+### 安全
+
+- 更新查询固定到 npm 官方 DSH dist-tags 端点，限制响应大小、禁止非官方重定向，并复用 inherit/custom/disabled 代理策略；前端只能选择 `latest` 或 `next`，不能提交任意包名或版本。
+
 ## [0.5.1] - 2026-08-17
 
 ### 修复
@@ -152,7 +168,8 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.3...v0.4.0

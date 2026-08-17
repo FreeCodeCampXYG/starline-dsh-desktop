@@ -11,9 +11,13 @@
 | 缺少设备验证 | 构建或 Web 启动检查成功，但没有代表性设备上的安装和功能证据 |
 | 产品限制 | 当前设计或分发方式明确不覆盖的能力，不等同于回归 Bug |
 
-## v0.5.1 发布候选证据
+## v0.5.2 发布候选边界
 
-提交 `299578c` 的 [CI 运行 32023493664](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/runs/32023493664) 已通过质量门和六平台原生构建。新增的进程级兼容入口只在 Agent 执行 `dsh plugin` 且完全遗漏 `--profile` 时补为当前 `web` profile；显式 profile 与其他 DSH 命令保持不变，不修改全局 PATH 或 npm shim。Windows x64/ARM64 原生 runner 同时验证 PowerShell 与 CMD，macOS 和 Linux runner 验证各自原生 Shell。该结果证明补全逻辑、Go 构建和既有离线运行时门禁在 CI 中通过；正式 Release 资产仍需由 `v0.5.1` tag 工作流完成最终归档复测，真实设备权限、插件网络和 pnpm 可用性仍不由该修复保证。
+本版增加启动后自动查询 npm `latest`/`next`、显式通道切换，并移除在线启动强制的 `--prefer-offline`。本地仅做静态检查，六平台编译、原生依赖、归档和 DEB 安装证据必须来自 `v0.5.2` tag 的 Release 工作流；工作流完成前不得把候选实现描述为已通过跨平台验证。自动检查沿用代理设置且不阻塞 DSH，通道切换会回收当前应用持有的进程树，但仍缺少代表性设备上的升级体验验证。
+
+## v0.5.1 当前发布证据
+
+提交 `299578c` 的 [CI 运行 32023493664](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/runs/32023493664) 已通过质量门和六平台原生构建；[v0.5.1 Release 工作流 32026664082](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/runs/32026664082) 已完成最终打包与发布。新增的进程级兼容入口只在 Agent 执行 `dsh plugin` 且完全遗漏 `--profile` 时补为当前 `web` profile；显式 profile 与其他 DSH 命令保持不变，不修改全局 PATH 或 npm shim。真实设备权限、插件网络和 pnpm 可用性仍不由该修复保证。
 
 ## v0.5.0 当前发布证据
 

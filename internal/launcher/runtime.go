@@ -68,11 +68,10 @@ func BundledDSHVersion() (string, bool, error) {
 	return version, true, nil
 }
 
-// onlineDSHPrefix 固定 DSH 版本并优先复用 npm 内容缓存；缓存缺失时仍允许正常下载。
+// onlineDSHPrefix 固定 DSH 版本，并让 npm 正常重新校验版本元数据与复用内容缓存。
 func onlineDSHPrefix(commandPrefix []string, version string) []string {
 	return append(append([]string{}, commandPrefix...),
 		"--yes",
-		"--prefer-offline",
 		"--package=@deepseek-ai/dsh@"+version,
 		"dsh",
 	)
