@@ -4,14 +4,20 @@
 
 ## [Unreleased]
 
-### 修复
-
-- Starline 启动的 DSH 环境增加进程级命令兼容入口：Agent 执行 `dsh plugin` 时若遗漏官方必需的 `--profile`，默认补为当前 `web` profile；显式 profile 和其他 DSH 命令保持不变。
-
 ### 计划
 
 - Windows 代码签名与 macOS Developer ID 签名、公证。
 - 多实例工作区锁与 MCP 编排服务。
+
+## [0.5.1] - 2026-08-17
+
+### 修复
+
+- Starline 启动的 DSH 环境增加进程级命令兼容入口：Agent 执行 `dsh plugin` 时若遗漏官方必需的 `--profile`，默认补为当前 `web` profile；显式 profile 和其他 DSH 命令保持不变。
+
+### 验证
+
+- 质量门与 Windows x64/ARM64、macOS Intel/Apple Silicon、Linux x64/ARM64 原生构建全部通过；Windows 同时验证 PowerShell 与 CMD 的命令补全行为。
 
 ## [0.5.0] - 2026-08-16
 
@@ -146,7 +152,8 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.3.2...v0.3.3

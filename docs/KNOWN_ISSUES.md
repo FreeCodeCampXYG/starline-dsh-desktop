@@ -11,6 +11,10 @@
 | 缺少设备验证 | 构建或 Web 启动检查成功，但没有代表性设备上的安装和功能证据 |
 | 产品限制 | 当前设计或分发方式明确不覆盖的能力，不等同于回归 Bug |
 
+## v0.5.1 发布候选证据
+
+提交 `299578c` 的 [CI 运行 32023493664](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/runs/32023493664) 已通过质量门和六平台原生构建。新增的进程级兼容入口只在 Agent 执行 `dsh plugin` 且完全遗漏 `--profile` 时补为当前 `web` profile；显式 profile 与其他 DSH 命令保持不变，不修改全局 PATH 或 npm shim。Windows x64/ARM64 原生 runner 同时验证 PowerShell 与 CMD，macOS 和 Linux runner 验证各自原生 Shell。该结果证明补全逻辑、Go 构建和既有离线运行时门禁在 CI 中通过；正式 Release 资产仍需由 `v0.5.1` tag 工作流完成最终归档复测，真实设备权限、插件网络和 pnpm 可用性仍不由该修复保证。
+
 ## v0.5.0 当前发布证据
 
 提交 `70c805a` 的 [CI 运行 31928652053](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/runs/31928652053) 已通过质量门和六平台原生构建；[v0.5.0 Release 工作流 31929012111](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/runs/31929012111) 已通过六平台打包并发布 [33 个正式资产](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/releases/tag/v0.5.0)。发布工作流在各原生 runner 上准备离线运行时，真实调用 `node-pty.spawn()`，并在最终 ZIP/TAR.GZ 解包后复测；这属于原生 CI、归档和公开 Release 证据，不属于代表性设备测试。

@@ -125,7 +125,7 @@ dsh plugin --profile web --help
 dsh plugin --profile web add <package>
 ```
 
-当前 `main` 会在 Starline 启动的 DSH 进程环境中提供临时兼容入口：只有 `dsh plugin` 完全没写 `--profile` 时才补为当前 `web` profile；`--profile tui` 等显式选择保持不变，其他 DSH 命令也不会被改写。该入口不修改系统 PATH 或全局 npm 文件，也不会绕过 DSH/PowerShell 权限；插件管理仍依赖官方要求的 pnpm、网络或本地缓存。v0.5.0 用户可先按上面的完整语法执行。
+v0.5.1 起会在 Starline 启动的 DSH 进程环境中提供临时兼容入口：只有 `dsh plugin` 完全没写 `--profile` 时才补为当前 `web` profile；`--profile tui` 等显式选择保持不变，其他 DSH 命令也不会被改写。该入口不修改系统 PATH 或全局 npm 文件，也不会绕过 DSH/PowerShell 权限；插件管理仍依赖官方要求的 pnpm、网络或本地缓存。v0.5.0 及更早版本可先按上面的完整语法执行。
 
 ## macOS 无法打开
 
