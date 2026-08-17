@@ -21,6 +21,14 @@ type Config struct {
 	WorkingDir string
 	ProxyMode  string
 	ProxyURL   string
+	OnProgress func(Progress)
+}
+
+// Progress 表示可验证的启动阶段；百分比是阶段权重，不伪装成 npm 下载字节进度。
+type Progress struct {
+	Percent     int
+	Stage       string
+	RuntimeMode string
 }
 
 type Process struct {
@@ -36,6 +44,10 @@ type Process struct {
 	done     chan struct{}
 	waitErr  error
 	stopOnce sync.Once
+
+	progressMu sync.Mutex
+	progress   int
+	onProgress func(Progress)
 }
 
 // Start 优先使用包内离线运行时，否则通过系统 Node 和固定版本 npm 包启动 DSH Web。
@@ -46,14 +58,21 @@ func Start(_ context.Context, config Config) (*Process, error) {
 	if info, err := os.Stat(config.WorkingDir); err != nil || !info.IsDir() {
 		return nil, fmt.Errorf("工作目录不可用：%s", config.WorkingDir)
 	}
+	emitProgress(config.OnProgress, 30, "正在检测包内运行时和系统 Node…", "auto")
 
 	command, err := resolveDSHCommand(config.Version)
 	if err != nil {
 		return nil, err
 	}
+	modeStage := "已选择系统 Node / npx 在线运行时"
+	if command.mode == "offline" {
+		modeStage = "已找到并验证包内离线运行时"
+	}
+	emitProgress(config.OnProgress, 40, modeStage, command.mode)
 	if err := checkNodeVersion(command.nodePath); err != nil {
 		return nil, err
 	}
+	emitProgress(config.OnProgress, 48, "Node.js 版本检查通过", command.mode)
 
 	logPath, logFile, err := createLogFile()
 	if err != nil {
@@ -70,6 +89,7 @@ func Start(_ context.Context, config Config) (*Process, error) {
 		_ = logFile.Close()
 		return nil, err
 	}
+	emitProgress(config.OnProgress, 55, "正在准备日志、代理和命令兼容入口…", command.mode)
 
 	process := &Process{
 		logPath:     logPath,
@@ -77,6 +97,8 @@ func Start(_ context.Context, config Config) (*Process, error) {
 		shimDir:     shimDir,
 		urlReady:    make(chan struct{}),
 		done:        make(chan struct{}),
+		progress:    55,
+		onProgress:  config.OnProgress,
 	}
 	lineSink := &lineWriter{onLine: process.inspectLine}
 	writer := io.MultiWriter(logFile, lineSink)
@@ -107,6 +129,11 @@ func Start(_ context.Context, config Config) (*Process, error) {
 		_ = logFile.Close()
 		return nil, fmt.Errorf("无法启动%s：%w（日志：%s）", command.label, err, logPath)
 	}
+	stage := "包内 DSH 进程已启动，正在等待监听地址…"
+	if command.mode == "online" {
+		stage = "npx 已启动，正在校验元数据并准备 DSH 依赖…"
+	}
+	process.reportProgress(65, stage)
 
 	go func() {
 		process.waitErr = cmd.Wait()
@@ -125,6 +152,7 @@ func (p *Process) WaitReady(ctx context.Context, timeout time.Duration) error {
 
 	select {
 	case <-p.urlReady:
+		p.reportProgress(92, "已获得监听地址，正在校验本地 DSH 页面…")
 	case <-p.done:
 		return p.exitError("DSH 在公布监听地址前退出")
 	case <-ctx.Done():
@@ -149,6 +177,7 @@ func (p *Process) WaitReady(ctx context.Context, timeout time.Duration) error {
 				body, readErr := io.ReadAll(io.LimitReader(response.Body, 128*1024))
 				_ = response.Body.Close()
 				if readErr == nil && response.StatusCode == http.StatusOK && strings.Contains(string(body), "<title>DeepSeek Harness</title>") {
+					p.reportProgress(98, "本地 DSH 页面校验通过")
 					return nil
 				}
 			}
@@ -218,7 +247,31 @@ func (p *Process) inspectLine(line string) {
 	p.mu.Lock()
 	p.url = strings.TrimRight(match[1], "/")
 	p.mu.Unlock()
-	p.urlOnce.Do(func() { close(p.urlReady) })
+	p.urlOnce.Do(func() {
+		p.reportProgress(85, "DSH 已公布安全的本地监听地址")
+		close(p.urlReady)
+	})
+}
+
+func emitProgress(callback func(Progress), percent int, stage, runtimeMode string) {
+	if callback == nil {
+		return
+	}
+	callback(Progress{Percent: percent, Stage: stage, RuntimeMode: runtimeMode})
+}
+
+// reportProgress 只允许当前进程的阶段百分比单调前进，避免并发输出造成界面倒退。
+func (p *Process) reportProgress(percent int, stage string) {
+	p.progressMu.Lock()
+	if percent <= p.progress {
+		p.progressMu.Unlock()
+		return
+	}
+	p.progress = percent
+	callback := p.onProgress
+	runtimeMode := p.runtimeMode
+	p.progressMu.Unlock()
+	emitProgress(callback, percent, stage, runtimeMode)
 }
 
 func (p *Process) exitError(prefix string) error {

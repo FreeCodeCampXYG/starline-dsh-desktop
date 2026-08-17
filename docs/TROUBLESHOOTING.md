@@ -14,7 +14,7 @@
 
 ## Windows 自定义安装目录
 
-Setup 向导的“选择安装位置”页面可以改目录。当前用户安装默认位于 `%LOCALAPPDATA%\Programs\Starline DSH Desktop`，也可以选择其他当前用户可写位置。安装器会记录所选 `InstallLocation`，以后再次安装或升级时继续使用。
+Setup 向导的“选择安装位置”页面可以改目录。当前用户安装默认位于 `%LOCALAPPDATA%\Programs\Starline DSH Desktop`，也可以选择其他当前用户可写位置。安装器会记录所选 `InstallLocation`；关闭托盘中的旧程序后，再运行同一架构的新版 Setup 会继续使用该目录并覆盖程序文件，配置、日志和 DSH 工作区不在安装目录中。
 
 中文和空格路径受支持。若自定义路径启动失败，请检查：
 
@@ -56,7 +56,7 @@ npx --version
 5. 查看 npm 自己的调试日志路径，Starline 日志会打印该位置。
 
 ```bash
-npx --yes --package=@deepseek-ai/dsh@0.1.0-rc.6 dsh web
+npx --yes --package=@deepseek-ai/dsh@0.1.0-rc.7 dsh web
 ```
 
 ## DSH 启动后页面不就绪
@@ -87,9 +87,10 @@ npx --yes --package=@deepseek-ai/dsh@0.1.0-rc.6 dsh web
 1. 启动后的自动检查和手动刷新只访问 npm 官方 DSH dist-tags 端点，同时显示 `latest` 与 `next`；请求沿用 inherit/custom/disabled 代理模式，但失败不会阻塞当前 DSH 启动。
 2. 点击应用通道后，后端会再次核对官方 dist-tag，再保存精确版本并重启；`next` 属于预览通道。如果另一个桌面实例同时修改了设置，会返回配置冲突而不是覆盖。
 3. 在线包更新后启动失败，可重新打开设置并选择“恢复默认版本”，回到当前 Desktop Release 已验证的 DSH。
-4. `offline-full` 会显示新版本但拒绝原地安装；请下载包含该 DSH 版本的新离线资产。手工删除或覆盖 `node_modules` 会破坏完整性与原生依赖门禁。
-5. 使用 `DSH_DESKTOP_DSH_VERSION` 时，环境变量优先于界面设置；移除覆盖并重新启动桌面端后，更新按钮才能改变实际版本。
-6. v0.5.1 及更早版本的在线命令强制 `--prefer-offline`，可能让刚发布的精确版本命中陈旧 npm packument 并误报 `ETARGET`；v0.5.2 起改用 npm 默认元数据校验和内容缓存策略。
+4. `offline-full` 会显示新版本但拒绝原地安装；请下载包含该 DSH 版本的新离线资产。当前离线资产是便携归档，应关闭旧程序后解压到新目录验证；手工覆盖运行中的 `node_modules` 会破坏完整性与原生依赖门禁。
+5. 进度条显示真实启动阶段而非 npm 下载字节。长时间停在 65% 表示 npx 子进程已启动、仍在解析或准备依赖；查看 Starline 日志和 npm 调试日志判断是否仍有 HTTP 200、缓存命中或明确错误。
+6. 使用 `DSH_DESKTOP_DSH_VERSION` 时，环境变量优先于界面设置；移除覆盖并重新启动桌面端后，更新按钮才能改变实际版本。
+7. v0.5.1 及更早版本的在线命令强制 `--prefer-offline`，可能让刚发布的精确版本命中陈旧 npm packument 并误报 `ETARGET`；v0.5.2 起改用 npm 默认元数据校验和内容缓存策略。
 
 ## Windows 黑框闪烁
 

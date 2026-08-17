@@ -58,11 +58,12 @@ Wails application
 
 1. Wails 创建隐藏的原生窗口并加载内嵌前端资源；800 毫秒兜底计时器保证前端异常或 DSH 较慢时窗口仍会主动显示。
 2. Go 宿主读取用户代理配置。
-3. 宿主优先查找与可执行文件同包的 `offline-runtime/`；macOS 在应用包 `Contents/Resources` 中查找。
-4. 离线运行时必须同时包含匹配版本文件、Node 可执行文件和 DSH 入口，缺损或版本不一致时明确失败，不静默联网回退。
-5. 未发现离线运行时时，宿主查找系统 Node.js 并验证版本；Windows 直接让 Node 执行 `npx-cli.js`，Unix 使用 PATH 中的 `npx`。npm 使用默认元数据校验和内容缓存策略，不直接信任 PATH 中版本未知的全局 `dsh`。
-6. 宿主向 DSH 传入 `--port 0`，由 DSH 保持 listener 所有权并选择可用 loopback 端口；宿主不再预占后释放端口。
-7. 子进程执行精确版本的 `@deepseek-ai/dsh`：默认使用 Desktop 发布时验证的固定版本；前端启动后通过 Go 后端和当前代理模式自动查询 npm 官方 `latest`/`next`，只显示通道状态。在线包经用户确认后再次核对 dist-tag、保存对应精确版本，并可清除设置恢复默认。普通包使用：
+3. 前端显示由 Go 报告的单调阶段百分比；百分比对应运行时检测、Node 校验、子进程启动、监听地址和 HTTP 指纹等可验证里程碑，不等同于 npm 下载字节。
+4. 宿主优先查找与可执行文件同包的 `offline-runtime/`；macOS 在应用包 `Contents/Resources` 中查找。
+5. 离线运行时必须同时包含匹配版本文件、Node 可执行文件和 DSH 入口，缺损或版本不一致时明确失败，不静默联网回退。
+6. 未发现离线运行时时，宿主查找系统 Node.js 并验证版本；Windows 直接让 Node 执行 `npx-cli.js`，Unix 使用 PATH 中的 `npx`。npm 使用默认元数据校验和内容缓存策略，不直接信任 PATH 中版本未知的全局 `dsh`。
+7. 宿主向 DSH 传入 `--port 0`，由 DSH 保持 listener 所有权并选择可用 loopback 端口；宿主不再预占后释放端口。
+8. 子进程执行精确版本的 `@deepseek-ai/dsh`：默认使用 Desktop 发布时验证的固定版本；前端启动后通过 Go 后端和当前代理模式自动查询 npm 官方 `latest`/`next`，只显示通道状态。在线包经用户确认后再次核对 dist-tag、保存对应精确版本，并可清除设置恢复默认。普通包使用：
 
    ```text
    npx --yes --package=@deepseek-ai/dsh@<version> dsh web --host 127.0.0.1 --port 0
@@ -70,9 +71,9 @@ Wails application
 
    `offline-full` 直接执行 `offline-runtime/node[.exe] offline-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js web ...`，不调用 npm registry，也不允许界面原地替换包内依赖闭包。
 
-8. 宿主从 DSH 输出的 `dsh web: http://...` 行解析实际地址，只接受通过 loopback 安全校验的 HTTP URL，再使用禁用代理的 HTTP client 轮询并验证状态码和 DSH 页面标题。
-9. 宿主只在该 DSH 子进程的 `PATH` 前置临时命令目录；Agent 调用 `dsh plugin` 且完全遗漏 `--profile` 时，兼容入口按当前桌面 profile 补为 `web`，再转发给同一固定版本运行时。显式 profile、其他 DSH 命令、系统 PATH 和全局 npm shim 均不修改，DSH 退出后临时目录删除。
-10. 就绪后前端先在遮罩后让 iframe 导航到该 loopback URL；iframe `load` 后主动显示原生窗口并淡入页面。启动失败或进程意外退出时跳过等待，立即显示顶部错误状态栏。
+9. 宿主从 DSH 输出的 `dsh web: http://...` 行解析实际地址，只接受通过 loopback 安全校验的 HTTP URL，再使用禁用代理的 HTTP client 轮询并验证状态码和 DSH 页面标题。
+10. 宿主只在该 DSH 子进程的 `PATH` 前置临时命令目录；Agent 调用 `dsh plugin` 且完全遗漏 `--profile` 时，兼容入口按当前桌面 profile 补为 `web`，再转发给同一固定版本运行时。显式 profile、其他 DSH 命令、系统 PATH 和全局 npm shim 均不修改，DSH 退出后临时目录删除。
+11. 就绪后前端先在遮罩后让 iframe 导航到该 loopback URL；iframe `load` 后主动显示原生窗口并淡入页面。启动失败或进程意外退出时跳过等待，立即显示顶部错误状态栏。
 
 ## 安全边界
 
@@ -84,7 +85,7 @@ Wails application
 - 配置不存储模型 API Key；
 - 日志文件权限使用用户私有权限，并最多保留最近 10 份；
 - 退出时只回收宿主持有的子进程树，不按进程名全局扫描；
-- 重启使用 generation 标识，旧启动任务的迟到结果不能覆盖新状态。
+- 重启和进度事件共用 generation 标识，旧启动任务的迟到结果或百分比不能覆盖新状态；单个进程的阶段也只能单调前进。
 
 ## 窗口与托盘生命周期
 
@@ -125,15 +126,17 @@ Wails application
 - 在线包应用更新时由后端再次查询指定的 `latest` 或 `next`，只把返回的精确版本写入用户配置，然后同步回收宿主持有的旧 DSH 子进程树并通过既有 npx 启动链重启；前端不能提交任意包名、版本或其他通道。
 - 环境变量 `DSH_DESKTOP_DSH_VERSION` 继续作为显式开发覆盖且优先级最高；存在覆盖时，界面不修改实际版本。
 - `offline-full` 始终以包内 `dsh-version.txt` 为准，即使同一用户配置曾保存在线版本也不会产生离线运行时版本冲突。离线升级仍是新的 Desktop Release 和六平台原生依赖门禁。
+- 当前 main 把下一轮离线闭包固定为 rc.7；“最新”表示发布时审查并锁定的精确版本，不表示离线包在用户设备上跟随 npm `latest` 漂移。
 - 仓库 Dependabot 每周只检查 `offline-runtime` 的官方 DSH 直接依赖并提出 PR；它不自动合并、不发布，也不能代替原生 CI、最终归档和设备验证。
 
 ## 安装目录与路径语义
 
-- Windows Setup 的目录页允许选择任意当前用户可写目录，并通过注册表 `InstallLocation` 记住选择；
+- Windows Setup 的目录页允许选择任意当前用户可写目录，并通过注册表 `InstallLocation` 记住选择；同一应用身份和架构的后续 Setup 复用该目录并覆盖程序文件，用户数据仍保留在安装目录之外；
 - NSIS 源文件使用 `Unicode true`，安装验证覆盖中文和空格目录；
 - Go 文件路径全部通过 `os.Executable`、`filepath` 和参数数组处理，不拼接 `cmd /c` 字符串；
 - 普通包的配置和日志位于用户目录，不随安装目录移动；
 - Windows/Linux 离线包要求 `offline-runtime/` 与可执行文件相邻，macOS 放在 `.app/Contents/Resources`；
+- `offline-full` 当前是便携归档而不是独立安装器；升级采用关闭旧进程、解压新目录、验证后移除旧目录的边界，不对运行中的依赖树做原地覆盖；
 - 便携包可以整体移动，但不要只移动离线版的可执行文件。
 
 ## 不在本项目中的内容

@@ -97,6 +97,7 @@ Section
     !insertmacro wails.webview2runtime
 
     SetOutPath $INSTDIR
+    SetOverwrite on
 
     !insertmacro wails.files
 

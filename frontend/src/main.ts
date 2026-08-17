@@ -42,7 +42,7 @@ const initialStatus: Status = {
   state: "starting",
   message: "正在连接桌面宿主…",
   version: "dev",
-  dshVersion: "0.1.0-rc.6",
+  dshVersion: "0.1.0-rc.7",
   runtimeMode: "auto",
 };
 
@@ -134,6 +134,8 @@ const renderSplash = (status: Status): string => {
       ? "桌面宿主正在使用包内固定版本的 Node 与 DSH，不会访问 npm registry。"
       : "桌面宿主正在检查包内离线运行时；普通包会通过系统 Node 与 npx 准备官方 DSH。"
     : "桌面宿主没有修改 DSH 内核。你可以调整代理、查看原始日志，修复问题后重试。";
+  const progress = Math.min(100, Math.max(0, Math.round(status.progress ?? 0)));
+  const progressStage = status.stage ?? "等待桌面宿主报告启动阶段…";
 
   return `
     <section class="splash">
@@ -145,7 +147,7 @@ const renderSplash = (status: Status): string => {
         ${
           status.detail
             ? `<pre class="detail">${escapeHTML(status.detail)}</pre>`
-            : `<div class="progress" role="progressbar" aria-label="正在启动"><span></span></div>`
+            : `<div class="progress" role="progressbar" aria-label="DSH 启动阶段进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}"><span style="width: ${progress}%"></span></div><div class="progress-meta"><strong>${progress}%</strong><span>${escapeHTML(progressStage)}</span></div>`
         }
         <div class="actions">
           ${isBusy ? "" : `<button class="button primary" data-action="retry">${icons.restart}<span>重新启动</span></button>`}
@@ -224,6 +226,8 @@ const renderReady = (status: Status, sequence: number): void => {
     state: "starting",
     message: "正在载入 DeepSeek Harness…",
     detail: undefined,
+    progress: 99,
+    stage: "DSH 已就绪，正在载入桌面 WebView…",
   };
   root.innerHTML = `
     <section class="workspace workspace-ready">
@@ -400,15 +404,17 @@ const openSettings = async (checkUpdate = false): Promise<void> => {
       ? `<button type="button" class="button secondary" data-action="dsh-update-reset">恢复默认 ${escapeHTML(info.defaultVersion)}</button>`
       : "";
     updateOutput.innerHTML = `<div class="update-badges">${badges}</div><p>${escapeHTML(info.message)}</p><div class="update-actions">${latestButton}${nextButton}${resetButton}</div>`;
-    updateOutput.querySelectorAll<HTMLButtonElement>("[data-action='dsh-update-apply']").forEach((applyButton) => applyButton.addEventListener("click", (event) => {
+    updateOutput.querySelectorAll<HTMLButtonElement>("[data-action='dsh-update-apply']").forEach((applyButton) => applyButton.addEventListener("click", () => {
       const channel = applyButton.dataset.channel as "latest" | "next";
       const targetVersion = applyButton.dataset.version ?? "";
       const warning = channel === "next"
         ? `next 是预览通道，版本 ${targetVersion} 尚未随当前 Desktop Release 完成六平台验证。仍要从 ${info.currentVersion} 切换并重启吗？`
         : `将 DSH 从 ${info.currentVersion} 更新到 npm latest ${targetVersion} 并重启。是否继续？`;
       if (!window.confirm(warning)) return;
-      const button = event.currentTarget as HTMLButtonElement;
-      button.disabled = true;
+      updateOutput?.querySelectorAll<HTMLButtonElement>("button").forEach((actionButton) => {
+        actionButton.disabled = true;
+      });
+      updateOutput?.insertAdjacentHTML("beforeend", `<div class="update-operation-progress"><div class="progress" role="progressbar" aria-label="更新准备进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="10"><span style="width: 10%"></span></div><div class="progress-meta"><strong>10%</strong><span>正在重新核对 npm 官方 ${channel} 通道…</span></div></div>`);
       void backend().ApplyDSHUpdate(channel)
         .then((status) => {
           dshUpdateInfo = null;
@@ -417,7 +423,7 @@ const openSettings = async (checkUpdate = false): Promise<void> => {
           void checkDSHUpdates(true).catch(() => undefined);
         })
         .catch((error: unknown) => {
-          button.disabled = false;
+          renderUpdateInfo(info);
           setUpdateMessage(error instanceof Error ? error.message : String(error));
         });
     }));
@@ -481,8 +487,9 @@ const openHelp = (): void => {
       <section><h3>代理怎么填</h3><p>如果代理软件监听本机端口，选择“自定义代理”，填写 <code>http://127.0.0.1:端口</code>。例如端口 10808 就填 <code>http://127.0.0.1:10808</code>。</p></section>
       <section><h3>出错排查</h3><p>先打开日志检查 Node、npm 下载或网络错误；改完代理后保存，外壳会自动重启 DSH。模型服务的密钥仍在官方 DSH 页面中配置。</p></section>
       <section><h3>PowerShell 与权限</h3><p>权限模式由官方 DSH 页面选择。<code>danger-full-access</code> 可以按当前 Windows 用户权限执行更广泛的命令和文件操作，但会失去工作区沙箱保护；宿主不会因命令失败自动切换。该模式也不等于“以管理员身份运行”，不会自动获得 UAC 管理员令牌。</p></section>
-      <section><h3>普通包与离线包</h3><p>Setup.exe 和普通 ZIP 体积较小，需要系统 Node/npm。<code>offline-full</code> 是较大的便携包，内含固定 DSH 依赖，但模型服务、远程 MCP 和联网工具仍可能需要网络。</p></section>
-      <section><h3>DSH 更新</h3><p>应用启动后会使用“代理与启动设置”自动查询 npm 官方 <code>latest</code> 与 <code>next</code>，顶栏只提示版本，不会静默切换。在线包可确认应用稳定或预览通道并随时恢复 Desktop 内置兼容版本；切换时只回收本应用持有的 DSH 子进程树。离线包必须下载匹配的新 <code>offline-full</code>，不会原地替换原生依赖闭包。</p></section>
+      <section><h3>普通包与离线包</h3><p>Setup.exe 和普通 ZIP 体积较小，需要系统 Node/npm。<code>offline-full</code> 是较大的便携包，内含发布时固定并经原生门禁的 DSH 依赖，但模型服务、远程 MCP 和联网工具仍可能需要网络。</p></section>
+      <section><h3>安装与覆盖升级</h3><p>Windows Setup 使用同一应用身份；关闭正在运行的应用后，新版会复用已记录的安装目录并覆盖程序文件，用户配置和 DSH 工作区不在安装目录中。<code>offline-full</code> 当前是便携压缩包，不属于安装器；请解压到新目录验证后再删除旧目录，不要覆盖正在运行的文件。</p></section>
+      <section><h3>DSH 更新</h3><p>应用启动后会使用“代理与启动设置”自动查询 npm 官方 <code>latest</code> 与 <code>next</code>，顶栏只提示版本，不会静默切换。在线包可确认应用稳定或预览通道并随时恢复 Desktop 内置兼容版本；切换时只回收本应用持有的 DSH 子进程树。离线包需要下载内置新 DSH 且重新通过六平台原生门禁的 <code>offline-full</code>。</p></section>
     </div>
     <div class="dialog-actions">
       <button class="button secondary" data-action="help-logs">${icons.logs}<span>打开日志目录</span></button>
@@ -502,7 +509,7 @@ const showErrorDialog = (title: string, error: unknown): void => {
 };
 
 render(initialStatus);
-for (const eventName of ["dsh:ready", "dsh:failed", "dsh:stopped"] as const) {
+for (const eventName of ["dsh:progress", "dsh:ready", "dsh:failed", "dsh:stopped"] as const) {
   onStatusEvent(eventName, render);
 }
 onCommandEvent("shell:open-settings", () => void openSettings());

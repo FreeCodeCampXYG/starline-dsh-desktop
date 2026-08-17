@@ -25,18 +25,18 @@ npm --prefix frontend ci
 离线运行时有独立锁文件。使用平台准备脚本，不要手工只运行 `npm ci --ignore-scripts`：
 
 ```powershell
-.\scripts\prepare-offline-runtime.ps1 -DSHVersion 0.1.0-rc.6
+.\scripts\prepare-offline-runtime.ps1 -DSHVersion 0.1.0-rc.7
 ```
 
 ```bash
-bash scripts/prepare-offline-runtime.sh 0.1.0-rc.6
+bash scripts/prepare-offline-runtime.sh 0.1.0-rc.7
 ```
 
 准备脚本采用显式白名单，而不是开放所有依赖脚本：
 
 1. `npm ci --ignore-scripts` 安装锁定依赖；
 2. `verify-offline-runtime.mjs preflight` 核对包版本、lockfile integrity、生命周期命令和已审查脚本 SHA-256；
-3. 只重建 `node-pty`，再执行锁定 DSH 提供的 `ensure-spawn-helper.mjs`；
+3. 只执行审查过的 `node-pty` install/postinstall，再执行锁定 DSH 提供的 `ensure-spawn-helper.mjs`；
 4. 使用包内 Node 真实启动平台 Shell，并核对输出和退出码；同时实际执行 Sharp 图像转换、Koffi 动态库/函数调用和 ripgrep。
 
 新增或升级白名单包时必须重新审查脚本并显式更新校验值。CLI `--version` 成功只证明 JavaScript 入口可启动，不能替代功能测试。v0.2.4 已发布资产的影响范围见 [已知问题与平台支持边界](KNOWN_ISSUES.md)。
@@ -108,13 +108,13 @@ python scripts/generate-app-icons.py
 安装 Go、Node.js、Wails、WebView2 和 NSIS，并确保 `makensis` 在 PATH：
 
 ```powershell
-.\scripts\build-windows.ps1 -Version 0.5.2
+.\scripts\build-windows.ps1 -Version 0.6.0
 ```
 
 额外构建 Windows x64 离线便携包：
 
 ```powershell
-.\scripts\build-windows.ps1 -Version 0.5.2 -OfflineFull
+.\scripts\build-windows.ps1 -Version 0.6.0 -OfflineFull
 ```
 
 脚本依次执行：
@@ -135,12 +135,12 @@ python scripts/generate-app-icons.py
 .\scripts\test-windows-installer-path.ps1
 ```
 
-测试同时确认 `InstallLocation` 被记录、第二次安装复用自定义目录，以及卸载清理成功。脚本要求 `build/bin/starline-dsh-desktop.exe`、生成过的 `wails_tools.nsh` 和 `makensis` 已可用。
+测试同时确认 `InstallLocation` 被记录、第二次安装复用自定义目录并覆盖已存在的程序二进制，以及卸载清理成功。脚本要求 `build/bin/starline-dsh-desktop.exe`、生成过的 `wails_tools.nsh` 和 `makensis` 已可用；测试产品使用隔离名称和卸载键，不覆盖正式安装记录。
 
 手动构建：
 
 ```powershell
-wails build -clean -trimpath -platform windows/amd64 -nsis -installscope user -ldflags "-s -w -H=windowsgui -X main.version=0.5.2"
+wails build -clean -trimpath -platform windows/amd64 -nsis -installscope user -ldflags "-s -w -H=windowsgui -X main.version=0.6.0"
 ```
 
 Windows ARM64 必须在 ARM64 Windows 或受支持的原生 runner 构建。仓库 Release 使用 `windows-11-arm`，不把 x64 交叉编译结果当作完整平台验证。
@@ -151,7 +151,7 @@ Windows ARM64 必须在 ARM64 Windows 或受支持的原生 runner 构建。仓�
 
 ```bash
 npm --prefix frontend ci
-wails build -clean -trimpath -platform darwin/arm64 -ldflags "-s -w -X main.version=0.5.2"
+wails build -clean -trimpath -platform darwin/arm64 -ldflags "-s -w -X main.version=0.6.0"
 ```
 
 Intel 使用 `darwin/amd64`。GitHub Actions 分别使用 `macos-15-intel` 与 `macos-15` 原生 runner。
@@ -172,7 +172,7 @@ sudo apt-get install -y --no-install-recommends \
 
 ```bash
 npm --prefix frontend ci
-wails build -clean -trimpath -platform linux/amd64 -tags webkit2_41 -ldflags "-s -w -X main.version=0.5.2"
+wails build -clean -trimpath -platform linux/amd64 -tags webkit2_41 -ldflags "-s -w -X main.version=0.6.0"
 ```
 
 ARM64 使用 `linux/arm64`，GitHub Actions 在 `ubuntu-24.04-arm` 原生 runner 上构建。
@@ -181,10 +181,10 @@ Linux 应用是动态链接产物，仅支持 Ubuntu Desktop 24.04 LTS；不宣�
 
 ```bash
 bash scripts/package-linux-deb.sh \
-  0.5.2-dev \
+  0.6.0-dev \
   amd64 \
   build/bin/starline-dsh-desktop \
-  dist/starline-dsh-desktop-v0.5.2-dev-linux-x64-deb-online.deb
+  dist/starline-dsh-desktop-v0.6.0-dev-linux-x64-deb-online.deb
 ```
 
 脚本从 `release-requirements.json` 读取包依赖，创建 `/usr/bin`、应用菜单、图标和许可证布局，再检查 control 字段、DEB 架构、ELF 架构与动态库解析。Actions 随后使用 apt 实际安装、核对架构并卸载。正式证据只来自 Ubuntu 24.04 x64/ARM64 原生 Actions；用户要求不在本机编译、安装依赖或制作正式包。

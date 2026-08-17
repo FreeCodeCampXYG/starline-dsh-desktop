@@ -9,16 +9,16 @@ import { pathToFileURL } from 'node:url'
 
 const APPROVED_PACKAGES = {
   'node_modules/node-pty': {
-    version: '1.1.0',
-    integrity: 'sha512-20JqtutY6JPXTUnL0ij1uad7Qe1baT46lyolh2sSENDd4sTzKZ4nmAFkeAARDKwmlLjPx6XKRlwRUxwjOy+lUg==',
+    version: '1.2.0-beta.15',
+    integrity: 'sha512-vORSzHXi4Ofl7HemVWpuudLqCPdaQb4LfpRCUpE5HPxhp4JYscl8zZwxh11p26v2wvW24WMwnMfLjhRLixrfxA==',
     scripts: {
       install: 'node scripts/prebuild.js || node-gyp rebuild',
       postinstall: 'node scripts/post-install.js',
     },
   },
   'node_modules/@deepseek-ai/dsh-subprocess-local': {
-    version: '0.1.0-rc.6',
-    integrity: 'sha512-D2daTRaprE25ti1Ra69eURPwLULpnRyUHqAGtcMHddcjNIsZ4yR0DGinYOsgoRymzu3t02qLxyoio05atSViRw==',
+    version: '0.1.0-rc.7',
+    integrity: 'sha512-Q1zl35fRNSASv2FOi6viwR29cn3vtOcyKfamcmRB789m6sb6CdlhIMettvcxxDDHwTSH/jjz3hqb0JAx2GT32g==',
     scripts: {
       postinstall: 'node scripts/ensure-spawn-helper.mjs',
     },
@@ -27,7 +27,7 @@ const APPROVED_PACKAGES = {
 
 const APPROVED_SCRIPT_HASHES = new Map([
   ['node_modules/node-pty/scripts/prebuild.js', '7e604b10f7769d7dc95947d3481c00513b9e3bb6c561d5264506350a16a0381a'],
-  ['node_modules/node-pty/scripts/post-install.js', 'b15bb24cd3388b05392eeb200aa805e2827356818d111b93847e1b0f6a6ada46'],
+  ['node_modules/node-pty/scripts/post-install.js', '98b3f6379debdab20eea21f216e0d09fa38c7757ddc3411f1a743eae7f5be14a'],
   ['node_modules/@deepseek-ai/dsh-subprocess-local/scripts/ensure-spawn-helper.mjs', 'ca5509febf1e6ec1356df121835ebe5ed2f9cace4bdc2ba6d83d41c7e45e0f1b'],
 ])
 
@@ -79,7 +79,11 @@ function requireFile(path, label) {
 function verifyNativePayload(runtimeRoot) {
   const nodePtyRoot = join(runtimeRoot, 'node_modules', 'node-pty')
   if (process.platform === 'win32') {
-    requireFile(join(nodePtyRoot, 'prebuilds', `win32-${process.arch}`, 'pty.node'), 'Windows node-pty binding')
+    const prebuildRoot = join(nodePtyRoot, 'prebuilds', `win32-${process.arch}`)
+    requireFile(join(prebuildRoot, 'conpty.node'), 'Windows node-pty ConPTY binding')
+    requireFile(join(prebuildRoot, 'conpty_console_list.node'), 'Windows node-pty console-list binding')
+    requireFile(join(prebuildRoot, 'conpty', 'conpty.dll'), 'Windows node-pty ConPTY library')
+    requireFile(join(prebuildRoot, 'conpty', 'OpenConsole.exe'), 'Windows node-pty OpenConsole helper')
     return
   }
   if (process.platform === 'darwin') {
@@ -92,7 +96,7 @@ function verifyNativePayload(runtimeRoot) {
     return
   }
   if (process.platform === 'linux') {
-    requireFile(join(nodePtyRoot, 'build', 'Release', 'pty.node'), 'Linux node-pty binding')
+    requireFile(join(nodePtyRoot, 'prebuilds', `linux-${process.arch}`, 'pty.node'), 'Linux node-pty binding')
     return
   }
   fail(`Unsupported offline runtime platform: ${process.platform}`)

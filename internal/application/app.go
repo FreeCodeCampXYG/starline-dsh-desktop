@@ -17,6 +17,7 @@ import (
 
 const (
 	readyEvent        = "dsh:ready"
+	progressEvent     = "dsh:progress"
 	failedEvent       = "dsh:failed"
 	stoppedEvent      = "dsh:stopped"
 	windowRevealDelay = 800 * time.Millisecond
@@ -60,6 +61,8 @@ type Status struct {
 	Version     string `json:"version"`
 	DSHVersion  string `json:"dshVersion"`
 	RuntimeMode string `json:"runtimeMode"`
+	Progress    int    `json:"progress,omitempty"`
+	Stage       string `json:"stage,omitempty"`
 }
 
 // New 组装 Wails 适配层需要的状态；DSH 版本在启动时解析一次，运行期间保持稳定。
@@ -287,7 +290,11 @@ func (a *App) ApplyDSHUpdate(channel string) (Status, error) {
 	a.settingsLoadErr = nil
 	a.dshVersion = targetVersion
 	a.mu.Unlock()
-	return a.restart(), nil
+	return a.restartWithProgress(
+		"正在更新 DeepSeek Harness…",
+		"已保存官方 "+strings.ToLower(strings.TrimSpace(channel))+" 精确版本 "+targetVersion+"，正在切换运行时…",
+		20,
+	), nil
 }
 
 // selectDSHUpdateTarget 只接受已知 npm 通道，并禁止无意义降级或重复重启。
@@ -336,7 +343,7 @@ func (a *App) ResetDSHVersion() (Status, error) {
 	a.settingsLoadErr = nil
 	a.dshVersion = resolvedVersion
 	a.mu.Unlock()
-	return a.restart(), nil
+	return a.restartWithProgress("正在恢复默认 DSH 版本…", "已恢复 Desktop 内置兼容版本，正在切换运行时…", 20), nil
 }
 
 // OpenLogs 使用系统文件管理器打开日志所在目录。
@@ -367,6 +374,9 @@ func (a *App) launch(generation uint64, settings config.Settings, dshVersion str
 		WorkingDir: workingDir,
 		ProxyMode:  settings.ProxyMode,
 		ProxyURL:   settings.ProxyURL,
+		OnProgress: func(progress launcher.Progress) {
+			a.progressIfCurrent(generation, dshVersion, progress)
+		},
 	})
 	if err != nil {
 		a.failIfCurrent(generation, dshVersion, "DSH 启动失败", err)
@@ -396,6 +406,8 @@ func (a *App) launch(generation uint64, settings config.Settings, dshVersion str
 		Version:     a.version,
 		DSHVersion:  dshVersion,
 		RuntimeMode: runtimeMode,
+		Progress:    100,
+		Stage:       "DeepSeek Harness 已就绪",
 	}
 	if !a.setStatusIfCurrent(generation, status) {
 		_ = process.Stop(3 * time.Second)
@@ -433,6 +445,11 @@ func (a *App) launch(generation uint64, settings config.Settings, dshVersion str
 
 // restart 切换启动代次，旧进程的迟到结果不会覆盖新一轮状态。
 func (a *App) restart() Status {
+	return a.restartWithProgress("正在启动 DeepSeek Harness…", "正在初始化桌面运行时…", 5)
+}
+
+// restartWithProgress 切换启动代次，并在停止旧进程前发布新一轮的确定阶段。
+func (a *App) restartWithProgress(message, stage string, progress int) Status {
 	a.mu.Lock()
 	a.generation++
 	generation := a.generation
@@ -442,19 +459,53 @@ func (a *App) restart() Status {
 	dshVersion := a.dshVersion
 	a.status = Status{
 		State:       "starting",
-		Message:     "正在启动 DeepSeek Harness…",
+		Message:     message,
 		Version:     a.version,
 		DSHVersion:  dshVersion,
 		RuntimeMode: "auto",
+		Progress:    progress,
+		Stage:       stage,
 	}
 	status := a.status
+	ctx := a.ctx
 	a.mu.Unlock()
+	if ctx != nil {
+		runtime.EventsEmit(ctx, progressEvent, status)
+	}
 
 	if process != nil {
 		_ = process.Stop(3 * time.Second)
 	}
 	go a.launch(generation, settings, dshVersion)
 	return status
+}
+
+// progressIfCurrent 只接收当前启动代次的单调阶段，旧进程不能覆盖新状态。
+func (a *App) progressIfCurrent(generation uint64, dshVersion string, progress launcher.Progress) {
+	a.mu.Lock()
+	if generation != a.generation || progress.Percent <= a.status.Progress {
+		a.mu.Unlock()
+		return
+	}
+	message := a.status.Message
+	if message == "" {
+		message = "正在启动 DeepSeek Harness…"
+	}
+	status := Status{
+		State:       "starting",
+		Message:     message,
+		Version:     a.version,
+		DSHVersion:  dshVersion,
+		RuntimeMode: progress.RuntimeMode,
+		Progress:    progress.Percent,
+		Stage:       progress.Stage,
+	}
+	a.status = status
+	ctx := a.ctx
+	a.mu.Unlock()
+	if ctx != nil {
+		runtime.EventsEmit(ctx, progressEvent, status)
+	}
 }
 
 func (a *App) failIfCurrent(generation uint64, dshVersion, message string, err error) {

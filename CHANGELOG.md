@@ -9,6 +9,21 @@
 - Windows 代码签名与 macOS Developer ID 签名、公证。
 - 多实例工作区锁与 MCP 编排服务。
 
+## [0.6.0] - 2026-08-17
+
+### 新增
+
+- 启动页和 DSH 通道切换增加可验证阶段百分比，覆盖运行时检测、Node 校验、子进程启动、监听地址解析和本地页面指纹检查；不把不可测的 npm 依赖解析伪装成下载字节百分比。
+
+### 变更
+
+- 默认在线版本和下一轮 `offline-full` 固定依赖闭包提升到 `@deepseek-ai/dsh@0.1.0-rc.7`；同步审查 `node-pty@1.2.0-beta.15` 与 `dsh-subprocess-local@0.1.0-rc.7` 的生命周期命令、完整性和脚本 SHA-256。
+- Windows 隔离安装测试增加已存在二进制的原地覆盖校验；Setup 继续复用记录的自定义安装目录，便携 `offline-full` 明确采用新目录解压升级。
+
+### 待验证
+
+- rc.7 离线闭包及新的 `node-pty` 预构建布局仍需未来递增 tag 的六平台原生构建、真实 PTY、最终归档和设备升级证据。
+
 ## [0.5.2] - 2026-08-17
 
 ### 新增
@@ -168,7 +183,8 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.4.0...v0.5.0

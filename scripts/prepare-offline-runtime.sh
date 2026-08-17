@@ -32,7 +32,8 @@ npm --prefix "$runtime_root" ci --omit=dev --ignore-scripts --workspaces=false
 "$node_source" "$verifier" preflight "$runtime_root"
 
 # npm ci keeps every lifecycle script disabled. Only the pinned and hash-checked
-# node-pty install/postinstall pair is allowed to run here.
+# node-pty install/postinstall pair is allowed to run here; it may select a
+# reviewed platform prebuild instead of compiling from source.
 npm --prefix "$runtime_root" rebuild node-pty --foreground-scripts --ignore-scripts=false --workspaces=false
 "$node_source" "$runtime_root/node_modules/@deepseek-ai/dsh-subprocess-local/scripts/ensure-spawn-helper.mjs"
 

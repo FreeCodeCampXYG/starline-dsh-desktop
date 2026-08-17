@@ -80,10 +80,14 @@ try {
         throw "InstallLocation mismatch: $recordedPath"
     }
 
-    Remove-Item -LiteralPath $installedBinary -Force
+    $expectedBinaryHash = (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash
+    [IO.File]::WriteAllText($installedBinary, 'upgrade-overwrite-marker', [Text.UTF8Encoding]::new($false))
     Invoke-Installer -Path $testInstaller
-    if (-not (Test-Path -LiteralPath $installedBinary -PathType Leaf)) {
-        throw 'The second installation did not reuse the recorded custom directory.'
+    if (
+        -not (Test-Path -LiteralPath $installedBinary -PathType Leaf) -or
+        (Get-FileHash -LiteralPath $installedBinary -Algorithm SHA256).Hash -ne $expectedBinaryHash
+    ) {
+        throw 'The second installation did not overwrite the existing binary in the recorded custom directory.'
     }
     if (Test-Path -LiteralPath $defaultInstall) {
         throw "The second installation unexpectedly used the default directory: $defaultInstall"
@@ -93,6 +97,7 @@ try {
         CustomInstallPath = $customInstall
         UnicodeAndSpaces  = 'passed'
         RememberedPath    = 'passed'
+        InPlaceOverwrite  = 'passed'
         MetadataFiles     = 'passed'
     }
 }

@@ -16,7 +16,7 @@ func TestResolveDSHCommandUsesOfflineRuntime(t *testing.T) {
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	version := "0.1.0-rc.6"
+	version := "0.1.0-rc.7"
 	nodePath := filepath.Join(root, offlineNodeName())
 	dshPath := filepath.Join(root, "node_modules", "@deepseek-ai", "dsh", "lib", "bin.js")
 	if err := os.MkdirAll(filepath.Dir(dshPath), 0o755); err != nil {
@@ -52,18 +52,18 @@ func TestResolveDSHCommandRejectsOfflineVersionMismatch(t *testing.T) {
 	}
 	t.Setenv(offlineRuntimeEnv, root)
 
-	_, err := resolveDSHCommand("0.1.0-rc.6")
+	_, err := resolveDSHCommand("0.1.0-rc.7")
 	if err == nil || !strings.Contains(err.Error(), "版本") {
 		t.Fatalf("expected version mismatch, got %v", err)
 	}
 }
 
 func TestOnlineDSHPrefixLetsNPMRefreshMetadata(t *testing.T) {
-	prefix := onlineDSHPrefix([]string{"npx-cli.js"}, "0.1.0-rc.6")
+	prefix := onlineDSHPrefix([]string{"npx-cli.js"}, "0.1.0-rc.7")
 	want := []string{
 		"npx-cli.js",
 		"--yes",
-		"--package=@deepseek-ai/dsh@0.1.0-rc.6",
+		"--package=@deepseek-ai/dsh@0.1.0-rc.7",
 		"dsh",
 	}
 	if strings.Join(prefix, "\x00") != strings.Join(want, "\x00") {
@@ -193,10 +193,35 @@ func TestSafeLoopbackURL(t *testing.T) {
 }
 
 func TestInspectLineAcceptsOnlyDSHLoopbackURL(t *testing.T) {
-	process := &Process{urlReady: make(chan struct{})}
+	progresses := make([]int, 0, 1)
+	process := &Process{
+		urlReady: make(chan struct{}),
+		onProgress: func(progress Progress) {
+			progresses = append(progresses, progress.Percent)
+		},
+	}
 	process.inspectLine("dsh web: http://127.0.0.1:41234/")
 	if process.URL() != "http://127.0.0.1:41234" {
 		t.Fatalf("unexpected URL: %s", process.URL())
+	}
+	if len(progresses) != 1 || progresses[0] != 85 {
+		t.Fatalf("unexpected progress events: %#v", progresses)
+	}
+}
+
+func TestProcessProgressOnlyMovesForward(t *testing.T) {
+	progresses := make([]int, 0, 2)
+	process := &Process{
+		runtimeMode: "online",
+		onProgress: func(progress Progress) {
+			progresses = append(progresses, progress.Percent)
+		},
+	}
+	process.reportProgress(65, "已启动")
+	process.reportProgress(40, "迟到阶段")
+	process.reportProgress(85, "已获得监听地址")
+	if len(progresses) != 2 || progresses[0] != 65 || progresses[1] != 85 {
+		t.Fatalf("progress should be monotonic: %#v", progresses)
 	}
 }
 

@@ -1,6 +1,6 @@
 # 发布流程
 
-> v0.5.2 的 DSH `latest`/`next` 自动检查、通道切换和 npm 陈旧元数据修复必须通过 tag 触发的六平台原生构建、最终离线归档功能复测和 Ubuntu 24.04 x64/ARM64 DEB 安装门禁。证据边界与历史缺陷见 [已知问题与平台支持边界](KNOWN_ISSUES.md)；任何修复都发布递增版本，不移动已有公开 tag。
+> v0.6.0 的阶段百分比、DSH rc.7 离线闭包和 Windows Setup 原位覆盖门禁必须通过 tag 触发的六平台原生构建、最终离线归档功能复测和 Ubuntu 24.04 x64/ARM64 DEB 安装门禁。证据边界与历史缺陷见 [已知问题与平台支持边界](KNOWN_ISSUES.md)；任何修复都发布递增版本，不移动已有公开 tag。
 
 ## 发布模型
 
@@ -26,13 +26,15 @@ Dependabot 每周只检查 `/offline-runtime` 中固定的 `@deepseek-ai/dsh` �
 1. 确认工作区干净，依赖锁文件已提交；
 2. 确认默认 DSH 版本确实能启动；
 3. 确认 `offline-runtime/package-lock.json` 与 `main.go` 默认 DSH 版本一致；
-4. 在每个目标原生 runner 上让包内 `node-pty` 实际启动平台 Shell，并验证输出和退出码；仅有 CLI/Web smoke test 不通过此门槛；
-5. 检查原生扩展平台/架构、macOS 可执行位以及 Linux `pty.node`，并对重新解开的最终归档重复检查；
-6. 执行基础测试与原生平台生产构建；当前项目按维护约束全部在 GitHub Actions 完成，不在本机安装依赖或编译；
-7. CI 六个平台全部通过，且没有把“构建成功”代替上述功能测试；
-8. 检查 README、变更记录、`release-requirements.json`、[系统要求](SYSTEM_REQUIREMENTS.md)和[已知问题](KNOWN_ISSUES.md)，分别写明受支持基线、已确认、同逻辑推断和缺少设备验证的范围；
-9. 确认没有 API Key、Token、Cookie、私有代理地址或构建缓存；
-10. 确认签名状态。未签名时必须保留 Release 警告。
+4. DSH 升级时重新审查白名单原生包版本、integrity、生命周期命令、脚本 SHA-256 和预构建布局；不能沿用旧版本证据；
+5. 在每个目标原生 runner 上让包内 `node-pty` 实际启动平台 Shell，并验证输出和退出码；仅有 CLI/Web smoke test 不通过此门槛；
+6. 检查原生扩展平台/架构、macOS 可执行位以及 Linux `pty.node`，并对重新解开的最终归档重复检查；
+7. Windows 安装门禁确认同一应用身份复用 `InstallLocation`，并实际覆盖已存在的测试二进制；便携离线包不宣称安装器覆盖升级；
+8. 执行基础测试与原生平台生产构建；当前项目按维护约束全部在 GitHub Actions 完成，不在本机安装依赖或编译；
+9. CI 六个平台全部通过，且没有把“构建成功”代替上述功能测试；
+10. 检查 README、变更记录、`release-requirements.json`、[系统要求](SYSTEM_REQUIREMENTS.md)和[已知问题](KNOWN_ISSUES.md)，分别写明受支持基线、已确认、同逻辑推断和缺少设备验证的范围；
+11. 确认没有 API Key、Token、Cookie、私有代理地址或构建缓存；
+12. 确认签名状态。未签名时必须保留 Release 警告。
 
 ## 创建版本
 

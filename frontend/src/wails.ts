@@ -6,6 +6,8 @@ export type Status = {
   version: string;
   dshVersion: string;
   runtimeMode: "auto" | "online" | "offline";
+  progress?: number;
+  stage?: string;
 };
 
 export type Settings = {
@@ -57,7 +59,7 @@ export const backend = (): AppBindings => window.go.application.App;
 export const showWindow = (): void => window.runtime.WindowShow();
 
 export const onStatusEvent = (
-  name: "dsh:ready" | "dsh:failed" | "dsh:stopped",
+  name: "dsh:progress" | "dsh:ready" | "dsh:failed" | "dsh:stopped",
   callback: (status: Status) => void,
 ): (() => void) =>
   window.runtime.EventsOn(name, (...args: unknown[]) => callback(args[0] as Status));

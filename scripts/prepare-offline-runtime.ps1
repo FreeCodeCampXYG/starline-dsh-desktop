@@ -32,10 +32,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # npm ci keeps every lifecycle script disabled. Only the pinned and hash-checked
-# node-pty install/postinstall pair is allowed to run here.
+# node-pty install/postinstall pair is allowed to run here; it may select a
+# reviewed platform prebuild instead of compiling from source.
 npm --prefix $runtimeRoot rebuild node-pty --foreground-scripts --ignore-scripts=false --workspaces=false
 if ($LASTEXITCODE -ne 0) {
-    throw "Approved node-pty rebuild failed with exit code $LASTEXITCODE."
+    throw "Approved node-pty lifecycle preparation failed with exit code $LASTEXITCODE."
 }
 
 $permissionFix = Join-Path $runtimeRoot 'node_modules\@deepseek-ai\dsh-subprocess-local\scripts\ensure-spawn-helper.mjs'

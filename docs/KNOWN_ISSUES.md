@@ -11,6 +11,10 @@
 | 缺少设备验证 | 构建或 Web 启动检查成功，但没有代表性设备上的安装和功能证据 |
 | 产品限制 | 当前设计或分发方式明确不覆盖的能力，不等同于回归 Bug |
 
+## v0.6.0 发布候选边界
+
+本版加入单调阶段百分比，并把默认在线版本与 `offline-full` 锁定到 DSH rc.7。rc.7 同时把 `node-pty` 提升到 `1.2.0-beta.15` 并改用新的预构建布局；源码已同步生命周期白名单、完整性、脚本 SHA-256 和结构检查，但六平台原生安装、真实 PTY、最终归档与 Setup 覆盖证据必须来自 `v0.6.0` tag 的 Release 工作流。阶段百分比不是 npm 下载字节百分比，停在 65% 仅表示 npx 子进程已启动且仍在准备依赖；代表性设备升级验证仍然缺失。
+
 ## v0.5.2 发布候选边界
 
 本版增加启动后自动查询 npm `latest`/`next`、显式通道切换，并移除在线启动强制的 `--prefer-offline`。本地仅做静态检查，六平台编译、原生依赖、归档和 DEB 安装证据必须来自 `v0.5.2` tag 的 Release 工作流；工作流完成前不得把候选实现描述为已通过跨平台验证。自动检查沿用代理设置且不阻塞 DSH，通道切换会回收当前应用持有的进程树，但仍缺少代表性设备上的升级体验验证。
@@ -56,13 +60,13 @@ v0.5.0 已增加 Ubuntu 24.04 x64/ARM64 在线 DEB；正式工作流确认 contr
 
 ## v0.2.5 起的 PTY 修复状态
 
-v0.2.5 起已经加入以下修复，并在 v0.3.2 的六平台构建与最终归档检查中通过；这仍不反向改变 v0.2.4 的已发布资产：
+v0.2.5 起已经加入以下修复，并在 v0.3.2 的六平台构建与最终归档检查中通过；这仍不反向改变 v0.2.4 的已发布资产。当前 main 又针对 rc.7 的依赖变化更新了门禁，但需要新的线上证据：
 
 1. 仍使用 `npm ci --ignore-scripts` 默认禁止全部依赖脚本；
-2. 在执行任何白名单脚本前，核对 `node-pty@1.1.0` 与 `@deepseek-ai/dsh-subprocess-local@0.1.0-rc.6` 的锁文件 integrity、已安装版本、生命周期命令和已审查脚本 SHA-256；
+2. 在执行任何白名单脚本前，核对锁文件 integrity、已安装版本、生命周期命令和已审查脚本 SHA-256；当前 main 精确批准 `node-pty@1.2.0-beta.15` 与 `@deepseek-ai/dsh-subprocess-local@0.1.0-rc.7`；
 3. 只允许 `node-pty` 的 install/postinstall 重建，以及 DSH 官方 `ensure-spawn-helper.mjs` 权限修复；
 4. 在 Windows x64/ARM64、macOS Intel/ARM64、Linux x64/ARM64 原生 runner 上真实调用 `node-pty.spawn()`，启动平台 Shell、核对唯一输出标记和退出码；
-5. macOS 明确检查 `spawn-helper` 可执行位，Linux 明确检查并加载本机架构构建出的 `build/Release/pty.node`；
+5. macOS 明确检查 `spawn-helper` 可执行位；当前 main 按新依赖布局检查 Linux `prebuilds/linux-<arch>/pty.node`，Windows 检查 ConPTY 绑定和 helper，再由真实 PTY 测试证明可加载；
 6. 最终 ZIP/TAR.GZ 重新解包后，使用归档内 Node 再执行同一功能测试；
 7. DSH 改为接收 `--port 0`，宿主只接受其日志中公布并通过 loopback 校验的实际 URL，不再自行预占后释放端口。
 
@@ -94,7 +98,7 @@ v0.3.2 已达到六平台原生 CI 和最终归档检查门槛；设备安装与
 
 - **未签名**：Windows 无代码签名；macOS 无 Developer ID 签名和 notarization。
 - **Linux 分发范围有限**：v0.5.0 增加 Ubuntu 24.04 x64/ARM64 在线 DEB，并继续提供动态链接 TAR.GZ；仍没有 AppImage、RPM 或软件仓库更新通道，也不支持旧 Ubuntu/其他发行版。
-- **没有自动更新器**：新版本需要用户自行下载并校验。
+- **没有 Desktop 二进制自动更新器**：DSH 在线依赖可以在界面确认切换，但新的桌面安装包或 `offline-full` 仍需用户自行下载并校验。
 - **v0.2.4 端口交接存在小窗口**：该版本让系统选择空闲端口后先关闭临时 listener，再把端口交给 DSH；当前 `main` 已改为 `--port 0` 并解析 DSH 实际公布的地址。
 - **DSH 用户数据不是便携隔离数据**：宿主当前不覆盖 `DSH_HOME`，桌面端和命令行 DSH 使用上游默认用户目录；移动便携包不会自动搬走工作区和会话状态。
 - **上游 Web UI 兼容性**：宿主通过 loopback iframe 承载 DSH。若上游将来增加禁止嵌入的 CSP 或 `X-Frame-Options`，内嵌页面可能失效；“在浏览器中打开”是当前回退入口。
