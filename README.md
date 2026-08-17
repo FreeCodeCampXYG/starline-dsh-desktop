@@ -29,6 +29,7 @@ Starline DSH Desktop 是 [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 - 启动页与运行状态栏显示桌面端版本和 DSH 版本；
 - Windows 窗口右上角 X 隐藏到系统托盘，从托盘菜单选择“退出”才回收本应用创建的 DSH 进程树；macOS/Linux 暂按系统原生关闭行为退出，避免无托盘入口时进程残留；
 - 支持多开 DSH Web 实例；配置保存带跨进程原子锁和过期版本检查，避免多开时静默覆盖代理设置；
+- Agent 在桌面 DSH 内执行 `dsh plugin` 且遗漏 `--profile` 时，进程级兼容入口会默认使用当前 `web` profile；显式 profile 不会被覆盖；
 - Windows Setup.exe 与便携 ZIP；macOS ZIP；Linux DEB 与 TAR.GZ；
 - x64 与 ARM64 原生 GitHub Actions 构建。
 

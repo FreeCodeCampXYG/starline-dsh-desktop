@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### 修复
+
+- Starline 启动的 DSH 环境增加进程级命令兼容入口：Agent 执行 `dsh plugin` 时若遗漏官方必需的 `--profile`，默认补为当前 `web` profile；显式 profile 和其他 DSH 命令保持不变。
+
 ### 计划
 
 - Windows 代码签名与 macOS Developer ID 签名、公证。

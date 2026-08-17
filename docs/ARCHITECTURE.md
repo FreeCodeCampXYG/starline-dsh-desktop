@@ -71,6 +71,7 @@ Wails application
    `offline-full` 直接执行 `offline-runtime/node[.exe] offline-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js web ...`，不调用 npm registry，也不允许界面原地替换包内依赖闭包。
 
 8. 宿主从 DSH 输出的 `dsh web: http://...` 行解析实际地址，只接受通过 loopback 安全校验的 HTTP URL，再使用禁用代理的 HTTP client 轮询并验证状态码和 DSH 页面标题。
+9. 宿主只在该 DSH 子进程的 `PATH` 前置临时命令目录；Agent 调用 `dsh plugin` 且完全遗漏 `--profile` 时，兼容入口按当前桌面 profile 补为 `web`，再转发给同一固定版本运行时。显式 profile、其他 DSH 命令、系统 PATH 和全局 npm shim 均不修改，DSH 退出后临时目录删除。
 9. 就绪后前端先在遮罩后让 iframe 导航到该 loopback URL；iframe `load` 后主动显示原生窗口并淡入页面。启动失败或进程意外退出时跳过等待，立即显示顶部错误状态栏。
 
 ## 安全边界

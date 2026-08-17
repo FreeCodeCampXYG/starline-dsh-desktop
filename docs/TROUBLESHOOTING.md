@@ -116,6 +116,17 @@ npx --yes --package=@deepseek-ai/dsh@0.1.0-rc.6 dsh web
 
 宿主最多等待五分钟，并在 DSH 提前退出或超时后显示日志入口。MCP 启动阻塞、profile 中重复插入已经由 bundle 自动注册的插件、无效 `cordis.patch.yml` 都可能让 DSH 在 readiness 前失败；同类案例见 [#45](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/45) 和 [#8](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/8)。先在浏览器直接运行同版本 `dsh web` 并检查同一份 profile；Starline 不自动删除或禁用用户插件。
 
+## Agent 执行 `dsh plugin` 提示缺少 `--profile`
+
+这说明 PowerShell 已经成功启动 DSH，失败点是官方 CLI 参数校验，不是 Shell 权限。官方语法要求 profile 写在 `plugin` 子命令后：
+
+```powershell
+dsh plugin --profile web --help
+dsh plugin --profile web add <package>
+```
+
+当前 `main` 会在 Starline 启动的 DSH 进程环境中提供临时兼容入口：只有 `dsh plugin` 完全没写 `--profile` 时才补为当前 `web` profile；`--profile tui` 等显式选择保持不变，其他 DSH 命令也不会被改写。该入口不修改系统 PATH 或全局 npm 文件，也不会绕过 DSH/PowerShell 权限；插件管理仍依赖官方要求的 pnpm、网络或本地缓存。v0.5.0 用户可先按上面的完整语法执行。
+
 ## macOS 无法打开
 
 未签名/未 notarize 的构建可能被 Gatekeeper 阻止。开发者可在本机重新构建。不要建议普通用户永久关闭 Gatekeeper；正式分发应完成签名和公证。

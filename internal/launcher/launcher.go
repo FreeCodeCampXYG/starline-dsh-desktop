@@ -27,6 +27,7 @@ type Process struct {
 	cmd         *exec.Cmd
 	logPath     string
 	runtimeMode string
+	shimDir     string
 
 	mu       sync.RWMutex
 	url      string
@@ -58,10 +59,22 @@ func Start(_ context.Context, config Config) (*Process, error) {
 	if err != nil {
 		return nil, fmt.Errorf("无法创建日志文件：%w", err)
 	}
+	shimDir, err := prepareDSHCommandShim()
+	if err != nil {
+		_ = logFile.Close()
+		return nil, err
+	}
+	childEnv, err := withDSHCommandShim(childEnvironment(os.Environ(), config.ProxyMode, config.ProxyURL), shimDir, command)
+	if err != nil {
+		_ = os.RemoveAll(shimDir)
+		_ = logFile.Close()
+		return nil, err
+	}
 
 	process := &Process{
 		logPath:     logPath,
 		runtimeMode: command.mode,
+		shimDir:     shimDir,
 		urlReady:    make(chan struct{}),
 		done:        make(chan struct{}),
 	}
@@ -73,6 +86,7 @@ func Start(_ context.Context, config Config) (*Process, error) {
 		_, _ = fmt.Fprintf(logFile, "[%s] Starline DSH Desktop 正在通过 npx 准备 @deepseek-ai/dsh@%s；优先复用 npm 缓存，缓存缺失时才下载。\n", time.Now().Format(time.RFC3339), config.Version)
 		_, _ = fmt.Fprintf(logFile, "npm 调试日志目录：%s\n", npmLogDir())
 	}
+	_, _ = fmt.Fprintln(logFile, "DSH 命令兼容入口：Agent 执行 dsh plugin 且未指定 --profile 时，默认使用当前 web profile。")
 	args := append(append([]string{}, command.prefix...), []string{
 		"web",
 		"--host",
@@ -82,13 +96,14 @@ func Start(_ context.Context, config Config) (*Process, error) {
 	}...)
 	cmd := exec.Command(command.commandPath, args...)
 	cmd.Dir = config.WorkingDir
-	cmd.Env = childEnvironment(os.Environ(), config.ProxyMode, config.ProxyURL)
+	cmd.Env = childEnv
 	cmd.Stdout = writer
 	cmd.Stderr = writer
 	configureProcess(cmd)
 	process.cmd = cmd
 
 	if err := cmd.Start(); err != nil {
+		_ = os.RemoveAll(shimDir)
 		_ = logFile.Close()
 		return nil, fmt.Errorf("无法启动%s：%w（日志：%s）", command.label, err, logPath)
 	}
@@ -97,6 +112,7 @@ func Start(_ context.Context, config Config) (*Process, error) {
 		process.waitErr = cmd.Wait()
 		_ = lineSink.Flush()
 		_ = logFile.Close()
+		_ = os.RemoveAll(process.shimDir)
 		close(process.done)
 	}()
 	return process, nil
