@@ -41,9 +41,9 @@ type App struct {
 }
 
 type dshUpdateRollback struct {
-	generation       uint64
-	previousSettings config.Settings
-	previousVersion  string
+	generation        uint64
+	previousSettings  config.Settings
+	previousVersion   string
 	attemptedSettings config.Settings
 }
 

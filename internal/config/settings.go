@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	ProxyModeInherit                  = "inherit"
-	ProxyModeCustom                   = "custom"
-	ProxyModeDisabled                 = "disabled"
+	ProxyModeInherit                   = "inherit"
+	ProxyModeCustom                    = "custom"
+	ProxyModeDisabled                  = "disabled"
 	DefaultOnlineStartupTimeoutSeconds = 90
 	MinOnlineStartupTimeoutSeconds     = 30
 	MaxOnlineStartupTimeoutSeconds     = 600
@@ -25,9 +25,9 @@ const (
 var ErrConflict = errors.New("配置已被其他实例修改，请重新加载后再保存")
 
 type Settings struct {
-	ProxyMode                  string `json:"proxyMode"`
-	ProxyURL                   string `json:"proxyUrl,omitempty"`
-	DSHVersion                 string `json:"dshVersion,omitempty"`
+	ProxyMode                   string `json:"proxyMode"`
+	ProxyURL                    string `json:"proxyUrl,omitempty"`
+	DSHVersion                  string `json:"dshVersion,omitempty"`
 	OnlineStartupTimeoutSeconds int    `json:"onlineStartupTimeoutSeconds,omitempty"`
 }
 
