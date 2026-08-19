@@ -61,9 +61,9 @@ Wails application
 3. 前端显示由 Go 报告的单调阶段百分比；百分比对应运行时检测、Node 校验、子进程启动、监听地址和 HTTP 指纹等可验证里程碑，不等同于 npm 下载字节。
 4. 宿主优先查找与可执行文件同包的 `offline-runtime/`；macOS 在应用包 `Contents/Resources` 中查找。
 5. 离线运行时必须同时包含匹配版本文件、Node 可执行文件和 DSH 入口，缺损或版本不一致时明确失败，不静默联网回退。
-6. 未发现离线运行时时，宿主查找系统 Node.js 并验证版本；Windows 直接让 Node 执行 `npx-cli.js`，Unix 使用 PATH 中的 `npx`。npm 使用默认元数据校验和内容缓存策略，不直接信任 PATH 中版本未知的全局 `dsh`。
+6. 未发现离线运行时时，宿主查找系统 Node.js 并验证版本；Windows 直接让 Node 执行 `npx-cli.js`，Unix 使用 PATH 中的 `npx`。npm 请求单次等待 10 秒、最多重试 1 次；无代理时设置 `registry.npmmirror.com`，继承或自定义有效代理时保持用户选择，不在代理失效时静默绕过。
 7. 宿主向 DSH 传入 `--port 0`，由 DSH 保持 listener 所有权并选择可用 loopback 端口；宿主不再预占后释放端口。
-8. 子进程执行精确版本的 `@deepseek-ai/dsh`：默认使用 Desktop 发布时验证的固定版本；前端启动后通过 Go 后端和当前代理模式自动查询 npm 官方 `latest`/`next`，只显示通道状态。在线包经用户确认后再次核对 dist-tag、保存对应精确版本，并可清除设置恢复默认。普通包使用：
+8. 子进程执行精确版本的 `@deepseek-ai/dsh`：默认使用 Desktop 发布时验证的固定版本；前端启动后通过 Go 后端按当前代理模式查询 `latest`/`next`，只显示通道状态。无代理时优先查询国内镜像，镜像失败再直连官方；自定义代理失败不会绕过代理。在线包经用户确认后再次核对 dist-tag、保存对应精确版本，并可清除设置恢复默认；新版本在默认 90 秒（可在设置中调整为 30–600 秒）内无法完成本地页面指纹校验时，宿主恢复更新前的配置并自动重启旧版本。这个等待上限只保护 npm 运行时准备和本地 DSH Web 就绪，DeepSeek Harness 内部远程模型/API 请求仍由 DSH 自己处理。普通包使用：
 
    ```text
    npx --yes --package=@deepseek-ai/dsh@<version> dsh web --host 127.0.0.1 --port 0
@@ -81,7 +81,7 @@ Wails application
 - iframe 只显式开放剪贴板读写权限，不开放任意外部页面的 Wails 绑定；
 - 健康检查不使用系统代理，防止 loopback 请求泄漏；
 - `NO_PROXY` 始终合并 `127.0.0.1`、`localhost`、`::1`；
-- 自定义代理仅用于官方 dist-tag 检查并传递给 DSH/npm 子进程；
+- 自定义代理仅用于 registry 检查并传递给 DSH/npm 子进程；无代理时普通包使用国内 npm 镜像，自定义代理失败不会静默切直连；镜像只影响 npm 运行时元数据和包下载，不替代 DeepSeek Harness 的模型/API 服务地址；
 - 配置不存储模型 API Key；
 - 日志文件权限使用用户私有权限，并最多保留最近 10 份；
 - 退出时只回收宿主持有的子进程树，不按进程名全局扫描；

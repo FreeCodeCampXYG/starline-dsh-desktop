@@ -16,6 +16,8 @@ import (
 
 var webURLPattern = regexp.MustCompile(`dsh web:\s+(http://[^\s]+)`)
 
+const onlineStartupTimeout = 90 * time.Second
+
 type Config struct {
 	Version    string
 	WorkingDir string
@@ -48,6 +50,14 @@ type Process struct {
 	progressMu sync.Mutex
 	progress   int
 	onProgress func(Progress)
+}
+
+// OnlineStartupTimeout 返回在线 npx 运行时的整体启动上限；零值使用宿主默认值。
+func OnlineStartupTimeout(seconds int) time.Duration {
+	if seconds <= 0 {
+		return onlineStartupTimeout
+	}
+	return time.Duration(seconds) * time.Second
 }
 
 // Start 优先使用包内离线运行时，否则通过系统 Node 和固定版本 npm 包启动 DSH Web。
@@ -107,6 +117,7 @@ func Start(_ context.Context, config Config) (*Process, error) {
 	} else {
 		_, _ = fmt.Fprintf(logFile, "[%s] Starline DSH Desktop 正在通过 npx 准备 @deepseek-ai/dsh@%s；npm 会校验版本元数据并复用可用内容缓存。\n", time.Now().Format(time.RFC3339), config.Version)
 		_, _ = fmt.Fprintf(logFile, "npm 调试日志目录：%s\n", npmLogDir())
+		_, _ = fmt.Fprintf(logFile, "npm registry：%s；单次网络等待：%sms；重试次数：%s。\n", npmRegistry(childEnv), npmFetchTimeout, npmFetchRetries)
 	}
 	_, _ = fmt.Fprintln(logFile, "DSH 命令兼容入口：Agent 执行 dsh plugin 且未指定 --profile 时，默认使用当前 web profile。")
 	args := append(append([]string{}, command.prefix...), []string{

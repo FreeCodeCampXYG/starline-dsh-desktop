@@ -1,6 +1,17 @@
 package launcher
 
-import "strings"
+import (
+	"net/url"
+	"strings"
+)
+
+const (
+	npmMirrorRegistry       = "https://registry.npmmirror.com"
+	npmFetchTimeout         = "10000"
+	npmFetchRetries         = "1"
+	npmFetchRetryMinTimeout = "1000"
+	npmFetchRetryMaxTimeout = "3000"
+)
 
 func childEnvironment(environment []string, proxyMode, proxyURL string) []string {
 	if proxyMode == "custom" || proxyMode == "disabled" {
@@ -17,7 +28,67 @@ func childEnvironment(environment []string, proxyMode, proxyURL string) []string
 			"npm_config_https_proxy="+proxyURL,
 		)
 	}
+	if shouldUseDomesticMirror(environment, proxyMode) {
+		environment = append(environment, "npm_config_registry="+npmMirrorRegistry)
+	}
+	// 限制 npm 的单次网络等待和重试，避免代理端口失效时 npx 长时间无响应。
+	environment = append(environment,
+		"npm_config_fetch_timeout="+npmFetchTimeout,
+		"npm_config_fetch_retries="+npmFetchRetries,
+		"npm_config_fetch_retry_mintimeout="+npmFetchRetryMinTimeout,
+		"npm_config_fetch_retry_maxtimeout="+npmFetchRetryMaxTimeout,
+		"npm_config_update_notifier=false",
+	)
 	return mergeNoProxy(environment, []string{"127.0.0.1", "localhost", "::1"})
+}
+
+func shouldUseDomesticMirror(environment []string, proxyMode string) bool {
+	if hasNPMRegistry(environment) {
+		return false
+	}
+	if proxyMode == "disabled" {
+		return true
+	}
+	if proxyMode != "inherit" {
+		return false
+	}
+	return !hasProxy(environment)
+}
+
+func hasNPMRegistry(environment []string) bool {
+	for _, entry := range environment {
+		key, value, found := strings.Cut(entry, "=")
+		if found && strings.EqualFold(key, "npm_config_registry") && strings.TrimSpace(value) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func hasProxy(environment []string) bool {
+	for _, entry := range environment {
+		key, value, found := strings.Cut(entry, "=")
+		if !found || strings.TrimSpace(value) == "" {
+			continue
+		}
+		switch strings.ToLower(key) {
+		case "http_proxy", "https_proxy", "all_proxy", "npm_config_proxy", "npm_config_https_proxy":
+			return true
+		}
+	}
+	return false
+}
+
+func npmRegistry(environment []string) string {
+	for _, entry := range environment {
+		key, value, found := strings.Cut(entry, "=")
+		if found && strings.EqualFold(key, "npm_config_registry") {
+			if parsed, err := url.Parse(strings.TrimSpace(value)); err == nil && parsed.Scheme != "" && parsed.Hostname() != "" {
+				return strings.TrimRight(parsed.String(), "/")
+			}
+		}
+	}
+	return "https://registry.npmjs.org"
 }
 
 func withoutProxyVariables(environment []string) []string {

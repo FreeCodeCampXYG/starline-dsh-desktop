@@ -284,4 +284,31 @@ func TestChildEnvironmentCanDisableInheritedProxy(t *testing.T) {
 	if !strings.Contains(joined, "no_proxy=127.0.0.1,localhost,::1") {
 		t.Fatalf("禁用模式没有保留本地直连：%s", joined)
 	}
+	if !strings.Contains(joined, "npm_config_registry=https://registry.npmmirror.com") {
+		t.Fatalf("无代理模式没有使用国内 npm 镜像：%s", joined)
+	}
+	if !strings.Contains(joined, "npm_config_fetch_timeout=10000") || !strings.Contains(joined, "npm_config_fetch_retries=1") {
+		t.Fatalf("npm 网络超时/重试限制缺失：%s", joined)
+	}
+}
+
+func TestInheritedProxyKeepsOfficialRegistry(t *testing.T) {
+	environment := childEnvironment(
+		[]string{"HTTP_PROXY=http://127.0.0.1:1080", "PATH=/bin"},
+		"inherit",
+		"",
+	)
+	joined := strings.Join(environment, "\n")
+	if strings.Contains(joined, "registry.npmmirror.com") {
+		t.Fatalf("继承有效代理时不应偷偷切换国内镜像：%s", joined)
+	}
+}
+
+func TestOnlineStartupTimeoutIsBounded(t *testing.T) {
+	if OnlineStartupTimeout(0) != 90*time.Second {
+		t.Fatalf("默认在线启动超时 = %s, want 90s", OnlineStartupTimeout(0))
+	}
+	if OnlineStartupTimeout(180) != 180*time.Second {
+		t.Fatalf("可配置在线启动超时 = %s, want 180s", OnlineStartupTimeout(180))
+	}
 }

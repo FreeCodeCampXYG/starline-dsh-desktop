@@ -334,7 +334,7 @@ const openSettings = async (checkUpdate = false): Promise<void> => {
       <div><p class="eyebrow">STARTUP SETTINGS</p><h2>代理与启动设置</h2></div>
       <button class="icon-button" data-dialog-close aria-label="关闭">×</button>
     </header>
-    <p class="dialog-intro">代理只用于 DSH/npm 子进程和官方版本检查；外壳访问本地 DSH 时始终绕过代理。保存代理后会立即重启 DSH。</p>
+    <p class="dialog-intro">代理只用于 DSH/npm 子进程和版本检查；外壳访问本地 DSH 时始终绕过代理。保存后会立即重启 DSH。</p>
     <form class="settings-form">
       <label class="mode-option">
         <input type="radio" name="proxy-mode" value="inherit" ${settings.proxyMode === "inherit" ? "checked" : ""}>
@@ -353,6 +353,11 @@ const openSettings = async (checkUpdate = false): Promise<void> => {
         <input type="radio" name="proxy-mode" value="disabled" ${settings.proxyMode === "disabled" ? "checked" : ""}>
         <span><strong>禁用代理</strong><small>移除继承的代理变量，所有外部请求直接连接。</small></span>
       </label>
+      <div class="network-field">
+        <label for="online-startup-timeout">在线启动等待上限</label>
+        <div class="network-field-row"><input id="online-startup-timeout" name="online-startup-timeout" type="number" min="30" max="600" step="10" value="${settings.onlineStartupTimeoutSeconds || 90}"><span>秒</span></div>
+        <small>只影响普通包通过 Node / npx 准备 DSH 的总等待时间，范围 30–600 秒。npm 单次请求仍有短超时；离线包不受影响。</small>
+      </div>
       <section class="runtime-update-card">
         <div>
           <strong>官方 DSH 更新通道</strong>
@@ -371,6 +376,7 @@ const openSettings = async (checkUpdate = false): Promise<void> => {
   const form = backdrop.querySelector<HTMLFormElement>(".settings-form");
   const proxyField = backdrop.querySelector<HTMLElement>(".proxy-field");
   const proxyInput = backdrop.querySelector<HTMLInputElement>("#proxy-url");
+  const timeoutInput = backdrop.querySelector<HTMLInputElement>("#online-startup-timeout");
   const errorOutput = backdrop.querySelector<HTMLElement>(".form-error");
   const updateOutput = backdrop.querySelector<HTMLElement>(".update-result");
   const checkUpdateButton = backdrop.querySelector<HTMLButtonElement>("[data-action='dsh-update-check']");
@@ -464,7 +470,11 @@ const openSettings = async (checkUpdate = false): Promise<void> => {
     if (submit) submit.disabled = true;
     if (errorOutput) errorOutput.textContent = "";
     void backend()
-      .SaveSettings({ proxyMode: mode, proxyUrl: proxyInput?.value ?? "" })
+      .SaveSettings({
+        proxyMode: mode,
+        proxyUrl: proxyInput?.value ?? "",
+        onlineStartupTimeoutSeconds: Number(timeoutInput?.value ?? 90),
+      })
       .then((status) => {
         closeDialog();
         render(status);
@@ -483,13 +493,13 @@ const openHelp = (): void => {
       <button class="icon-button" data-dialog-close aria-label="关闭">×</button>
     </header>
     <div class="help-content">
-      <section><h3>首次启动</h3><p>普通包需要系统 Node.js 22.19+ 或 24+，并会通过 npx 下载固定版本的 DSH。<code>offline-full</code> 已包含 Node 与 DSH，不访问 npm registry；第一次选择工作区仍是 DSH 自身的正常初始化。</p></section>
+      <section><h3>首次启动</h3><p>普通包需要系统 Node.js 22.19+ 或 24+，并会通过 npx 下载固定版本的 DSH。没有代理时优先使用国内 npm 镜像；自定义代理失败不会偷偷绕过。在线启动等待上限可在设置中调整（30–600 秒）。<code>offline-full</code> 已包含 Node 与 DSH，不访问 npm registry；第一次选择工作区仍是 DSH 自身的正常初始化。</p></section>
       <section><h3>代理怎么填</h3><p>如果代理软件监听本机端口，选择“自定义代理”，填写 <code>http://127.0.0.1:端口</code>。例如端口 10808 就填 <code>http://127.0.0.1:10808</code>。</p></section>
       <section><h3>出错排查</h3><p>先打开日志检查 Node、npm 下载或网络错误；改完代理后保存，外壳会自动重启 DSH。模型服务的密钥仍在官方 DSH 页面中配置。</p></section>
       <section><h3>PowerShell 与权限</h3><p>权限模式由官方 DSH 页面选择。<code>danger-full-access</code> 可以按当前 Windows 用户权限执行更广泛的命令和文件操作，但会失去工作区沙箱保护；宿主不会因命令失败自动切换。该模式也不等于“以管理员身份运行”，不会自动获得 UAC 管理员令牌。</p></section>
       <section><h3>普通包与离线包</h3><p>Setup.exe 和普通 ZIP 体积较小，需要系统 Node/npm。<code>offline-full</code> 是较大的便携包，内含发布时固定并经原生门禁的 DSH 依赖，但模型服务、远程 MCP 和联网工具仍可能需要网络。</p></section>
       <section><h3>安装与覆盖升级</h3><p>Windows Setup 使用同一应用身份；关闭正在运行的应用后，新版会复用已记录的安装目录并覆盖程序文件，用户配置和 DSH 工作区不在安装目录中。<code>offline-full</code> 当前是便携压缩包，不属于安装器；请解压到新目录验证后再删除旧目录，不要覆盖正在运行的文件。</p></section>
-      <section><h3>DSH 更新</h3><p>应用启动后会使用“代理与启动设置”自动查询 npm 官方 <code>latest</code> 与 <code>next</code>，顶栏只提示版本，不会静默切换。在线包可确认应用稳定或预览通道并随时恢复 Desktop 内置兼容版本；切换时只回收本应用持有的 DSH 子进程树。离线包需要下载内置新 DSH 且重新通过六平台原生门禁的 <code>offline-full</code>。</p></section>
+      <section><h3>DSH 更新</h3><p>应用启动后会使用“代理与启动设置”自动查询 npm 的 <code>latest</code> 与 <code>next</code>，顶栏只提示版本，不会静默切换。在线包可确认应用稳定或预览通道；下载或新版本启动不完整时会恢复上一版配置并重新启动。离线包需要下载内置新 DSH 且重新通过六平台原生门禁的 <code>offline-full</code>。</p></section>
     </div>
     <div class="dialog-actions">
       <button class="button secondary" data-action="help-logs">${icons.logs}<span>打开日志目录</span></button>

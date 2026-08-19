@@ -37,6 +37,14 @@ type App struct {
 	settingsLoadErr error
 	generation      uint64
 	quitRequested   bool
+	pendingRollback *dshUpdateRollback
+}
+
+type dshUpdateRollback struct {
+	generation       uint64
+	previousSettings config.Settings
+	previousVersion  string
+	attemptedSettings config.Settings
 }
 
 type DSHUpdateInfo struct {
@@ -199,7 +207,7 @@ func (a *App) SaveSettings(settings config.Settings) (Status, error) {
 	return a.restart(), nil
 }
 
-// CheckDSHUpdate 查询 npm 官方 latest/next；自动检查只提示，不下载 DSH 或修改设置。
+// CheckDSHUpdate 查询受信任 npm registry 的 latest/next；自动检查只提示，不下载 DSH 或修改设置。
 func (a *App) CheckDSHUpdate() (DSHUpdateInfo, error) {
 	a.mu.Lock()
 	ctx := a.ctx
@@ -290,10 +298,15 @@ func (a *App) ApplyDSHUpdate(channel string) (Status, error) {
 	a.settingsLoadErr = nil
 	a.dshVersion = targetVersion
 	a.mu.Unlock()
-	return a.restartWithProgress(
+	return a.restartWithProgressAndRollback(
 		"正在更新 DeepSeek Harness…",
 		"已保存官方 "+strings.ToLower(strings.TrimSpace(channel))+" 精确版本 "+targetVersion+"，正在切换运行时…",
 		20,
+		&dshUpdateRollback{
+			previousSettings:  expected,
+			previousVersion:   currentVersion,
+			attemptedSettings: updated,
+		},
 	), nil
 }
 
@@ -393,7 +406,11 @@ func (a *App) launch(generation uint64, settings config.Settings, dshVersion str
 	a.process = process
 	a.mu.Unlock()
 
-	if err := process.WaitReady(a.ctx, 5*time.Minute); err != nil {
+	readyTimeout := 5 * time.Minute
+	if runtimeMode == "online" {
+		readyTimeout = launcher.OnlineStartupTimeout(config.EffectiveOnlineStartupTimeoutSeconds(settings))
+	}
+	if err := process.WaitReady(a.ctx, readyTimeout); err != nil {
 		_ = process.Stop(3 * time.Second)
 		a.failIfCurrent(generation, dshVersion, "DSH 未能按时就绪", err)
 		return
@@ -413,6 +430,11 @@ func (a *App) launch(generation uint64, settings config.Settings, dshVersion str
 		_ = process.Stop(3 * time.Second)
 		return
 	}
+	a.mu.Lock()
+	if a.pendingRollback != nil && a.pendingRollback.generation == generation {
+		a.pendingRollback = nil
+	}
+	a.mu.Unlock()
 	runtime.EventsEmit(a.ctx, readyEvent, status)
 
 	go func() {
@@ -445,14 +467,22 @@ func (a *App) launch(generation uint64, settings config.Settings, dshVersion str
 
 // restart 切换启动代次，旧进程的迟到结果不会覆盖新一轮状态。
 func (a *App) restart() Status {
-	return a.restartWithProgress("正在启动 DeepSeek Harness…", "正在初始化桌面运行时…", 5)
+	return a.restartWithProgressAndRollback("正在启动 DeepSeek Harness…", "正在初始化桌面运行时…", 5, nil)
 }
 
 // restartWithProgress 切换启动代次，并在停止旧进程前发布新一轮的确定阶段。
 func (a *App) restartWithProgress(message, stage string, progress int) Status {
+	return a.restartWithProgressAndRollback(message, stage, progress, nil)
+}
+
+func (a *App) restartWithProgressAndRollback(message, stage string, progress int, rollback *dshUpdateRollback) Status {
 	a.mu.Lock()
 	a.generation++
 	generation := a.generation
+	if rollback != nil {
+		rollback.generation = generation
+	}
+	a.pendingRollback = rollback
 	process := a.process
 	a.process = nil
 	settings := a.settings
@@ -509,6 +539,72 @@ func (a *App) progressIfCurrent(generation uint64, dshVersion string, progress l
 }
 
 func (a *App) failIfCurrent(generation uint64, dshVersion, message string, err error) {
+	if a.rollbackFailedUpdate(generation, dshVersion, err) {
+		return
+	}
+	status := Status{
+		State:       "failed",
+		Message:     message,
+		Detail:      err.Error(),
+		Version:     a.version,
+		DSHVersion:  dshVersion,
+		RuntimeMode: "auto",
+	}
+	if a.setStatusIfCurrent(generation, status) && a.ctx != nil {
+		runtime.EventsEmit(a.ctx, failedEvent, status)
+	}
+}
+
+func (a *App) rollbackFailedUpdate(generation uint64, dshVersion string, cause error) bool {
+	a.mu.Lock()
+	rollback := a.pendingRollback
+	if rollback == nil || rollback.generation != generation || rollback.previousVersion == dshVersion {
+		a.mu.Unlock()
+		return false
+	}
+	a.pendingRollback = nil
+	ctx := a.ctx
+	currentSettings := a.settings
+	a.process = nil
+	a.mu.Unlock()
+
+	a.settingsMu.Lock()
+	defer a.settingsMu.Unlock()
+	if currentSettings != rollback.attemptedSettings {
+		a.failIfCurrentWithoutRollback(generation, dshVersion, "DSH 更新失败，检测到配置已被其他操作修改", cause)
+		return true
+	}
+	if err := config.SaveIfUnchanged(currentSettings, rollback.previousSettings); err != nil {
+		a.failIfCurrentWithoutRollback(generation, dshVersion, "DSH 更新失败且无法恢复旧配置", errors.Join(cause, err))
+		return true
+	}
+
+	a.mu.Lock()
+	a.settings = rollback.previousSettings
+	a.settingsLoadErr = nil
+	a.dshVersion = rollback.previousVersion
+	a.generation++
+	newGeneration := a.generation
+	a.status = Status{
+		State:       "starting",
+		Message:     "DSH 更新未完成，正在恢复旧版本…",
+		Detail:      cause.Error(),
+		Version:     a.version,
+		DSHVersion:  rollback.previousVersion,
+		RuntimeMode: "auto",
+		Progress:    10,
+		Stage:       "新版本校验失败，旧版本配置已恢复",
+	}
+	status := a.status
+	a.mu.Unlock()
+	if ctx != nil {
+		runtime.EventsEmit(ctx, progressEvent, status)
+	}
+	go a.launch(newGeneration, rollback.previousSettings, rollback.previousVersion)
+	return true
+}
+
+func (a *App) failIfCurrentWithoutRollback(generation uint64, dshVersion, message string, err error) {
 	status := Status{
 		State:       "failed",
 		Message:     message,

@@ -14,6 +14,7 @@ export type Settings = {
   proxyMode: "inherit" | "custom" | "disabled";
   proxyUrl?: string;
   dshVersion?: string;
+  onlineStartupTimeoutSeconds?: number;
 };
 
 export type DSHUpdateInfo = {

@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -16,8 +18,10 @@ import (
 )
 
 const (
-	registryDistTagsURL = "https://registry.npmjs.org/-/package/@deepseek-ai%2Fdsh/dist-tags"
-	maxMetadataBytes    = 64 << 10
+	registryDistTagsURL       = "https://registry.npmjs.org/-/package/@deepseek-ai%2Fdsh/dist-tags"
+	registryMirrorDistTagsURL = "https://registry.npmmirror.com/-/package/@deepseek-ai%2Fdsh/dist-tags"
+	maxMetadataBytes          = 64 << 10
+	registryRequestTimeout    = 8 * time.Second
 )
 
 type DSHRelease struct {
@@ -34,14 +38,71 @@ type registryDistTags struct {
 	Next   string `json:"next"`
 }
 
-// CheckDSHChannels 查询 npm 官方 latest/next；调用方决定自动提示或应用，不修改本地状态。
+// CheckDSHChannels 查询受信任 npm registry 的 latest/next；调用方决定自动提示或应用，不修改本地状态。
 func CheckDSHChannels(ctx context.Context, currentVersion string, settings config.Settings) (DSHRelease, error) {
-	client, err := registryClient(settings)
+	normalized, err := config.Normalize(settings)
 	if err != nil {
 		return DSHRelease{}, err
 	}
-	defer client.CloseIdleConnections()
-	return checkDSHChannels(ctx, client, registryDistTagsURL, currentVersion)
+	endpoints := []struct {
+		url      string
+		settings config.Settings
+	}{
+		{registryDistTagsURL, normalized},
+	}
+	if domesticMirrorPreferred(normalized) {
+		// 无代理时优先国内镜像；镜像不可用再直连 npm 官方，避免更新检查完全失效。
+		endpoints = []struct {
+			url      string
+			settings config.Settings
+		}{
+			{registryMirrorDistTagsURL, config.Settings{ProxyMode: config.ProxyModeDisabled}},
+			{registryDistTagsURL, config.Settings{ProxyMode: config.ProxyModeDisabled}},
+		}
+	}
+	var lastErr error
+	for _, endpoint := range endpoints {
+		client, clientErr := registryClient(endpoint.settings)
+		if clientErr != nil {
+			lastErr = clientErr
+			continue
+		}
+		release, checkErr := checkDSHChannels(ctx, client, endpoint.url, currentVersion)
+		client.CloseIdleConnections()
+		if checkErr == nil {
+			return release, nil
+		}
+		lastErr = checkErr
+	}
+	if lastErr == nil {
+		lastErr = errors.New("没有可用的 npm registry")
+	}
+	return DSHRelease{}, lastErr
+}
+
+func domesticMirrorPreferred(settings config.Settings) bool {
+	switch settings.ProxyMode {
+	case config.ProxyModeDisabled:
+		return true
+	case config.ProxyModeInherit:
+		return !environmentHasProxy()
+	default:
+		return false
+	}
+}
+
+func environmentHasProxy() bool {
+	for _, entry := range os.Environ() {
+		key, value, found := strings.Cut(entry, "=")
+		if !found || strings.TrimSpace(value) == "" {
+			continue
+		}
+		switch strings.ToLower(key) {
+		case "http_proxy", "https_proxy", "all_proxy", "npm_config_proxy", "npm_config_https_proxy":
+			return true
+		}
+	}
+	return false
 }
 
 func checkDSHChannels(ctx context.Context, client *http.Client, endpoint, currentVersion string) (DSHRelease, error) {
@@ -59,11 +120,11 @@ func checkDSHChannels(ctx context.Context, client *http.Client, endpoint, curren
 	request.Header.Set("User-Agent", "Starline-DSH-Desktop")
 	response, err := client.Do(request)
 	if err != nil {
-		return DSHRelease{}, fmt.Errorf("无法连接 npm 官方仓库：%w", err)
+		return DSHRelease{}, fmt.Errorf("无法连接 npm registry：%w", err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
-		return DSHRelease{}, fmt.Errorf("npm 官方仓库返回 HTTP %d", response.StatusCode)
+		return DSHRelease{}, fmt.Errorf("npm registry 返回 HTTP %d", response.StatusCode)
 	}
 	body, err := io.ReadAll(io.LimitReader(response.Body, maxMetadataBytes+1))
 	if err != nil {
@@ -116,6 +177,10 @@ func registryClient(settings config.Settings) (*http.Client, error) {
 		return nil, errors.New("系统 HTTP 传输器类型不受支持")
 	}
 	transport := defaultTransport.Clone()
+	transport.DialContext = (&net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}).DialContext
+	transport.TLSHandshakeTimeout = 5 * time.Second
+	transport.ResponseHeaderTimeout = registryRequestTimeout
+	transport.ExpectContinueTimeout = 1 * time.Second
 	switch normalized.ProxyMode {
 	case config.ProxyModeInherit:
 		transport.Proxy = http.ProxyFromEnvironment
@@ -131,14 +196,15 @@ func registryClient(settings config.Settings) (*http.Client, error) {
 		return nil, fmt.Errorf("未知代理模式：%s", normalized.ProxyMode)
 	}
 	return &http.Client{
-		Timeout:   15 * time.Second,
+		Timeout:   registryRequestTimeout,
 		Transport: transport,
 		CheckRedirect: func(request *http.Request, via []*http.Request) error {
 			if len(via) >= 3 {
 				return errors.New("npm DSH 版本检查重定向次数过多")
 			}
-			if request.URL.Scheme != "https" || !strings.EqualFold(request.URL.Hostname(), "registry.npmjs.org") {
-				return errors.New("npm DSH 版本检查拒绝了非官方重定向")
+			host := strings.ToLower(request.URL.Hostname())
+			if request.URL.Scheme != "https" || (host != "registry.npmjs.org" && host != "registry.npmmirror.com") {
+				return errors.New("npm DSH 版本检查拒绝了非受信 registry 重定向")
 			}
 			return nil
 		},

@@ -13,18 +13,22 @@ import (
 )
 
 const (
-	ProxyModeInherit  = "inherit"
-	ProxyModeCustom   = "custom"
-	ProxyModeDisabled = "disabled"
+	ProxyModeInherit                  = "inherit"
+	ProxyModeCustom                   = "custom"
+	ProxyModeDisabled                 = "disabled"
+	DefaultOnlineStartupTimeoutSeconds = 90
+	MinOnlineStartupTimeoutSeconds     = 30
+	MaxOnlineStartupTimeoutSeconds     = 600
 )
 
 // ErrConflict 表示另一个桌面实例已经修改了配置，当前实例不能覆盖它。
 var ErrConflict = errors.New("配置已被其他实例修改，请重新加载后再保存")
 
 type Settings struct {
-	ProxyMode  string `json:"proxyMode"`
-	ProxyURL   string `json:"proxyUrl,omitempty"`
-	DSHVersion string `json:"dshVersion,omitempty"`
+	ProxyMode                  string `json:"proxyMode"`
+	ProxyURL                   string `json:"proxyUrl,omitempty"`
+	DSHVersion                 string `json:"dshVersion,omitempty"`
+	OnlineStartupTimeoutSeconds int    `json:"onlineStartupTimeoutSeconds,omitempty"`
 }
 
 func Default() Settings {
@@ -36,6 +40,12 @@ func Normalize(settings Settings) (Settings, error) {
 	settings.ProxyMode = strings.TrimSpace(settings.ProxyMode)
 	settings.ProxyURL = strings.TrimSpace(settings.ProxyURL)
 	settings.DSHVersion = strings.TrimSpace(settings.DSHVersion)
+	if settings.OnlineStartupTimeoutSeconds < 0 || settings.OnlineStartupTimeoutSeconds > MaxOnlineStartupTimeoutSeconds {
+		return Settings{}, fmt.Errorf("在线启动等待上限必须为 %d-%d 秒", MinOnlineStartupTimeoutSeconds, MaxOnlineStartupTimeoutSeconds)
+	}
+	if settings.OnlineStartupTimeoutSeconds > 0 && settings.OnlineStartupTimeoutSeconds < MinOnlineStartupTimeoutSeconds {
+		return Settings{}, fmt.Errorf("在线启动等待上限不能低于 %d 秒", MinOnlineStartupTimeoutSeconds)
+	}
 	if settings.DSHVersion != "" {
 		version, err := dshversion.Normalize(settings.DSHVersion)
 		if err != nil {
@@ -65,6 +75,14 @@ func Normalize(settings Settings) (Settings, error) {
 	default:
 		return Settings{}, fmt.Errorf("未知代理模式：%s", settings.ProxyMode)
 	}
+}
+
+// EffectiveOnlineStartupTimeoutSeconds 返回在线 npx 启动的有效等待上限；零值兼容旧配置并使用默认值。
+func EffectiveOnlineStartupTimeoutSeconds(settings Settings) int {
+	if settings.OnlineStartupTimeoutSeconds == 0 {
+		return DefaultOnlineStartupTimeoutSeconds
+	}
+	return settings.OnlineStartupTimeoutSeconds
 }
 
 // Load 从当前用户配置目录读取桌面宿主设置。

@@ -685,6 +685,49 @@ footer {
 	border-color: #6079ff;
 }
 
+.network-field {
+	display: grid;
+	gap: 6px;
+	margin: 4px 0 2px 40px;
+}
+
+.network-field > label {
+	color: #bdc8dc;
+	font-size: 12px;
+}
+
+.network-field-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.network-field-row input {
+	width: 110px;
+	height: 42px;
+	padding: 0 12px;
+	border: 1px solid rgba(140, 164, 255, 0.23);
+	border-radius: 10px;
+	outline: none;
+	color: #edf3ff;
+	background: #090e18;
+	font: 13px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.network-field-row input:focus {
+	border-color: #6079ff;
+}
+
+.network-field-row span,
+.network-field small {
+	color: #77849e;
+	font-size: 11px;
+}
+
+.network-field small {
+	line-height: 1.55;
+}
+
 .form-error {
 	min-height: 20px;
 	margin: 0;

@@ -78,3 +78,24 @@ func TestNormalizeSettingsRejectsFloatingDSHVersion(t *testing.T) {
 		t.Fatal("配置不应接受未固定的 latest DSH 版本")
 	}
 }
+
+func TestNormalizeSettingsAcceptsConfigurableOnlineStartupTimeout(t *testing.T) {
+	settings, err := Normalize(Settings{ProxyMode: ProxyModeInherit, OnlineStartupTimeoutSeconds: 180})
+	if err != nil {
+		t.Fatalf("应接受可配置在线启动等待上限：%v", err)
+	}
+	if EffectiveOnlineStartupTimeoutSeconds(settings) != 180 {
+		t.Fatalf("有效在线启动等待上限 = %d, want 180", EffectiveOnlineStartupTimeoutSeconds(settings))
+	}
+	if EffectiveOnlineStartupTimeoutSeconds(Settings{}) != DefaultOnlineStartupTimeoutSeconds {
+		t.Fatalf("旧配置零值应回退默认等待上限")
+	}
+}
+
+func TestNormalizeSettingsRejectsUnsafeOnlineStartupTimeout(t *testing.T) {
+	for _, seconds := range []int{-1, MinOnlineStartupTimeoutSeconds - 1, MaxOnlineStartupTimeoutSeconds + 1} {
+		if _, err := Normalize(Settings{ProxyMode: ProxyModeInherit, OnlineStartupTimeoutSeconds: seconds}); err == nil {
+			t.Fatalf("不应接受在线启动等待上限 %d 秒", seconds)
+		}
+	}
+}

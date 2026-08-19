@@ -74,3 +74,26 @@ func TestRegistryClientUsesCustomProxy(t *testing.T) {
 		t.Fatalf("更新检查没有沿用自定义代理：%v", proxyURL)
 	}
 }
+
+func TestDomesticMirrorPreferredWithoutProxy(t *testing.T) {
+	t.Setenv("HTTP_PROXY", "")
+	t.Setenv("HTTPS_PROXY", "")
+	t.Setenv("ALL_PROXY", "")
+	t.Setenv("http_proxy", "")
+	t.Setenv("https_proxy", "")
+	t.Setenv("all_proxy", "")
+	t.Setenv("npm_config_proxy", "")
+	t.Setenv("npm_config_https_proxy", "")
+	if !domesticMirrorPreferred(config.Settings{ProxyMode: config.ProxyModeDisabled}) {
+		t.Fatal("禁用代理时应优先使用国内镜像")
+	}
+	if !domesticMirrorPreferred(config.Settings{ProxyMode: config.ProxyModeInherit}) {
+		t.Fatal("继承模式且没有系统代理时应优先使用国内镜像")
+	}
+}
+
+func TestDomesticMirrorNotUsedForCustomProxy(t *testing.T) {
+	if domesticMirrorPreferred(config.Settings{ProxyMode: config.ProxyModeCustom, ProxyURL: "http://127.0.0.1:1080"}) {
+		t.Fatal("自定义代理失败时不应偷偷绕过代理")
+	}
+}
