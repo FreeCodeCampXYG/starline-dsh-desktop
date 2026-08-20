@@ -37,6 +37,7 @@ type AppBindings = {
   GetSettings(): Promise<Settings>;
   SaveSettings(settings: Settings): Promise<Status>;
   CheckDSHUpdate(): Promise<DSHUpdateInfo>;
+  CheckDSHUpdateManual(): Promise<DSHUpdateInfo>;
   ApplyDSHUpdate(channel: "latest" | "next"): Promise<Status>;
   ResetDSHVersion(): Promise<Status>;
   OpenLogs(): Promise<void>;

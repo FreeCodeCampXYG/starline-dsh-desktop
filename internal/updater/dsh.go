@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -38,28 +37,32 @@ type registryDistTags struct {
 	Next   string `json:"next"`
 }
 
-// CheckDSHChannels 查询受信任 npm registry 的 latest/next；调用方决定自动提示或应用，不修改本地状态。
+type registryEndpoint struct {
+	url      string
+	settings config.Settings
+}
+
+// CheckDSHChannelsAutomatic 自动检查固定优先直连国内镜像，不依赖本机代理是否启动。
+func CheckDSHChannelsAutomatic(ctx context.Context, currentVersion string) (DSHRelease, error) {
+	return checkDSHChannelEndpoints(ctx, currentVersion, []registryEndpoint{
+		{registryMirrorDistTagsURL, config.Settings{ProxyMode: config.ProxyModeDisabled}},
+		{registryDistTagsURL, config.Settings{ProxyMode: config.ProxyModeDisabled}},
+	})
+}
+
+// CheckDSHChannels 供用户手动刷新和应用更新；优先国内镜像，并按当前设置决定是否使用代理。
 func CheckDSHChannels(ctx context.Context, currentVersion string, settings config.Settings) (DSHRelease, error) {
 	normalized, err := config.Normalize(settings)
 	if err != nil {
 		return DSHRelease{}, err
 	}
-	endpoints := []struct {
-		url      string
-		settings config.Settings
-	}{
+	return checkDSHChannelEndpoints(ctx, currentVersion, []registryEndpoint{
+		{registryMirrorDistTagsURL, normalized},
 		{registryDistTagsURL, normalized},
-	}
-	if domesticMirrorPreferred(normalized) {
-		// 无代理时优先国内镜像；镜像不可用再直连 npm 官方，避免更新检查完全失效。
-		endpoints = []struct {
-			url      string
-			settings config.Settings
-		}{
-			{registryMirrorDistTagsURL, config.Settings{ProxyMode: config.ProxyModeDisabled}},
-			{registryDistTagsURL, config.Settings{ProxyMode: config.ProxyModeDisabled}},
-		}
-	}
+	})
+}
+
+func checkDSHChannelEndpoints(ctx context.Context, currentVersion string, endpoints []registryEndpoint) (DSHRelease, error) {
 	var lastErr error
 	for _, endpoint := range endpoints {
 		client, clientErr := registryClient(endpoint.settings)
@@ -78,31 +81,6 @@ func CheckDSHChannels(ctx context.Context, currentVersion string, settings confi
 		lastErr = errors.New("没有可用的 npm registry")
 	}
 	return DSHRelease{}, lastErr
-}
-
-func domesticMirrorPreferred(settings config.Settings) bool {
-	switch settings.ProxyMode {
-	case config.ProxyModeDisabled:
-		return true
-	case config.ProxyModeInherit:
-		return !environmentHasProxy()
-	default:
-		return false
-	}
-}
-
-func environmentHasProxy() bool {
-	for _, entry := range os.Environ() {
-		key, value, found := strings.Cut(entry, "=")
-		if !found || strings.TrimSpace(value) == "" {
-			continue
-		}
-		switch strings.ToLower(key) {
-		case "http_proxy", "https_proxy", "all_proxy", "npm_config_proxy", "npm_config_https_proxy":
-			return true
-		}
-	}
-	return false
 }
 
 func checkDSHChannels(ctx context.Context, client *http.Client, endpoint, currentVersion string) (DSHRelease, error) {

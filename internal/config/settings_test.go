@@ -16,6 +16,22 @@ func TestNormalizeSettingsCustomProxy(t *testing.T) {
 	}
 }
 
+func TestDefaultSettingsDoNotAssumeLocalProxy(t *testing.T) {
+	if Default().ProxyMode != ProxyModeDisabled {
+		t.Fatalf("默认代理模式 = %s, want disabled", Default().ProxyMode)
+	}
+}
+
+func TestNormalizeMissingProxyModeUsesDirectDefault(t *testing.T) {
+	settings, err := Normalize(Settings{})
+	if err != nil {
+		t.Fatalf("缺失代理模式的旧配置应兼容：%v", err)
+	}
+	if settings.ProxyMode != ProxyModeDisabled {
+		t.Fatalf("缺失代理模式应使用禁用代理，得到 %s", settings.ProxyMode)
+	}
+}
+
 func TestNormalizeSettingsRejectsUnsupportedProxy(t *testing.T) {
 	_, err := Normalize(Settings{ProxyMode: ProxyModeCustom, ProxyURL: "socks5://127.0.0.1:10808"})
 	if err == nil {

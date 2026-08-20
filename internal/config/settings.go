@@ -32,7 +32,7 @@ type Settings struct {
 }
 
 func Default() Settings {
-	return Settings{ProxyMode: ProxyModeInherit}
+	return Settings{ProxyMode: ProxyModeDisabled}
 }
 
 // Normalize 校验界面输入，并把省略协议的常见代理地址补成 HTTP URL。
@@ -40,6 +40,9 @@ func Normalize(settings Settings) (Settings, error) {
 	settings.ProxyMode = strings.TrimSpace(settings.ProxyMode)
 	settings.ProxyURL = strings.TrimSpace(settings.ProxyURL)
 	settings.DSHVersion = strings.TrimSpace(settings.DSHVersion)
+	if settings.ProxyMode == "" {
+		settings.ProxyMode = ProxyModeDisabled
+	}
 	if settings.OnlineStartupTimeoutSeconds < 0 || settings.OnlineStartupTimeoutSeconds > MaxOnlineStartupTimeoutSeconds {
 		return Settings{}, fmt.Errorf("在线启动等待上限必须为 %d-%d 秒", MinOnlineStartupTimeoutSeconds, MaxOnlineStartupTimeoutSeconds)
 	}

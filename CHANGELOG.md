@@ -2,6 +2,23 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 的组织方式，并使用语义化版本号。
 
+## [0.6.2] - 2026-08-20
+
+### 修复
+
+- 默认设置不再假设本机存在代理；自动版本检查固定优先直连国内 npm 镜像。
+- 自定义代理端口不可达时，普通包快速回退到国内镜像直连，避免旧端口阻塞 DSH 启动。
+- 手动刷新与应用 DSH 版本时，才按当前代理设置访问 registry；DSH 模型/API 代理边界在界面和日志中明确提示。
+- Windows NSIS 安装器增加开始菜单卸载入口；帮助页补充 Setup、便携包、macOS 和 Ubuntu 的卸载/重装路径。
+
+### 变更
+
+- 普通包准备、自动检查和手动更新的网络路径分层，减少离线或未启动代理电脑的启动阻塞。
+
+### 未验证
+
+- 当前主机没有 Go 工具链；Go 测试与六平台构建仍由 GitHub Actions 验证。
+
 ## [Unreleased]
 
 ### 计划
@@ -195,7 +212,9 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.1...v0.6.2
+[0.6.1]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.5.0...v0.5.1

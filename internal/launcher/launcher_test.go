@@ -264,7 +264,7 @@ func TestChildEnvironmentUsesCustomProxyAndKeepsLoopbackDirect(t *testing.T) {
 	if strings.Contains(joined, "http://old:8080") {
 		t.Fatalf("旧代理没有被移除：%s", joined)
 	}
-	for _, value := range []string{"HTTP_PROXY=http://127.0.0.1:10808", "HTTPS_PROXY=http://127.0.0.1:10808", "example.com", "127.0.0.1", "localhost", "::1"} {
+	for _, value := range []string{"HTTP_PROXY=http://127.0.0.1:10808", "HTTPS_PROXY=http://127.0.0.1:10808", "npm_config_registry=https://registry.npmmirror.com", "example.com", "127.0.0.1", "localhost", "::1"} {
 		if !strings.Contains(joined, value) {
 			t.Fatalf("环境变量缺少 %s：%s", value, joined)
 		}
@@ -292,15 +292,33 @@ func TestChildEnvironmentCanDisableInheritedProxy(t *testing.T) {
 	}
 }
 
-func TestInheritedProxyKeepsOfficialRegistry(t *testing.T) {
+func TestChildEnvironmentWithFallbackUsesMirrorForUnreachableCustomProxy(t *testing.T) {
+	environment, fallback := childEnvironmentWithFallback(
+		[]string{"PATH=/bin", "HTTP_PROXY=http://old:8080"},
+		"custom",
+		"http://127.0.0.1:0",
+	)
+	if !fallback {
+		t.Fatal("不可达自定义代理应触发直连回退")
+	}
+	joined := strings.ToLower(strings.Join(environment, "\n"))
+	if strings.Contains(joined, "http_proxy=") || strings.Contains(joined, "npm_config_proxy=") {
+		t.Fatalf("回退环境仍保留代理：%s", joined)
+	}
+	if !strings.Contains(joined, "npm_config_registry=https://registry.npmmirror.com") {
+		t.Fatalf("回退环境没有使用国内 npm 镜像：%s", joined)
+	}
+}
+
+func TestInheritedProxyStillPrefersDomesticMirror(t *testing.T) {
 	environment := childEnvironment(
-		[]string{"HTTP_PROXY=http://127.0.0.1:1080", "PATH=/bin"},
+		[]string{"HTTP_PROXY=http://127.0.0.1:1080", "npm_config_registry=https://registry.npmjs.org", "PATH=/bin"},
 		"inherit",
 		"",
 	)
 	joined := strings.Join(environment, "\n")
-	if strings.Contains(joined, "registry.npmmirror.com") {
-		t.Fatalf("继承有效代理时不应偷偷切换国内镜像：%s", joined)
+	if !strings.Contains(joined, "registry.npmmirror.com") {
+		t.Fatalf("继承代理时仍应优先国内镜像：%s", joined)
 	}
 }
 

@@ -93,7 +93,8 @@ func Start(_ context.Context, config Config) (*Process, error) {
 		_ = logFile.Close()
 		return nil, err
 	}
-	childEnv, err := withDSHCommandShim(childEnvironment(os.Environ(), config.ProxyMode, config.ProxyURL), shimDir, command)
+	childBaseEnv, proxyFallback := childEnvironmentWithFallback(os.Environ(), config.ProxyMode, config.ProxyURL)
+	childEnv, err := withDSHCommandShim(childBaseEnv, shimDir, command)
 	if err != nil {
 		_ = os.RemoveAll(shimDir)
 		_ = logFile.Close()
@@ -118,6 +119,10 @@ func Start(_ context.Context, config Config) (*Process, error) {
 		_, _ = fmt.Fprintf(logFile, "[%s] Starline DSH Desktop 正在通过 npx 准备 @deepseek-ai/dsh@%s；npm 会校验版本元数据并复用可用内容缓存。\n", time.Now().Format(time.RFC3339), config.Version)
 		_, _ = fmt.Fprintf(logFile, "npm 调试日志目录：%s\n", npmLogDir())
 		_, _ = fmt.Fprintf(logFile, "npm registry：%s；单次网络等待：%sms；重试次数：%s。\n", npmRegistry(childEnv), npmFetchTimeout, npmFetchRetries)
+	}
+	if proxyFallback {
+		_, _ = fmt.Fprintf(logFile, "自定义代理不可达，已切换为国内 npm 镜像直连；DSH 模型/API 请求如需代理，请恢复可用代理后重启。\n")
+		emitProgress(config.OnProgress, 56, "代理不可达，已切换国内镜像直连（模型/API 可能仍需代理）", command.mode)
 	}
 	_, _ = fmt.Fprintln(logFile, "DSH 命令兼容入口：Agent 执行 dsh plugin 且未指定 --profile 时，默认使用当前 web profile。")
 	args := append(append([]string{}, command.prefix...), []string{

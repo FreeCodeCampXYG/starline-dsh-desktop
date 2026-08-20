@@ -207,8 +207,17 @@ func (a *App) SaveSettings(settings config.Settings) (Status, error) {
 	return a.restart(), nil
 }
 
-// CheckDSHUpdate 查询受信任 npm registry 的 latest/next；自动检查只提示，不下载 DSH 或修改设置。
+// CheckDSHUpdate 自动通过国内镜像直连查询 latest/next，只提示而不修改状态。
 func (a *App) CheckDSHUpdate() (DSHUpdateInfo, error) {
+	return a.checkDSHUpdate(false)
+}
+
+// CheckDSHUpdateManual 由用户主动触发，按当前代理设置查询受信任的 npm registry。
+func (a *App) CheckDSHUpdateManual() (DSHUpdateInfo, error) {
+	return a.checkDSHUpdate(true)
+}
+
+func (a *App) checkDSHUpdate(manual bool) (DSHUpdateInfo, error) {
 	a.mu.Lock()
 	ctx := a.ctx
 	currentVersion := a.dshVersion
@@ -219,7 +228,13 @@ func (a *App) CheckDSHUpdate() (DSHUpdateInfo, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	release, err := updater.CheckDSHChannels(ctx, currentVersion, settings)
+	var release updater.DSHRelease
+	var err error
+	if manual {
+		release, err = updater.CheckDSHChannels(ctx, currentVersion, settings)
+	} else {
+		release, err = updater.CheckDSHChannelsAutomatic(ctx, currentVersion)
+	}
 	if err != nil {
 		return DSHUpdateInfo{}, err
 	}

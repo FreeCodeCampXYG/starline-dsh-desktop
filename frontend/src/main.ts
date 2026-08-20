@@ -35,6 +35,7 @@ const icons = {
   restart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>',
   settings: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h7M15 18h5"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="13" cy="18" r="2"/></svg>',
   shell: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 9v11"/></svg>',
+  uninstall: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg>',
   update: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>',
 } as const;
 
@@ -75,12 +76,12 @@ const syncUpdateIndicator = (): void => {
   });
 };
 
-const checkDSHUpdates = (force = false): Promise<DSHUpdateInfo> => {
+const checkDSHUpdates = (force = false, manual = false): Promise<DSHUpdateInfo> => {
   if (!force && dshUpdateInfo) return Promise.resolve(dshUpdateInfo);
   if (dshUpdateRequest) return dshUpdateRequest;
   dshUpdateError = "";
   syncUpdateIndicator();
-  const request = backend().CheckDSHUpdate()
+  const request = (manual ? backend().CheckDSHUpdateManual() : backend().CheckDSHUpdate())
     .then((info) => {
       dshUpdateInfo = info;
       syncUpdateIndicator();
@@ -107,6 +108,7 @@ const renderDesktopMenu = (includeBrowser: boolean): string => `
       <button data-action="restart">${icons.restart}<span>重新启动 DSH</span></button>
       <button data-action="logs">${icons.logs}<span>打开日志目录</span></button>
       ${includeBrowser ? `<button data-action="browser">${icons.browser}<span>在浏览器中打开</span></button>` : ""}
+      <button data-action="uninstall-help">${icons.uninstall}<span>卸载与重装</span></button>
       <button data-action="help">${icons.help}<span>使用帮助</span></button>
     </div>
   </details>
@@ -298,6 +300,7 @@ const bindCommonActions = (): void => {
     void openSettings(true);
   }));
   root.querySelector<HTMLButtonElement>("[data-action='help']")?.addEventListener("click", openHelp);
+  root.querySelector<HTMLButtonElement>("[data-action='uninstall-help']")?.addEventListener("click", openUninstallHelp);
   syncUpdateIndicator();
 };
 
@@ -334,7 +337,7 @@ const openSettings = async (checkUpdate = false): Promise<void> => {
       <div><p class="eyebrow">STARTUP SETTINGS</p><h2>代理与启动设置</h2></div>
       <button class="icon-button" data-dialog-close aria-label="关闭">×</button>
     </header>
-    <p class="dialog-intro">代理只用于 DSH/npm 子进程和版本检查；外壳访问本地 DSH 时始终绕过代理。保存后会立即重启 DSH。</p>
+    <p class="dialog-intro">普通包和自动版本检查默认优先国内镜像；手动刷新、应用版本以及 DSH 模型/API 才按这里的代理设置执行。保存后会立即重启 DSH。</p>
     <form class="settings-form">
       <label class="mode-option">
         <input type="radio" name="proxy-mode" value="inherit" ${settings.proxyMode === "inherit" ? "checked" : ""}>
@@ -361,7 +364,7 @@ const openSettings = async (checkUpdate = false): Promise<void> => {
       <section class="runtime-update-card">
         <div>
           <strong>官方 DSH 更新通道</strong>
-          <small>启动后会通过当前代理设置自动检查 latest 与 next，但不会静默切换运行版本。当前 ${escapeHTML(currentStatus.dshVersion)}；Desktop ${escapeHTML(currentStatus.version)} 默认兼容版本保持不变。</small>
+          <small>启动后的自动提示直连国内镜像；点击刷新或应用版本时才使用当前代理设置。当前 ${escapeHTML(currentStatus.dshVersion)}；Desktop ${escapeHTML(currentStatus.version)} 默认兼容版本保持不变。</small>
         </div>
         <button type="button" class="button secondary" data-action="dsh-update-check">${icons.update}<span>刷新 npm latest / next</span></button>
         <div class="update-result" role="status" aria-live="polite"></div>
@@ -450,8 +453,8 @@ const openSettings = async (checkUpdate = false): Promise<void> => {
   };
   const runUpdateCheck = (): void => {
     if (checkUpdateButton) checkUpdateButton.disabled = true;
-    if (updateOutput) updateOutput.textContent = "正在通过当前代理设置查询 npm 官方 latest / next…";
-    void checkDSHUpdates(true)
+    if (updateOutput) updateOutput.textContent = "正在按当前代理设置查询国内镜像 latest / next…";
+    void checkDSHUpdates(true, true)
       .then(renderUpdateInfo)
       .catch((error: unknown) => {
         if (updateOutput) updateOutput.textContent = error instanceof Error ? error.message : String(error);
@@ -493,13 +496,14 @@ const openHelp = (): void => {
       <button class="icon-button" data-dialog-close aria-label="关闭">×</button>
     </header>
     <div class="help-content">
-      <section><h3>首次启动</h3><p>普通包需要系统 Node.js 22.19+ 或 24+，并会通过 npx 下载固定版本的 DSH。没有代理时优先使用国内 npm 镜像；自定义代理失败不会偷偷绕过。在线启动等待上限可在设置中调整（30–600 秒）。<code>offline-full</code> 已包含 Node 与 DSH，不访问 npm registry；第一次选择工作区仍是 DSH 自身的正常初始化。</p></section>
+      <section><h3>首次启动</h3><p>普通包需要系统 Node.js 22.19+ 或 24+，并会通过 npx 下载固定版本的 DSH。没有代理时优先使用国内 npm 镜像；自定义代理端口不可达时，普通包会快速切换到国内镜像直连，避免旧端口阻塞启动，但 DSH 的模型/API 请求仍可能需要可用代理。在线启动等待上限可在设置中调整（30–600 秒）。<code>offline-full</code> 已包含 Node 与 DSH，不访问 npm registry；第一次选择工作区仍是 DSH 自身的正常初始化。</p></section>
       <section><h3>代理怎么填</h3><p>如果代理软件监听本机端口，选择“自定义代理”，填写 <code>http://127.0.0.1:端口</code>。例如端口 10808 就填 <code>http://127.0.0.1:10808</code>。</p></section>
       <section><h3>出错排查</h3><p>先打开日志检查 Node、npm 下载或网络错误；改完代理后保存，外壳会自动重启 DSH。模型服务的密钥仍在官方 DSH 页面中配置。</p></section>
       <section><h3>PowerShell 与权限</h3><p>权限模式由官方 DSH 页面选择。<code>danger-full-access</code> 可以按当前 Windows 用户权限执行更广泛的命令和文件操作，但会失去工作区沙箱保护；宿主不会因命令失败自动切换。该模式也不等于“以管理员身份运行”，不会自动获得 UAC 管理员令牌。</p></section>
       <section><h3>普通包与离线包</h3><p>Setup.exe 和普通 ZIP 体积较小，需要系统 Node/npm。<code>offline-full</code> 是较大的便携包，内含发布时固定并经原生门禁的 DSH 依赖，但模型服务、远程 MCP 和联网工具仍可能需要网络。</p></section>
       <section><h3>安装与覆盖升级</h3><p>Windows Setup 使用同一应用身份；关闭正在运行的应用后，新版会复用已记录的安装目录并覆盖程序文件，用户配置和 DSH 工作区不在安装目录中。<code>offline-full</code> 当前是便携压缩包，不属于安装器；请解压到新目录验证后再删除旧目录，不要覆盖正在运行的文件。</p></section>
-      <section><h3>DSH 更新</h3><p>应用启动后会使用“代理与启动设置”自动查询 npm 的 <code>latest</code> 与 <code>next</code>，顶栏只提示版本，不会静默切换。在线包可确认应用稳定或预览通道；下载或新版本启动不完整时会恢复上一版配置并重新启动。离线包需要下载内置新 DSH 且重新通过六平台原生门禁的 <code>offline-full</code>。</p></section>
+      <section><h3>DSH 更新</h3><p>应用启动后直连国内镜像查询 <code>latest</code> 与 <code>next</code>，顶栏只提示版本，不会静默切换。手动刷新或应用版本时才按当前代理设置访问镜像；下载或新版本启动不完整时会恢复上一版配置并重新启动。离线包需要下载内置新 DSH 且重新通过六平台原生门禁的 <code>offline-full</code>。</p></section>
+      <section><h3>卸载与重装</h3><p>Windows Setup 会创建系统卸载记录和“卸载 Starline DSH Desktop”开始菜单入口；便携 ZIP/离线包应从托盘退出后直接删除解压目录。macOS 退出后删除应用，Ubuntu DEB 使用 <code>sudo apt remove starline-dsh-desktop</code>。卸载默认保留用户配置、日志和工作区，重装后可以继续使用。</p></section>
     </div>
     <div class="dialog-actions">
       <button class="button secondary" data-action="help-logs">${icons.logs}<span>打开日志目录</span></button>
@@ -508,6 +512,22 @@ const openHelp = (): void => {
   `).querySelector<HTMLButtonElement>("[data-action='help-logs']")?.addEventListener("click", () => {
     void backend().OpenLogs();
   });
+};
+
+const openUninstallHelp = (): void => {
+  showDialog(`
+    <header class="dialog-header">
+      <div><p class="eyebrow">REMOVE OR REINSTALL</p><h2>卸载与重装</h2></div>
+      <button class="icon-button" data-dialog-close aria-label="关闭">×</button>
+    </header>
+    <div class="help-content">
+      <section><h3>Windows Setup</h3><p>先从托盘右键真正退出，然后使用开始菜单中的“卸载 Starline DSH Desktop”、Windows“已安装的应用”，或安装目录内的 <code>uninstall.exe</code>。重新安装会复用已记录的安装目录。</p></section>
+      <section><h3>Windows 便携包</h3><p>退出应用后删除整个解压目录即可；便携包不会创建系统卸载项。</p></section>
+      <section><h3>macOS / Ubuntu</h3><p>macOS 退出后把应用移到废纸篓；Ubuntu DEB 执行 <code>sudo apt remove starline-dsh-desktop</code>。Linux TAR.GZ 与便携包一样删除解压目录。</p></section>
+      <section><h3>用户数据</h3><p>卸载默认保留代理设置、日志和 DSH 工作区，便于覆盖安装和重装。只有确认不再需要这些数据时，才单独清理用户配置目录。</p></section>
+    </div>
+    <div class="dialog-actions"><button class="button primary" data-dialog-close>知道了</button></div>
+  `);
 };
 
 const showErrorDialog = (title: string, error: unknown): void => {

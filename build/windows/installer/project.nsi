@@ -113,6 +113,7 @@ Section
     !insertmacro wails.associateCustomProtocols
 
     !insertmacro wails.writeUninstaller
+    CreateShortcut "$SMPROGRAMS\卸载 ${INFO_PRODUCTNAME}.lnk" "$INSTDIR\uninstall.exe"
     !ifdef WAILS_INSTALL_SCOPE
       !if "${WAILS_INSTALL_SCOPE}" == "user"
         WriteRegStr HKCU "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
@@ -132,6 +133,7 @@ Section "uninstall"
     RMDir /r "$INSTDIR"
 
     Delete "$SMPROGRAMS\${INFO_PRODUCTNAME}.lnk"
+    Delete "$SMPROGRAMS\卸载 ${INFO_PRODUCTNAME}.lnk"
     Delete "$DESKTOP\${INFO_PRODUCTNAME}.lnk"
 
     !insertmacro wails.unassociateFiles

@@ -12,21 +12,21 @@ Starline DSH Desktop 是 [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 
 > 本项目是独立社区项目，与 DeepSeek 官方无隶属、背书或商业关系。DSH 仍处于开发者预览阶段，上游版本可能发生破坏性变化。
 
-> **v0.6.0 发布边界：** 本版增加可验证阶段百分比，并把 `offline-full` 固定基线提升到 DSH rc.7；跨平台证据以 `v0.6.0` tag 触发的六平台 Release 工作流为准。绿色 CI 不等同于代表性设备上的首次启动、覆盖升级和完整工作流验证，详情见 [已知问题与平台支持边界](docs/KNOWN_ISSUES.md)。
+> **v0.6.2 发布边界：** 本版默认优先国内镜像、分离自动检查与手动代理路径，并补充卸载入口和重装说明；跨平台证据以 `v0.6.2` tag 触发的六平台 Release 工作流为准。绿色 CI 不等同于代表性设备上的首次启动、覆盖升级和完整工作流验证，详情见 [已知问题与平台支持边界](docs/KNOWN_ISSUES.md)。
 
-> 当前版本线是 v0.6.0；旧版本资产不会被反向修改，请以对应版本 Release 的矩阵结果为准。
+> 当前版本线是 v0.6.2；旧版本资产不会被反向修改，请以对应版本 Release 的矩阵结果为准。
 
 ## 功能
 
 - Windows、macOS、Linux 原生桌面窗口；
 - 固定 DSH 版本启动，避免 `latest` 漂移；
-- 启动后通过当前代理设置自动检查 npm 官方 `latest` 与 `next`；在线包明确确认后可切换对应精确版本，并可恢复 Desktop 内置兼容版本；
+- 启动后直连国内镜像自动检查 npm `latest` 与 `next`；手动刷新/应用版本才按代理设置访问，在线包明确确认后可切换对应精确版本，并可恢复 Desktop 内置兼容版本；
 - 自动选择 loopback 端口并校验 DSH 页面指纹；
 - 代理可视化：继承环境、自定义 HTTP(S) 代理、禁用代理；
 - 本地 DSH 健康检查强制直连，不受外部代理影响；
 - 启动诊断、日志目录、浏览器打开和一键重启；
 - 启动与 DSH 通道切换显示可验证阶段百分比；npm 不提供完整依赖闭包的可靠总字节，因此界面不会伪造下载百分比；
-- 在线 npm 请求有单次超时和重试上限；无代理时优先使用国内 npm 镜像，代理模式不会在失败时静默绕过；DSH 更新启动失败会自动恢复旧版本；
+- 在线 npm 请求有单次超时和重试上限；无代理时优先使用国内 npm 镜像，自定义代理端口不可达时普通包会快速切换到镜像直连；DSH 更新启动失败会自动恢复旧版本；
 - 正式构建启用系统 WebView 默认右键菜单，为选择、复制和粘贴提供手工回退入口；
 - 启动页与运行状态栏显示桌面端版本和 DSH 版本；
 - Windows 窗口右上角 X 隐藏到系统托盘，从托盘菜单选择“退出”才回收本应用创建的 DSH 进程树；macOS/Linux 暂按系统原生关闭行为退出，避免无托盘入口时进程残留；
@@ -60,11 +60,11 @@ Starline DSH Desktop (Go + Wails)
 | Windows | Windows 10 22H2（OS build 19045）或 Windows 11，WebView2 Runtime |
 | macOS | 13.5+，Intel 或 Apple Silicon，使用系统 WebKit |
 | Linux | 仅支持 Ubuntu Desktop 24.04 LTS x64/ARM64；Linux 6.8 为 GA 基线，并要求 glibc 2.39+、GTK3、WebKitGTK 4.1 |
-| 网络 | 普通包首次运行需要 npm registry；`offline-full` 不访问 npm，但模型服务等功能可能仍需网络 |
+| 网络 | 普通包默认优先国内 npm 镜像；`offline-full` 启动不访问 npm，但模型服务等功能可能仍需网络 |
 
 Windows 10 22H2 之前版本、macOS 13.5 之前版本、Ubuntu 22.04 及更早版本不受支持；其他 Linux 发行版当前也不在支持范围内。旧 Ubuntu 即使升级到较新 HWE 内核，glibc 与 WebKitGTK 仍可能不满足要求，因此不能只按内核号判断。
 
-当前 main 默认启动 `@deepseek-ai/dsh@0.1.0-rc.7`，下一轮 `offline-full` 也固定 rc.7。桌面端启动后会按 inherit/custom/disabled 代理模式检查 npm `latest` 与 `next` 并显示版本，但不会静默切换；无代理时在线包优先使用国内 npm 镜像，继承或自定义代理仍按用户选择访问 registry，代理失效不会偷偷绕过。在线包由用户确认通道后保存精确版本、回收当前 DSH 子进程树并重启；普通包的在线启动页面校验默认最多等待 90 秒，可在“代理与启动设置”中调整为 30–600 秒，新版本不完整时会自动恢复更新前的版本和配置。这里的镜像、npm 超时和启动超时只负责运行时准备与本地 DSH 页面就绪，不改变 DeepSeek Harness 内部模型/API 请求的超时策略；远程接口请求由 DSH 自身处理，代理环境会传递给 DSH 子进程。离线包使用发布时锁定且经过原生门禁的版本，不在用户电脑上原地替换依赖闭包；上游再发布新版本时仍需新的 Desktop Release。`DSH_DESKTOP_DSH_VERSION` 可用于临时开发覆盖，并优先于界面设置。
+当前 main 默认启动 `@deepseek-ai/dsh@0.1.0-rc.7`，下一轮 `offline-full` 也固定 rc.7。桌面端启动后的自动版本检查固定优先直连国内 npm 镜像，顶栏只提示 npm `latest` 与 `next`，不会静默切换；手动刷新和应用版本时才按“代理与启动设置”访问 registry。普通包准备同样优先国内镜像，自定义代理端口不可达时快速切换镜像直连；这只解决 Node/npm/DSH 准备，DSH 模型/API 请求如需代理仍应恢复可用代理并重启。在线包由用户确认通道后保存精确版本、回收当前 DSH 子进程树并重启；普通包的在线启动页面校验默认最多等待 90 秒，可在“代理与启动设置”中调整为 30–600 秒，新版本不完整时会自动恢复更新前的版本和配置。离线包使用发布时锁定且经过原生门禁的版本，不在用户电脑上原地替换依赖闭包；上游再发布新版本时仍需新的 Desktop Release。`DSH_DESKTOP_DSH_VERSION` 可用于临时开发覆盖，并优先于界面设置。
 
 多开说明：每个桌面进程都会为 DSH 申请独立的动态 loopback 端口，因此可以同时打开多个 Web 实例。代理配置仍位于用户级共享配置文件；当另一个实例已经保存过新配置时，旧实例会收到冲突提示并拒绝覆盖，需要重新打开设置后再保存。不同实例如需完全隔离，应使用不同工作区。
 
@@ -81,14 +81,16 @@ Release 页面会按平台分组并显示每个文件的实际体积，不需要
 
 ### Windows
 
-- `starline-dsh-desktop-v0.6.0-windows-x64-setup-online.exe`：常规 x64 在线小包，默认安装到当前用户目录；安装向导可选择其他本地可写目录；
-- `starline-dsh-desktop-v0.6.0-windows-x64-portable-online.zip`：x64 在线便携版，解压后运行；
-- `starline-dsh-desktop-v0.6.0-windows-x64-portable-offline-full.zip`：内含 Node 与固定 DSH 依赖的 x64 完整离线便携版；
+- `starline-dsh-desktop-v<版本>-windows-x64-setup-online.exe`：常规 x64 在线小包，默认安装到当前用户目录；安装向导可选择其他本地可写目录；
+- `starline-dsh-desktop-v<版本>-windows-x64-portable-online.zip`：x64 在线便携版，解压后运行；
+- `starline-dsh-desktop-v<版本>-windows-x64-portable-offline-full.zip`：内含 Node 与固定 DSH 依赖的 x64 完整离线便携版；
 - Windows on ARM 设备选择文件名含 `windows-arm64` 的对应产物，不要下载 x64 包。
 
 安装包未签名时，SmartScreen 可能提示未知发布者。正式广泛分发前需要代码签名证书。
 
 安装器使用 Unicode NSIS，并对目录中的中文、空格进行自动化安装/升级/卸载测试。应用不依赖固定安装路径：普通安装版从系统 PATH 查找 Node；`offline-full` 始终从桌面可执行文件旁定位 `offline-runtime/`。同一架构的新版 Setup 保持相同应用身份，会复用注册表中的 `InstallLocation` 并覆盖程序文件；升级前应从托盘真正退出应用，用户配置、日志和 DSH 工作区位于用户目录，不随安装文件被覆盖。由于 Setup 是当前用户权限，选择 `Program Files` 等需要管理员权限的位置会失败；建议选择当前用户有写权限的本地目录。UNC 网络路径和超长路径尚未完成设备验证，不作为当前支持承诺。
+
+Setup 会同时创建开始菜单中的“卸载 Starline DSH Desktop”入口、Windows 卸载记录和安装目录内的 `uninstall.exe`。卸载默认只移除程序、WebView 数据和快捷方式，保留用户配置、日志和 DSH 工作区，方便重新安装；便携包没有系统卸载项，退出后删除解压目录即可。
 
 当前 `offline-full` 是 ZIP/TAR.GZ 或 macOS app ZIP 便携包，不是可执行安装器。升级便携离线包时，应关闭旧程序、把新包解压到新目录并先验证启动，再删除旧目录；不要把覆盖正在运行的数万个依赖文件描述为“覆盖安装”。
 
@@ -109,7 +111,7 @@ sudo apt install ./starline-dsh-desktop-v<版本>-linux-x64-deb-online.deb
 DEB 会安装应用菜单入口、图标和许可证，并让 apt 检查 glibc 2.39、GTK3、WebKitGTK 4.1 等系统依赖；它仍是在线小包，Node.js 可能来自 nvm、Volta 等用户级管理器，所以应用启动时会实际检查 Node `22.19+` 或 `24+`。便携包示例：
 
 ```bash
-tar -xzf starline-dsh-desktop-v0.6.0-linux-x64-portable-online.tar.gz
+tar -xzf starline-dsh-desktop-v<版本>-linux-x64-portable-online.tar.gz
 chmod +x starline-dsh-desktop
 ./starline-dsh-desktop
 ```
@@ -135,7 +137,7 @@ sudo apt-get install libgtk-3-0t64 libwebkit2gtk-4.1-0
 
 预热最多等待 800 毫秒：DSH 很快就绪时直接显示已加载页面；较慢时会先显示稳定的“后台准备”界面，不会让窗口一直隐藏。界面显示检测运行时、校验 Node、启动 npx/包内进程、获得监听地址和 HTTP 页面校验等真实阶段百分比；它不是 npm 下载字节百分比。启动失败或 DSH 意外退出时，错误摘要会固定显示在顶部，并提供详情、重试、代理设置和日志入口。
 
-普通包不会直接调用 PATH 中版本未知的全局 `dsh`，而是要求桌面端选定的精确版本（当前 main 默认 `@deepseek-ai/dsh@0.1.0-rc.7`，或用户手动确认的 npm 官方通道版本）。npx 会复用与该版本对应的 npm 缓存，因此缓存完整时不会重复下载包体；但 npm 仍可能校验依赖元数据，首次准备或缓存不完整时耗时较长。更新检查沿用“继承环境 / 自定义 HTTP(S) 代理 / 禁用代理”设置，只读取官方 registry 元数据，不会在检查阶段下载 DSH。
+普通包不会直接调用 PATH 中版本未知的全局 `dsh`，而是要求桌面端选定的精确版本（当前 main 默认 `@deepseek-ai/dsh@0.1.0-rc.7`，或用户手动确认的 npm 官方通道版本）。npx 会复用与该版本对应的 npm 缓存，因此缓存完整时不会重复下载包体；但 npm 仍可能校验依赖元数据，首次准备或缓存不完整时耗时较长。启动自动检查直连国内镜像；手动刷新和应用版本沿用“继承环境 / 自定义 HTTP(S) 代理 / 禁用代理”设置。
 
 Windows 窗口右上角 X 的行为是隐藏到系统托盘，因此 DSH/Node 会继续运行，方便从托盘快速恢复窗口。需要释放端口、文件句柄和子进程时，请右击托盘图标并选择“退出”；宿主只回收自己创建的 DSH/Node 进程树，不扫描或终止其他 DSH 实例。macOS/Linux 当前使用系统原生关闭行为直接退出，托盘能力待后续采用与 Wails 原生菜单兼容的实现。
 
@@ -146,7 +148,7 @@ Windows 窗口右上角 X 的行为是隐藏到系统托盘，因此 DSH/Node �
 | 模式 | 行为 | 适用场景 |
 | --- | --- | --- |
 | 继承系统环境 | 保留启动应用时的 `HTTP_PROXY` / `HTTPS_PROXY` 等变量 | 已在系统或启动脚本配置代理 |
-| 自定义代理 | 覆盖 DSH/npm 子进程和 DSH 更新检查代理；连接失败后不会自动绕过 | VPN 客户端只开放本机 HTTP 端口 |
+| 自定义代理 | 手动刷新/应用版本和 DSH 子进程使用该代理；启动准备优先国内镜像，端口不可达时快速直连镜像 | VPN 客户端只开放本机 HTTP 端口 |
 | 禁用代理 | 移除继承的代理变量 | 网络可直连，或继承到错误代理 |
 
 自定义地址支持 `http://` 与 `https://`。直接填写 `127.0.0.1:10808` 时会规范化为 `http://127.0.0.1:10808`。保存后 DSH 自动重启。
@@ -160,13 +162,13 @@ Windows 窗口右上角 X 的行为是隐藏到系统托盘，因此 DSH/Node �
 Windows：
 
 ```powershell
-Get-FileHash .\starline-dsh-desktop-v0.6.0-windows-x64-setup-online.exe -Algorithm SHA256
+Get-FileHash .\starline-dsh-desktop-v<版本>-windows-x64-setup-online.exe -Algorithm SHA256
 ```
 
 macOS/Linux：
 
 ```bash
-sha256sum -c starline-dsh-desktop-v0.6.0-linux-x64-portable-online.tar.gz.sha256
+sha256sum -c starline-dsh-desktop-v<版本>-linux-x64-portable-online.tar.gz.sha256
 ```
 
 ## 常见问题
@@ -181,7 +183,7 @@ Node 是 DSH 的运行时。普通 Setup/ZIP 为了保持小体积，继续使�
 
 ### DSH 会自动更新吗？
 
-应用会在启动后自动检查并告知 npm `latest` 与 `next`。无代理时优先使用国内 npm 镜像；继承或自定义代理时沿用用户代理，代理不可用会在有限时间内失败，不会静默绕过。为避免预发布版本和原生依赖在后台静默漂移，切换通道仍需用户确认；应用后保存的是精确版本。新版本下载不完整或 DSH 本地页面校验失败时，应用会恢复更新前的版本和配置并重启旧运行时。该回退不等于回退已由 DSH 发出的远程模型请求；模型/API 请求的连接、流式响应和超时仍由 DSH 上游负责。当前 main 的下一轮 `offline-full` 已固定 rc.7，但仍必须通过 GitHub Actions 六平台原生依赖与最终归档门禁才能成为发布资产；以后出现更新版本时也不能在用户电脑上原地替换。
+应用会在启动后直连国内镜像检查并告知 npm `latest` 与 `next`；手动刷新或应用版本时才沿用用户代理设置。为避免预发布版本和原生依赖在后台静默漂移，切换通道仍需用户确认；应用后保存的是精确版本。普通包自定义代理端口不可达时会快速回退镜像直连，但 DSH 模型/API 请求仍可能需要可用代理。新版本下载不完整或 DSH 本地页面校验失败时，应用会恢复更新前的版本和配置并重启旧运行时。当前 main 的下一轮 `offline-full` 已固定 rc.7，但仍必须通过 GitHub Actions 六平台原生依赖与最终归档门禁才能成为发布资产；以后出现更新版本时也不能在用户电脑上原地替换。
 
 ### 启动后让我选择工作区正常吗？
 

@@ -1,8 +1,12 @@
 package launcher
 
 import (
+	"context"
+	"net"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -11,7 +15,44 @@ const (
 	npmFetchRetries         = "1"
 	npmFetchRetryMinTimeout = "1000"
 	npmFetchRetryMaxTimeout = "3000"
+	proxyProbeTimeout       = 800 * time.Millisecond
 )
+
+// childEnvironmentWithFallback 为失效的自定义代理选择无代理国内镜像，避免旧端口让普通包完全无法启动。
+// 返回值中的 fallback 表示 DSH 子进程也会直连；模型/API 请求若仍需代理，启动后应重新修正代理设置。
+func childEnvironmentWithFallback(environment []string, proxyMode, proxyURL string) ([]string, bool) {
+	if proxyMode == "custom" && !proxyEndpointReachable(proxyURL) {
+		return childEnvironment(environment, "disabled", ""), true
+	}
+	return childEnvironment(environment, proxyMode, proxyURL), false
+}
+
+func proxyEndpointReachable(rawURL string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil || parsed.Hostname() == "" {
+		return false
+	}
+	port := parsed.Port()
+	if port == "" {
+		if parsed.Scheme == "https" {
+			port = "443"
+		} else {
+			port = "80"
+		}
+	}
+	if _, err := strconv.Atoi(port); err != nil {
+		return false
+	}
+	address := net.JoinHostPort(parsed.Hostname(), port)
+	ctx, cancel := context.WithTimeout(context.Background(), proxyProbeTimeout)
+	defer cancel()
+	connection, err := (&net.Dialer{}).DialContext(ctx, "tcp", address)
+	if err != nil {
+		return false
+	}
+	_ = connection.Close()
+	return true
+}
 
 func childEnvironment(environment []string, proxyMode, proxyURL string) []string {
 	if proxyMode == "custom" || proxyMode == "disabled" {
@@ -28,9 +69,7 @@ func childEnvironment(environment []string, proxyMode, proxyURL string) []string
 			"npm_config_https_proxy="+proxyURL,
 		)
 	}
-	if shouldUseDomesticMirror(environment, proxyMode) {
-		environment = append(environment, "npm_config_registry="+npmMirrorRegistry)
-	}
+	environment = withNPMRegistry(environment, npmMirrorRegistry)
 	// 限制 npm 的单次网络等待和重试，避免代理端口失效时 npx 长时间无响应。
 	environment = append(environment,
 		"npm_config_fetch_timeout="+npmFetchTimeout,
@@ -42,41 +81,16 @@ func childEnvironment(environment []string, proxyMode, proxyURL string) []string
 	return mergeNoProxy(environment, []string{"127.0.0.1", "localhost", "::1"})
 }
 
-func shouldUseDomesticMirror(environment []string, proxyMode string) bool {
-	if hasNPMRegistry(environment) {
-		return false
-	}
-	if proxyMode == "disabled" {
-		return true
-	}
-	if proxyMode != "inherit" {
-		return false
-	}
-	return !hasProxy(environment)
-}
-
-func hasNPMRegistry(environment []string) bool {
+func withNPMRegistry(environment []string, registry string) []string {
+	result := make([]string, 0, len(environment)+1)
 	for _, entry := range environment {
-		key, value, found := strings.Cut(entry, "=")
-		if found && strings.EqualFold(key, "npm_config_registry") && strings.TrimSpace(value) != "" {
-			return true
-		}
-	}
-	return false
-}
-
-func hasProxy(environment []string) bool {
-	for _, entry := range environment {
-		key, value, found := strings.Cut(entry, "=")
-		if !found || strings.TrimSpace(value) == "" {
+		key, _, found := strings.Cut(entry, "=")
+		if found && strings.EqualFold(key, "npm_config_registry") {
 			continue
 		}
-		switch strings.ToLower(key) {
-		case "http_proxy", "https_proxy", "all_proxy", "npm_config_proxy", "npm_config_https_proxy":
-			return true
-		}
+		result = append(result, entry)
 	}
-	return false
+	return append(result, "npm_config_registry="+registry)
 }
 
 func npmRegistry(environment []string) string {
