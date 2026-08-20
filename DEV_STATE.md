@@ -1,12 +1,12 @@
 # DEV_STATE
 
-当前待发布修复：本地提交 `a5dea50` 已为 Windows manifest 增加 `requireAdministrator`；版本记录已准备为 `v0.6.6`，尚待推送和 Windows CI/Release 验证。
+当前状态：`a5dea50` 的 Windows `requireAdministrator` 修复已由 `4c04b13` 同步为 `v0.6.6`，main 与 annotated tag 均已推送；GitHub CI `32368691430` 和 Release `32368740319` 已成功完成六平台构建、离线运行时冒烟测试与发布。
 
 ## 2026-08-20 Windows 管理员权限修复
 
 - Windows 主程序 manifest 已显式声明 `requestedExecutionLevel=requireAdministrator`；正式 EXE 启动会请求 UAC 管理员令牌，Node/DSH 子进程继承该令牌，macOS/Linux 不变。
 - 同步更新 `CHANGELOG.md`、`README.md` 和 `docs/TROUBLESHOOTING.md`，明确 UAC 行为及火绒信誉/行为防护仍需单独放行，管理员权限不等于绕过安全软件。
-- 静态 XML 解析确认权限级别为 `requireAdministrator`；Wails web-host 结构审计 20 pass/0 warn/0 fail。当前机器未安装 Go/Wails，未执行本地原生构建；需由 Windows CI/设备验证最终 EXE 的嵌入 manifest 和 UAC 行为。
+- 静态 XML 解析确认权限级别为 `requireAdministrator`；Wails web-host 结构审计 20 pass/0 warn/0 fail。GitHub Release 已生成 Windows x64/ARM64、macOS Intel/Apple Silicon、Linux x64/ARM64 资产及各自校验文件，Windows 离线 web runtime 冒烟测试通过。当前机器未安装 Go/Wails，未执行本地原生构建；真实设备上的最终 EXE 嵌入 manifest、UAC 弹窗、火绒策略和日志权限仍待验证。
 
 ## 2026-08-20 实机 Profile bundle 与 task-board 锁
 
