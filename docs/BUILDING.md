@@ -204,4 +204,6 @@ bash scripts/package-linux-deb.sh \
 
 Release 脚本在每个原生 runner 上用同一锁文件安装平台适配的可选依赖，并复制该 runner 的 Node 24.19.0。普通包不受体积影响；离线包按平台单独下载，不把六个平台运行时合并在一个文件中。
 
+GitHub Actions 的 Go 模块/编译缓存和 npm 下载缓存由 `actions/setup-go`、`actions/setup-node` 管理；Wails CLI 二进制按操作系统和 runner 架构复用，Windows Release 额外缓存固定版本的 NSIS 安装目录。缓存只用于构建加速，不进入最终安装包或离线运行时；缓存恢复后仍会执行 `makensis` 校验、离线运行时完整性校验和平台功能测试。首次命中前仍会正常安装依赖，缓存未命中或损坏时会回退到官方安装流程。
+
 v0.2.4 的六个平台构建和 Web 启动检查虽为绿色，但当时没有白名单原生准备和 PTY 功能检查，因此 macOS/Linux 离线包不满足当前发布门槛。当前 `main` 已在六个原生 runner 增加真实 `node-pty.spawn()`；修复必须由递增版本交付，不能移动已公开 tag。

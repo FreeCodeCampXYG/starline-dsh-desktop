@@ -33,7 +33,7 @@ Dependabot 每周只检查 `/offline-runtime` 中固定的 `@deepseek-ai/dsh` �
 8. 执行基础测试与原生平台生产构建；当前项目按维护约束全部在 GitHub Actions 完成，不在本机安装依赖或编译；
 9. CI 六个平台全部通过，且没有把“构建成功”代替上述功能测试；
 10. 检查 README、变更记录、`release-requirements.json`、[系统要求](SYSTEM_REQUIREMENTS.md)和[已知问题](KNOWN_ISSUES.md)，分别写明受支持基线、已确认、同逻辑推断和缺少设备验证的范围；
-11. 确认没有 API Key、Token、Cookie、私有代理地址或构建缓存；
+11. 确认没有 API Key、Token、Cookie、私有代理地址或构建缓存内容进入提交、Release 资产和离线运行时；GitHub Actions 的受控缓存只用于构建加速；
 12. 确认签名状态。未签名时必须保留 Release 警告。
 
 ## 创建版本

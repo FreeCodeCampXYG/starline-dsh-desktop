@@ -151,7 +151,21 @@ jobs:
       - name: Install frontend dependencies
         run: npm --prefix frontend ci
 
-      - name: Install Wails CLI
+      - name: Cache Wails CLI
+        uses: actions/cache@v4
+        id: wails-cache
+        with:
+          path: |
+            ~/go/bin/wails
+            ~/go/bin/wails.exe
+          key: starline-wails-v2.14.0-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Add Go bin to PATH
+        shell: bash
+        run: echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Install Wails CLI on cache miss
+        if: steps.wails-cache.outputs.cache-hit != 'true'
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.14.0
 
       - name: Build native application

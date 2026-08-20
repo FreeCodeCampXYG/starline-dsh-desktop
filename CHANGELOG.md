@@ -2,6 +2,17 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 的组织方式，并使用语义化版本号。
 
+## [0.6.3] - 2026-08-20
+
+### 变更
+
+- GitHub Actions 增加按平台复用的 Wails CLI 编译缓存和 Windows NSIS 安装目录缓存；Go/npm 原有缓存继续由官方 setup actions 管理。
+- NSIS 准备增加缓存恢复后的 `makensis` 校验和三次 Chocolatey 重试，降低临时网络超时导致的 Windows x64 发布失败。
+
+### 未验证
+
+- 缓存命中率和节省时间需要下一次 GitHub Actions 运行后根据实际日志确认。
+
 ## [0.6.2] - 2026-08-20
 
 ### 修复
@@ -212,7 +223,8 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.5.2...v0.6.0

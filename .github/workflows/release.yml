@@ -80,19 +80,46 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
 
+      - name: Cache NSIS
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: |
+            C:\Program Files (x86)\NSIS
+            C:\Program Files\NSIS
+          key: starline-nsis-3.11.0-${{ matrix.asset }}
+
       - name: Ensure NSIS is available
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Continue'
           $nsisDirectories = @('C:\Program Files (x86)\NSIS', 'C:\Program Files\NSIS')
-          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
-            choco install nsis -y --no-progress
-          }
           foreach ($directory in $nsisDirectories) {
-            if (Test-Path -LiteralPath $directory) {
+            if (Test-Path -LiteralPath (Join-Path $directory 'makensis.exe')) {
               $directory | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
             }
           }
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
+            for ($attempt = 1; $attempt -le 3; $attempt++) {
+              choco install nsis --version=3.11.0 -y --no-progress
+              foreach ($directory in $nsisDirectories) {
+                if (Test-Path -LiteralPath (Join-Path $directory 'makensis.exe')) {
+                  $directory | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+                }
+              }
+              if (Get-Command makensis -ErrorAction SilentlyContinue) {
+                break
+              }
+              if ($attempt -lt 3) {
+                Start-Sleep -Seconds (5 * $attempt)
+              }
+            }
+          }
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
+            throw 'NSIS makensis.exe is unavailable after cache restore and three Chocolatey attempts.'
+          }
+          makensis /VERSION
 
       - name: Install frontend dependencies
         run: |
@@ -100,6 +127,20 @@ jobs:
           npm --prefix frontend run docs:check
 
       - name: Install Wails CLI
+        uses: actions/cache@v4
+        id: wails-cache
+        with:
+          path: |
+            ~/go/bin/wails
+            ~/go/bin/wails.exe
+          key: starline-wails-v2.14.0-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Add Go bin to PATH
+        shell: bash
+        run: echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Install Wails CLI on cache miss
+        if: steps.wails-cache.outputs.cache-hit != 'true'
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.14.0
 
       - name: Resolve and validate version
