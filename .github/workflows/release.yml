@@ -93,31 +93,41 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Continue'
+          $ErrorActionPreference = 'Stop'
           $nsisDirectories = @('C:\Program Files (x86)\NSIS', 'C:\Program Files\NSIS')
-          foreach ($directory in $nsisDirectories) {
-            if (Test-Path -LiteralPath (Join-Path $directory 'makensis.exe')) {
-              $directory | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-            }
-          }
-          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
-            for ($attempt = 1; $attempt -le 3; $attempt++) {
-              choco install nsis --version=3.11.0 -y --no-progress
-              foreach ($directory in $nsisDirectories) {
-                if (Test-Path -LiteralPath (Join-Path $directory 'makensis.exe')) {
-                  $directory | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          function Add-NSISToPath {
+            foreach ($directory in $nsisDirectories) {
+              if (Test-Path -LiteralPath (Join-Path $directory 'makensis.exe')) {
+                if ($env:PATH -notlike "*$directory*") {
+                  $env:PATH = "$directory;$env:PATH"
                 }
-              }
-              if (Get-Command makensis -ErrorAction SilentlyContinue) {
-                break
-              }
-              if ($attempt -lt 3) {
-                Start-Sleep -Seconds (5 * $attempt)
+                $directory | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
               }
             }
           }
+          Add-NSISToPath
           if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
-            throw 'NSIS makensis.exe is unavailable after cache restore and three Chocolatey attempts.'
+            $packagePath = Join-Path $env:RUNNER_TEMP 'nsis.install.3.11.0.nupkg'
+            Invoke-WebRequest `
+              -UseBasicParsing `
+              -Uri 'https://community.chocolatey.org/api/v2/package/nsis.install/3.11.0' `
+              -OutFile $packagePath `
+              -MaximumRetryCount 3 `
+              -RetryIntervalSec 5 `
+              -TimeoutSec 60
+            $expectedHash = '1435c994d7617964e512fa81303c72931cccbc89f8566dd1b1b960e3b14f70b2'
+            $actualHash = (Get-FileHash -LiteralPath $packagePath -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actualHash -ne $expectedHash) {
+              throw "NSIS package SHA-256 mismatch: $actualHash"
+            }
+            choco install nsis.install --version=3.11.0 -y --no-progress --source $env:RUNNER_TEMP
+            if ($LASTEXITCODE -ne 0) {
+              throw "Local NSIS package installation failed with exit code $LASTEXITCODE."
+            }
+            Add-NSISToPath
+          }
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
+            throw 'NSIS makensis.exe is unavailable after cache restore and verified local package installation.'
           }
           makensis /VERSION
 

@@ -2,6 +2,17 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 的组织方式，并使用语义化版本号。
 
+## [0.6.4] - 2026-08-20
+
+### 修复
+
+- NSIS 恢复或安装后同时更新当前 PowerShell 进程的 `PATH`，避免只写 `$GITHUB_PATH` 导致同一步骤仍找不到 `makensis`。
+- 首次缓存未命中时直接下载固定的 `nsis.install 3.11.0` 包并校验 SHA-256，再从 runner 临时目录安装，绕过 Chocolatey OData 查询超时。
+
+### 未验证
+
+- `v0.6.4` 的 Windows x64 缓存冷启动和六平台 Release 结果以 tag 工作流为准。
+
 ## [0.6.3] - 2026-08-20
 
 ### 变更
@@ -223,7 +234,8 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.4...HEAD
+[0.6.4]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.0...v0.6.1

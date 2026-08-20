@@ -1,3 +1,3 @@
 # DEV_STATE
 
-更新时间：2026-08-20。`v0.6.2` Release 工作流 `32338925807` 首次仅因 Windows x64 下载 NSIS 时 Chocolatey 返回 HTTP 408 失败，失败 job 重跑后六个平台和 Release 均成功。`v0.6.3` 提交 `c346784` 与 annotated tag 已推送，增加 Wails CLI 按平台缓存、Windows NSIS 3.11.0 安装目录缓存及三次安装重试/`makensis` 校验；Go/npm 继续使用 setup actions 的既有缓存，缓存不进入安装包或离线运行时。前端 typecheck/build、文档链接、Release notes 测试、版本元数据、workflow YAML 解析和差异检查通过；`v0.6.3` CI/Release 正在运行，缓存命中率与节省时间等待线上日志确认。普通包和离线包边界、rc.7 本机离线启动验证保持不变，不移动已公开 tag。
+更新时间：2026-08-20。`v0.6.2` Release 工作流 `32338925807` 经 failed-job 重跑后六个平台和 Release 均成功。`v0.6.3` 提交 `c346784` 引入 Wails/NSIS 缓存，但 Windows x64 冷缓存流程只写 `$GITHUB_PATH`、未更新当前 PowerShell `PATH`，同一步骤仍无法确认 `makensis`，因此该 tag 的 Release 失败且不移动。当前修复准备发布为 `v0.6.4`：NSIS 命中/安装后同步当前与后续步骤 PATH，首次未命中时下载固定 `nsis.install 3.11.0` 包、校验 SHA-256 后从本地安装；Go/npm/Wails 缓存和所有运行时安全校验保持。前端 typecheck/build、文档链接、Release notes 测试、版本元数据、workflow YAML 解析和差异检查需重新验证；正式六平台结果以 `v0.6.4` tag 为准。
