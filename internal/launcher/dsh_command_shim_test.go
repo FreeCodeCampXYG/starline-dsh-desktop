@@ -61,6 +61,36 @@ func TestDSHCommandShimDefaultsOnlyPluginProfile(t *testing.T) {
 	}
 }
 
+func TestDSHCommandShimKeepsExistingProfileStore(t *testing.T) {
+	dshHome := t.TempDir()
+	storeDir := filepath.Join(t.TempDir(), "store", "v11")
+	if err := os.MkdirAll(storeDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	metadataDir := filepath.Join(dshHome, "profiles", dshWebProfile, "node_modules")
+	if err := os.MkdirAll(metadataDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	metadata, err := json.Marshal(map[string]string{"storeDir": storeDir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(metadataDir, ".modules.yaml"), metadata, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	environment, err := withDSHCommandShim(
+		[]string{"PATH=/bin", "DSH_HOME=" + dshHome, "npm_config_store_dir=C:\\unexpected"},
+		t.TempDir(),
+		dshCommandSpec{nodePath: "node", commandPath: "dsh"},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if actual := environmentValue(environment, "npm_config_store_dir"); actual != filepath.Clean(storeDir) {
+		t.Fatalf("Profile Store = %q，期望 %q", actual, filepath.Clean(storeDir))
+	}
+}
+
 func runDSHShimTestCommand(t *testing.T, environment, args []string) string {
 	t.Helper()
 	commandText := "dsh " + strings.Join(args, " ")

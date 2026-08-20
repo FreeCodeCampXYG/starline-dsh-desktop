@@ -60,7 +60,7 @@ func main() {
 			TitleBar: mac.TitleBarDefault(),
 			About: &mac.AboutInfo{
 				Title:   "Starline DSH Desktop",
-				Message: "A thin desktop host for DeepSeek Harness.",
+				Message: "A thin desktop host for DeepSeek Harness.\nCopyright (c) 2026 starline and contributors.\nhttps://github.com/FreeCodeCampXYG/starline-dsh-desktop",
 				Icon:    appIcon,
 			},
 		},

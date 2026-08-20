@@ -787,9 +787,17 @@ footer {
 
 .dialog-actions {
 	display: flex;
+	flex-wrap: wrap;
 	justify-content: flex-end;
 	gap: 10px;
 	margin-top: 20px;
+}
+
+.copyright {
+	margin: 14px 0 0;
+	color: #68758f;
+	font-size: 11px;
+	text-align: center;
 }
 
 .help-content {

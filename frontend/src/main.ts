@@ -32,6 +32,7 @@ const icons = {
   browser: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
   help: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.6 2.6 0 1 1 4.3 2c-1.1.8-1.9 1.3-1.9 3M12 18h.01"/></svg>',
   logs: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5V6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1.5"/><path d="M3.4 10h17.2a1 1 0 0 1 1 1.2l-1.4 7A2 2 0 0 1 18.3 20H5.7a2 2 0 0 1-1.9-1.6l-1.4-7A1 1 0 0 1 3.4 10Z"/></svg>',
+  project: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 6h4a3 3 0 0 1 3 3v6M6 8v8a2 2 0 0 0 2 2h8"/></svg>',
   restart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>',
   settings: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h7M15 18h5"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="13" cy="18" r="2"/></svg>',
   shell: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 9v11"/></svg>',
@@ -105,11 +106,13 @@ const renderDesktopMenu = (includeBrowser: boolean): string => `
     <div class="shell-menu-popover">
       <button data-action="settings">${icons.settings}<span>代理与启动设置</span></button>
       <button data-action="dsh-update">${icons.update}<span class="dsh-update-menu-label">检查 DSH 更新</span></button>
+      <button data-action="desktop-update">${icons.update}<span>检查 Desktop 更新</span></button>
       <button data-action="restart">${icons.restart}<span>重新启动 DSH</span></button>
       <button data-action="logs">${icons.logs}<span>打开日志目录</span></button>
       ${includeBrowser ? `<button data-action="browser">${icons.browser}<span>在浏览器中打开</span></button>` : ""}
       <button data-action="uninstall-help">${icons.uninstall}<span>卸载与重装</span></button>
       <button data-action="help">${icons.help}<span>使用帮助</span></button>
+      <button data-action="project">${icons.project}<span>GitHub 项目主页</span></button>
     </div>
   </details>
 `;
@@ -299,6 +302,12 @@ const bindCommonActions = (): void => {
   root.querySelectorAll<HTMLButtonElement>("[data-action='dsh-update']").forEach((button) => button.addEventListener("click", () => {
     void openSettings(true);
   }));
+  root.querySelector<HTMLButtonElement>("[data-action='desktop-update']")?.addEventListener("click", () => {
+    void backend().OpenDesktopReleasePage();
+  });
+  root.querySelector<HTMLButtonElement>("[data-action='project']")?.addEventListener("click", () => {
+    void backend().OpenProjectPage();
+  });
   root.querySelector<HTMLButtonElement>("[data-action='help']")?.addEventListener("click", openHelp);
   root.querySelector<HTMLButtonElement>("[data-action='uninstall-help']")?.addEventListener("click", openUninstallHelp);
   syncUpdateIndicator();
@@ -337,7 +346,7 @@ const openSettings = async (checkUpdate = false): Promise<void> => {
       <div><p class="eyebrow">STARTUP SETTINGS</p><h2>代理与启动设置</h2></div>
       <button class="icon-button" data-dialog-close aria-label="关闭">×</button>
     </header>
-    <p class="dialog-intro">普通包和自动版本检查默认优先国内镜像；手动刷新、应用版本以及 DSH 模型/API 才按这里的代理设置执行。保存后会立即重启 DSH。</p>
+    <p class="dialog-intro">普通包和自动版本检查默认优先国内镜像；手动刷新和应用版本按“自定义代理 → 系统环境代理 → 国内镜像直连”依次尝试。这里的代理也会传给 DSH 模型/API 和 DSH Market 插件操作。保存后会立即重启 DSH。</p>
     <form class="settings-form">
       <label class="mode-option">
         <input type="radio" name="proxy-mode" value="inherit" ${settings.proxyMode === "inherit" ? "checked" : ""}>
@@ -502,15 +511,25 @@ const openHelp = (): void => {
       <section><h3>PowerShell 与权限</h3><p>权限模式由官方 DSH 页面选择。<code>danger-full-access</code> 可以按当前 Windows 用户权限执行更广泛的命令和文件操作，但会失去工作区沙箱保护；宿主不会因命令失败自动切换。该模式也不等于“以管理员身份运行”，不会自动获得 UAC 管理员令牌。</p></section>
       <section><h3>普通包与离线包</h3><p>Setup.exe 和普通 ZIP 体积较小，需要系统 Node/npm。<code>offline-full</code> 是较大的便携包，内含发布时固定并经原生门禁的 DSH 依赖，但模型服务、远程 MCP 和联网工具仍可能需要网络。</p></section>
       <section><h3>安装与覆盖升级</h3><p>Windows Setup 使用同一应用身份；关闭正在运行的应用后，新版会复用已记录的安装目录并覆盖程序文件，用户配置和 DSH 工作区不在安装目录中。<code>offline-full</code> 当前是便携压缩包，不属于安装器；请解压到新目录验证后再删除旧目录，不要覆盖正在运行的文件。</p></section>
-      <section><h3>DSH 更新</h3><p>应用启动后直连国内镜像查询 <code>latest</code> 与 <code>next</code>，顶栏只提示版本，不会静默切换。手动刷新或应用版本时才按当前代理设置访问镜像；下载或新版本启动不完整时会恢复上一版配置并重新启动。离线包需要下载内置新 DSH 且重新通过六平台原生门禁的 <code>offline-full</code>。</p></section>
+      <section><h3>DSH 与插件更新</h3><p>应用启动后直连国内镜像查询 <code>latest</code> 与 <code>next</code>，顶栏只提示版本，不会静默切换。手动刷新或应用版本依次尝试自定义代理、系统环境代理和国内镜像直连；新版本启动不完整时会恢复上一版配置并重新启动。DSH Market 插件操作沿用同一子进程网络，并固定现有 Profile 已记录的 pnpm Store，避免全局缓存目录变化造成 Store 冲突。</p></section>
+      <section><h3>Desktop 更新</h3><p>Desktop 不会静默覆盖自身；使用“检查 Desktop 更新”打开 GitHub 最新 Release，查看变更说明并选择对应系统资产。离线包升级需要下载内置新 DSH、重新通过六平台原生门禁的 <code>offline-full</code>。</p></section>
       <section><h3>卸载与重装</h3><p>Windows Setup 会创建系统卸载记录和“卸载 Starline DSH Desktop”开始菜单入口；便携 ZIP/离线包应从托盘退出后直接删除解压目录。macOS 退出后删除应用，Ubuntu DEB 使用 <code>sudo apt remove starline-dsh-desktop</code>。卸载默认保留用户配置、日志和工作区，重装后可以继续使用。</p></section>
     </div>
     <div class="dialog-actions">
       <button class="button secondary" data-action="help-logs">${icons.logs}<span>打开日志目录</span></button>
+      <button class="button secondary" data-action="help-project">${icons.project}<span>项目主页</span></button>
+      <button class="button secondary" data-action="help-update">${icons.update}<span>检查 Desktop 更新</span></button>
       <button class="button primary" data-dialog-close>知道了</button>
     </div>
+    <p class="copyright">Copyright (c) 2026 starline and contributors · MIT License</p>
   `).querySelector<HTMLButtonElement>("[data-action='help-logs']")?.addEventListener("click", () => {
     void backend().OpenLogs();
+  });
+  root.querySelector<HTMLButtonElement>("[data-action='help-project']")?.addEventListener("click", () => {
+    void backend().OpenProjectPage();
+  });
+  root.querySelector<HTMLButtonElement>("[data-action='help-update']")?.addEventListener("click", () => {
+    void backend().OpenDesktopReleasePage();
   });
 };
 

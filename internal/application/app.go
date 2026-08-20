@@ -21,6 +21,8 @@ const (
 	failedEvent       = "dsh:failed"
 	stoppedEvent      = "dsh:stopped"
 	windowRevealDelay = 800 * time.Millisecond
+	projectURL        = "https://github.com/FreeCodeCampXYG/starline-dsh-desktop"
+	desktopReleaseURL = projectURL + "/releases/latest"
 )
 
 type App struct {
@@ -377,6 +379,18 @@ func (a *App) ResetDSHVersion() (Status, error) {
 // OpenLogs 使用系统文件管理器打开日志所在目录。
 func (a *App) OpenLogs() error {
 	return launcher.OpenLogDir()
+}
+
+// OpenProjectPage 在系统浏览器中打开项目主页。
+func (a *App) OpenProjectPage() error {
+	runtime.BrowserOpenURL(a.ctx, projectURL)
+	return nil
+}
+
+// OpenDesktopReleasePage 供用户手工检查 Desktop 版本和下载对应平台资产。
+func (a *App) OpenDesktopReleasePage() error {
+	runtime.BrowserOpenURL(a.ctx, desktopReleaseURL)
+	return nil
 }
 
 // OpenInBrowser 在默认浏览器中打开当前 DSH 页面，便于排查 WebView 差异。

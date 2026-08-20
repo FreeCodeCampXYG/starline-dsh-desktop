@@ -63,7 +63,7 @@ Wails application
 5. 离线运行时必须同时包含匹配版本文件、Node 可执行文件和 DSH 入口，缺损或版本不一致时明确失败，不静默联网回退。
 6. 未发现离线运行时时，宿主查找系统 Node.js 并验证版本；Windows 直接让 Node 执行 `npx-cli.js`，Unix 使用 PATH 中的 `npx`。npm 请求单次等待 10 秒、最多重试 1 次；普通包准备固定优先 `registry.npmmirror.com`，自定义端口不可达时快速直连镜像。
 7. 宿主向 DSH 传入 `--port 0`，由 DSH 保持 listener 所有权并选择可用 loopback 端口；宿主不再预占后释放端口。
-8. 子进程执行精确版本的 `@deepseek-ai/dsh`：默认使用 Desktop 发布时验证的固定版本；前端启动后通过 Go 后端直连国内镜像查询 `latest`/`next`，只显示通道状态；用户手动刷新或应用更新时才按当前代理模式查询。普通包准备自定义端口不可达时切换镜像直连，同时在日志和状态中提示 DSH 模型/API 可能仍需代理。在线包经用户确认后再次核对 dist-tag、保存对应精确版本，并可清除设置恢复默认；新版本在默认 90 秒（可在设置中调整为 30–600 秒）内无法完成本地页面指纹校验时，宿主恢复更新前的配置并自动重启旧版本。这个等待上限只保护 npm 运行时准备和本地 DSH Web 就绪，DeepSeek Harness 内部远程模型/API 请求仍由 DSH 自己处理。普通包使用：
+8. 子进程执行精确版本的 `@deepseek-ai/dsh`：默认使用 Desktop 发布时验证的固定版本；前端启动后通过 Go 后端直连国内镜像查询 `latest`/`next`，只显示通道状态；用户手动刷新或应用更新时按自定义代理、应用启动时继承的系统环境代理、国内镜像直连依次查询。普通包准备沿用同一有界降级，并在日志和状态中提示实际路径。在线包经用户确认后再次核对 dist-tag、保存对应精确版本，并可清除设置恢复默认；新版本在默认 90 秒（可在设置中调整为 30–600 秒）内无法完成本地页面指纹校验时，宿主恢复更新前的配置并自动重启旧版本。这个等待上限只保护 npm 运行时准备和本地 DSH Web 就绪，DeepSeek Harness 内部远程模型/API 请求仍由 DSH 自己处理。普通包使用：
 
    ```text
    npx --yes --package=@deepseek-ai/dsh@<version> dsh web --host 127.0.0.1 --port 0
@@ -81,7 +81,7 @@ Wails application
 - iframe 只显式开放剪贴板读写权限，不开放任意外部页面的 Wails 绑定；
 - 健康检查不使用系统代理，防止 loopback 请求泄漏；
 - `NO_PROXY` 始终合并 `127.0.0.1`、`localhost`、`::1`；
-- 自定义代理仅用于 registry 检查并传递给 DSH/npm 子进程；无代理时普通包使用国内 npm 镜像，自定义代理端口不可达时普通包切换到镜像直连；镜像只影响 npm 运行时元数据和包下载，不替代 DeepSeek Harness 的模型/API 服务地址；
+- 自定义代理用于手动 registry 检查并传递给 DSH/npm 子进程；不可达时先尝试启动应用时继承的 HTTP(S) 环境代理，再直连国内 npm 镜像；镜像只影响 npm 运行时元数据和包下载，不替代 DeepSeek Harness 的模型/API 服务地址；
 - 配置不存储模型 API Key；
 - 日志文件权限使用用户私有权限，并最多保留最近 10 份；
 - 退出时只回收宿主持有的子进程树，不按进程名全局扫描；
@@ -120,9 +120,11 @@ Wails application
 
 宿主当前不设置 `DSH_HOME`。桌面端与命令行 DSH 因而遵循上游默认用户数据目录，共享状态；`offline-full` 的“便携”只表示程序和运行时可以整体移动，不表示工作区、会话和账户配置也随包移动。
 
+启动时若现有 `web` Profile 的 `node_modules/.modules.yaml` 已记录 pnpm Store，宿主只在该 DSH 子进程内设置对应的 `npm_config_store_dir`。这不会修改全局 pnpm 配置；目的是防止其他项目改变全局 `store-dir` 后，DSH Market 对既有 Profile 执行插件安装或更新时触发 Store 位置冲突。
+
 ## DSH 更新边界
 
-- `internal/updater` 在前端启动后及用户手动刷新时通过当前代理策略读取 `registry.npmjs.org` 的固定 DSH dist-tags 端点，限制响应大小、校验 `latest`/`next` SemVer、拒绝非官方重定向，并在请求结束后关闭 HTTP 空闲连接；检查本身不运行 npm、不下载软件包，失败也不阻塞 DSH。
+- `internal/updater` 在前端启动后直连国内镜像读取固定 DSH dist-tags 端点；用户手动刷新时按自定义代理、系统环境代理和直连依次尝试国内镜像与官方 registry。请求限制响应大小、校验 `latest`/`next` SemVer、拒绝非受信 registry 重定向，并在结束后关闭 HTTP 空闲连接；检查本身不运行 npm、不下载软件包，失败也不阻塞 DSH。
 - 在线包应用更新时由后端再次查询指定的 `latest` 或 `next`，只把返回的精确版本写入用户配置，然后同步回收宿主持有的旧 DSH 子进程树并通过既有 npx 启动链重启；前端不能提交任意包名、版本或其他通道。
 - 环境变量 `DSH_DESKTOP_DSH_VERSION` 继续作为显式开发覆盖且优先级最高；存在覆盖时，界面不修改实际版本。
 - `offline-full` 始终以包内 `dsh-version.txt` 为准，即使同一用户配置曾保存在线版本也不会产生离线运行时版本冲突。离线升级仍是新的 Desktop Release 和六平台原生依赖门禁。

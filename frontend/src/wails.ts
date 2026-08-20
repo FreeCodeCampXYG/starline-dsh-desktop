@@ -41,6 +41,8 @@ type AppBindings = {
   ApplyDSHUpdate(channel: "latest" | "next"): Promise<Status>;
   ResetDSHVersion(): Promise<Status>;
   OpenLogs(): Promise<void>;
+  OpenProjectPage(): Promise<void>;
+  OpenDesktopReleasePage(): Promise<void>;
   OpenInBrowser(): Promise<void>;
 };
 

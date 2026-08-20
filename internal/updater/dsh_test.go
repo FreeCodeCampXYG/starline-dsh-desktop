@@ -84,3 +84,26 @@ func TestAutomaticRegistryEndpointsUseDirectMirrorFirst(t *testing.T) {
 		t.Fatalf("自动检查没有优先直连国内镜像：%+v", endpoints)
 	}
 }
+
+func TestManualRegistryEndpointsFallBackByNetworkRoute(t *testing.T) {
+	endpoints := manualRegistryEndpoints(config.Settings{
+		ProxyMode: config.ProxyModeCustom,
+		ProxyURL:  "http://127.0.0.1:1080",
+	})
+	wantModes := []string{
+		config.ProxyModeCustom, config.ProxyModeCustom,
+		config.ProxyModeInherit, config.ProxyModeInherit,
+		config.ProxyModeDisabled, config.ProxyModeDisabled,
+	}
+	if len(endpoints) != len(wantModes) {
+		t.Fatalf("手动更新端点数量 = %d，期望 %d", len(endpoints), len(wantModes))
+	}
+	for index, wantMode := range wantModes {
+		if endpoints[index].settings.ProxyMode != wantMode {
+			t.Fatalf("端点 %d 的代理模式 = %q，期望 %q", index, endpoints[index].settings.ProxyMode, wantMode)
+		}
+		if index%2 == 0 && endpoints[index].url != registryMirrorDistTagsURL {
+			t.Fatalf("网络路径 %d 没有优先国内镜像", index/2)
+		}
+	}
+}

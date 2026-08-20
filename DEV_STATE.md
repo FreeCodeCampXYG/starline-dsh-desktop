@@ -1,11 +1,3 @@
 # DEV_STATE
 
-更新时间：2026-08-20。当前目标是维护 Go/Wails v2 的 DeepSeek Harness 薄宿主，并由 GitHub Actions 完成多平台在线构建与发布；本机不执行跨平台构建或离线运行时重建。
-
-已完成：`v0.6.4` 已由提交 `fca1af0` 和 annotated tag 推送到远端。Release 工作流 `32341535288` 已成功，Windows x64、Windows ARM64、macOS Intel、macOS Apple Silicon、Linux x64、Linux ARM64 六个平台均完成构建、离线运行时准备、冒烟测试、归档和上传，Release `v0.6.4` 已创建并包含在线包、完整离线包、校验清单及 Linux DEB。Windows x64 的 `Ensure NSIS is available` 已通过；修复内容是 NSIS 命中或本地安装后同步当前 PowerShell PATH，并在冷启动时下载固定 `nsis.install 3.11.0`、校验 SHA-256 后安装。Wails CLI、Go、npm 和 NSIS 缓存均保留在 CI 工作流中，不进入发布资产。
-
-已验证：workflow YAML、嵌入 PowerShell、版本元数据、Release notes、前端 typecheck/build、文档链接检查和 `git diff --check` 通过；仓库工作树干净，`main` 与远端同步。GitHub Actions 的 Node.js 20 弃用提示是非阻断警告。
-
-已知限制：尚未取得代表性 Windows/macOS/Ubuntu 设备上的实测反馈；本机不宣称完成跨平台运行验证。后续若修改构建流程，应创建递增版本并只针对实际失败步骤回读 CI，不移动已公开 tag。
-
-核心入口：`.github/workflows/ci.yml`、`.github/workflows/release.yml`、`CHANGELOG.md`、`README.md`、`docs/BUILDING.md`、`wails.json`、`frontend/package.json`。
+更新时间：2026-08-20。当前目标是发布 `v0.6.5`，修复其他项目修改全局 pnpm Store 后导致 DSH Market 插件安装/更新失败的问题，并完善 DSH 更新网络降级和 Desktop 手工更新入口。已确认本机故障来自现有 DSH `web` Profile 记录的 pnpm Store 与意外设置的全局 `store-dir` 不一致；该误配置已恢复为 pnpm 默认行为，Profile 的离线锁文件一致性检查通过且未改变插件清单。代码现在只在 DSH 子进程内复用 Profile `.modules.yaml` 已记录的 Store，不修改全局 pnpm 配置；启动与手动 DSH 版本检查按可达的自定义代理、应用启动时继承的 HTTP(S) 环境代理、国内镜像直连依次降级，网络请求保持有界，DSH 新版本启动失败继续恢复旧版本配置和进程。桌面工具、macOS 菜单和帮助页已增加 GitHub 项目主页、Desktop 最新 Release 手工入口、版权及 MIT License 信息；Desktop、DSH、插件和离线包更新边界已在 `README.md`、`CHANGELOG.md`、`docs/ARCHITECTURE.md`、`docs/TROUBLESHOOTING.md` 中统一。核心文件为 `internal/launcher/environment.go`、`internal/launcher/dsh_command_shim.go`、`internal/updater/dsh.go`、`internal/application/app.go`、`frontend/src/main.ts`。已通过前端 typecheck/生产构建、文档链接检查、Release notes 单元测试和 `git diff --check`；当前主机没有 Go 工具链，因此未在本机运行 Go 测试或 Wails 构建，Go 格式/测试和 Windows、macOS、Ubuntu 六平台发布构建仍需由 `v0.6.5` GitHub Actions 验证。未解决边界是系统代理仅指进程继承的 HTTP(S) 环境变量，不读取 Windows 系统代理面板；DSH Market 自身事务语义仍属于上游插件。下一步是审查暂存差异，使用仓库本地署名提交到 `main`，再按发布规则推送递增 tag 并根据线上单个失败步骤修复，不移动旧 tag。

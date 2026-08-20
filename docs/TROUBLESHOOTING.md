@@ -63,7 +63,7 @@ npx --version
 5. 如果选择“禁用代理”，Starline 会优先使用 `https://registry.npmmirror.com`；继承模式没有系统代理时也采用该镜像；
 6. 查看 npm 自己的调试日志路径，Starline 日志会打印该位置。
 
-在线包的单次 npm 网络等待为 10 秒，最多重试 1 次；在线 DSH 本地页面整体就绪等待默认上限为 90 秒，可在“代理与启动设置”中调整为 30–600 秒。自定义代理（例如 `127.0.0.1:10808`）不可达时，普通包会快速切换到国内镜像直连，避免旧端口阻塞启动；如果 DSH 的模型/API 请求仍需代理，应恢复可用代理后重启。这里的超时只控制 npm 运行时准备和本地 DSH 页面就绪，不控制 DeepSeek Harness 内部远程模型/API 请求；后者由 DSH 自身处理。
+在线包的单次 npm 网络等待为 10 秒，最多重试 1 次；在线 DSH 本地页面整体就绪等待默认上限为 90 秒，可在“代理与启动设置”中调整为 30–600 秒。自定义代理不可达时，普通包先尝试应用启动时继承且可达的 HTTP(S) 环境代理，再切换到国内镜像直连；如果 DSH 的模型/API 请求仍需代理，应恢复可用代理后重启。这里的超时只控制 npm 运行时准备和本地 DSH 页面就绪，不控制 DeepSeek Harness 内部远程模型/API 请求；后者由 DSH 自身处理。
 
 ```bash
 npx --yes --package=@deepseek-ai/dsh@0.1.0-rc.7 dsh web
@@ -94,7 +94,7 @@ npx --yes --package=@deepseek-ai/dsh@0.1.0-rc.7 dsh web
 
 ## 自动检查或更新 DSH 失败
 
-1. 启动后的自动检查直连国内镜像显示 `latest` 与 `next`；手动刷新和应用版本才按当前代理设置访问 registry。检查失败不会阻塞当前 DSH 启动。
+1. 启动后的自动检查直连国内镜像显示 `latest` 与 `next`；手动刷新和应用版本按自定义代理、应用启动时继承的系统环境代理、国内镜像直连依次访问受信 registry。检查失败不会阻塞当前 DSH 启动。
 2. 点击应用通道后，后端会再次核对 registry dist-tag，再保存精确版本并重启；`next` 属于预览通道。如果另一个桌面实例同时修改了设置，会返回配置冲突而不是覆盖。
 3. 在线包更新后如果下载不完整、DSH 提前退出或页面指纹校验失败，应用会自动恢复更新前的版本和配置并重启旧运行时；只有旧版本也无法启动时才需要手动排查。
 4. `offline-full` 会显示新版本但拒绝原地安装；请下载包含该 DSH 版本的新离线资产。当前离线资产是便携归档，应关闭旧程序后解压到新目录验证；手工覆盖运行中的 `node_modules` 会破坏完整性与原生依赖门禁。
@@ -138,6 +138,10 @@ dsh plugin --profile web add <package>
 ```
 
 v0.5.1 起会在 Starline 启动的 DSH 进程环境中提供临时兼容入口：只有 `dsh plugin` 完全没写 `--profile` 时才补为当前 `web` profile；`--profile tui` 等显式选择保持不变，其他 DSH 命令也不会被改写。该入口不修改系统 PATH 或全局 npm 文件，也不会绕过 DSH/PowerShell 权限；插件管理仍依赖官方要求的 pnpm、网络或本地缓存。v0.5.0 及更早版本可先按上面的完整语法执行。
+
+## DSH Market 提示 pnpm Store 位置不一致
+
+如果错误堆栈来自 `pnpm.mjs`，并且此前在其他项目执行过 `pnpm config set store-dir ... --global`，先检查 `pnpm config get store-dir`。不要为了 DSH 修改不相关项目的全局缓存脚本；确认全局值是误配置后，可使用 `pnpm config delete store-dir --global` 恢复默认。v0.6.5 起，Starline 会读取现有 `web` Profile 的 `.modules.yaml`，仅在 DSH 子进程内固定该 Profile 已记录的 Store，避免全局目录改变后插件安装/更新失败；它不会删除插件、Profile 或全局缓存。若仍失败，请保留完整错误开头而不只截取 JavaScript 调用栈尾部。
 
 ## macOS 无法打开
 

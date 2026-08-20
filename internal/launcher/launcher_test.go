@@ -2,6 +2,7 @@ package launcher
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -293,12 +294,12 @@ func TestChildEnvironmentCanDisableInheritedProxy(t *testing.T) {
 }
 
 func TestChildEnvironmentWithFallbackUsesMirrorForUnreachableCustomProxy(t *testing.T) {
-	environment, fallback := childEnvironmentWithFallback(
-		[]string{"PATH=/bin", "HTTP_PROXY=http://old:8080"},
+	environment, fallbackRoute := childEnvironmentWithFallback(
+		[]string{"PATH=/bin"},
 		"custom",
 		"http://127.0.0.1:0",
 	)
-	if !fallback {
+	if fallbackRoute != proxyFallbackDirect {
 		t.Fatal("不可达自定义代理应触发直连回退")
 	}
 	joined := strings.ToLower(strings.Join(environment, "\n"))
@@ -307,6 +308,26 @@ func TestChildEnvironmentWithFallbackUsesMirrorForUnreachableCustomProxy(t *test
 	}
 	if !strings.Contains(joined, "npm_config_registry=https://registry.npmmirror.com") {
 		t.Fatalf("回退环境没有使用国内 npm 镜像：%s", joined)
+	}
+}
+
+func TestChildEnvironmentWithFallbackUsesReachableSystemProxy(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	systemProxy := "http://" + listener.Addr().String()
+	environment, fallbackRoute := childEnvironmentWithFallback(
+		[]string{"PATH=/bin", "HTTPS_PROXY=" + systemProxy},
+		"custom",
+		"http://127.0.0.1:0",
+	)
+	if fallbackRoute != proxyFallbackSystem {
+		t.Fatalf("回退路径 = %q，期望系统代理", fallbackRoute)
+	}
+	if !strings.Contains(strings.Join(environment, "\n"), "HTTPS_PROXY="+systemProxy) {
+		t.Fatalf("没有改用可达的系统环境代理：%v", environment)
 	}
 }
 

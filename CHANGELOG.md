@@ -2,6 +2,21 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 的组织方式，并使用语义化版本号。
 
+## [0.6.5] - 2026-08-20
+
+### 修复
+
+- DSH 子进程优先使用可达的自定义代理，自定义代理失效时依次尝试应用启动时继承的系统环境代理和国内 npm 镜像直连；手动 DSH 版本检查使用相同的有界降级顺序。
+- 读取现有 DSH `web` Profile 的 pnpm Store 记录并仅在该子进程内固定 `npm_config_store_dir`，避免其他项目修改全局 `store-dir` 后造成 DSH Market 插件安装或更新失败。
+
+### 新增
+
+- 桌面工具和帮助页增加 GitHub 项目主页与 Desktop 手工更新入口；帮助页显示作者版权和 MIT License 信息，并区分 Desktop、DSH 与插件更新边界。
+
+### 未验证
+
+- 本机没有 Go 工具链；Go 测试和六平台构建结果以 `v0.6.5` tag 触发的 GitHub Actions 为准。
+
 ## [0.6.4] - 2026-08-20
 
 ### 修复
@@ -234,7 +249,8 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.5...HEAD
+[0.6.5]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.1...v0.6.2

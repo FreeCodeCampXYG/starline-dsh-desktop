@@ -93,7 +93,7 @@ func Start(_ context.Context, config Config) (*Process, error) {
 		_ = logFile.Close()
 		return nil, err
 	}
-	childBaseEnv, proxyFallback := childEnvironmentWithFallback(os.Environ(), config.ProxyMode, config.ProxyURL)
+	childBaseEnv, proxyFallbackRoute := childEnvironmentWithFallback(os.Environ(), config.ProxyMode, config.ProxyURL)
 	childEnv, err := withDSHCommandShim(childBaseEnv, shimDir, command)
 	if err != nil {
 		_ = os.RemoveAll(shimDir)
@@ -120,8 +120,12 @@ func Start(_ context.Context, config Config) (*Process, error) {
 		_, _ = fmt.Fprintf(logFile, "npm 调试日志目录：%s\n", npmLogDir())
 		_, _ = fmt.Fprintf(logFile, "npm registry：%s；单次网络等待：%sms；重试次数：%s。\n", npmRegistry(childEnv), npmFetchTimeout, npmFetchRetries)
 	}
-	if proxyFallback {
-		_, _ = fmt.Fprintf(logFile, "自定义代理不可达，已切换为国内 npm 镜像直连；DSH 模型/API 请求如需代理，请恢复可用代理后重启。\n")
+	switch proxyFallbackRoute {
+	case proxyFallbackSystem:
+		_, _ = fmt.Fprintln(logFile, "自定义代理不可达，已改用系统环境代理和国内 npm 镜像。")
+		emitProgress(config.OnProgress, 56, "自定义代理不可达，已改用系统环境代理", command.mode)
+	case proxyFallbackDirect:
+		_, _ = fmt.Fprintln(logFile, "代理不可达，已切换为国内 npm 镜像直连；DSH 模型/API 请求如需代理，请恢复可用代理后重启。")
 		emitProgress(config.OnProgress, 56, "代理不可达，已切换国内镜像直连（模型/API 可能仍需代理）", command.mode)
 	}
 	_, _ = fmt.Fprintln(logFile, "DSH 命令兼容入口：Agent 执行 dsh plugin 且未指定 --profile 时，默认使用当前 web profile。")

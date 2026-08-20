@@ -33,6 +33,12 @@ func Menu(app *App) *menu.Menu {
 	help.AddText("Starline DSH Desktop 使用帮助", nil, func(*menu.CallbackData) {
 		app.emit("shell:open-help")
 	})
+	help.AddText("检查 Desktop 更新", nil, func(*menu.CallbackData) {
+		_ = app.OpenDesktopReleasePage()
+	})
+	help.AddText("GitHub 项目主页", nil, func(*menu.CallbackData) {
+		_ = app.OpenProjectPage()
+	})
 	help.AddText("在浏览器中打开 DSH", nil, func(*menu.CallbackData) {
 		_ = app.OpenInBrowser()
 	})

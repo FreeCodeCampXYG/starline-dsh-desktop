@@ -64,6 +64,10 @@ func withDSHCommandShim(environment []string, directory string, command dshComma
 		dshShimCommandPrefixEnv,
 		dshActiveProfileEnv,
 	}
+	profileStoreDir := recordedProfileStoreDir(environment, dshWebProfile)
+	if profileStoreDir != "" {
+		ownedKeys = append(ownedKeys, "npm_config_store_dir")
+	}
 	filtered := make([]string, 0, len(environment)+5)
 	pathValue := ""
 	for _, entry := range environment {
@@ -92,12 +96,65 @@ func withDSHCommandShim(environment []string, directory string, command dshComma
 	} else {
 		pathValue = directory + string(os.PathListSeparator) + pathValue
 	}
-	return append(filtered,
+	result := append(filtered,
 		"PATH="+pathValue,
 		dshShimNodePathEnv+"="+command.nodePath,
 		dshShimScriptPathEnv+"="+filepath.Join(directory, "dsh-command-shim.mjs"),
 		dshShimCommandPathEnv+"="+command.commandPath,
 		dshShimCommandPrefixEnv+"="+base64.StdEncoding.EncodeToString(prefixJSON),
 		dshActiveProfileEnv+"="+dshWebProfile,
-	), nil
+	)
+	if profileStoreDir != "" {
+		result = append(result, "npm_config_store_dir="+profileStoreDir)
+	}
+	return result, nil
+}
+
+// recordedProfileStoreDir 固定现有 Profile 已使用的 pnpm Store，避免全局 pnpm 配置变化导致插件更新失败。
+func recordedProfileStoreDir(environment []string, profile string) string {
+	dshHome := environmentEntryValue(environment, "DSH_HOME")
+	if strings.TrimSpace(dshHome) == "" {
+		userHome, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
+		dshHome = filepath.Join(userHome, ".dsh")
+	}
+	metadataPath := filepath.Join(dshHome, "profiles", profile, "node_modules", ".modules.yaml")
+	metadata, err := os.ReadFile(metadataPath)
+	if err != nil {
+		return ""
+	}
+	storeDir := parsePNPMStoreDir(metadata)
+	if !filepath.IsAbs(storeDir) || strings.ContainsRune(storeDir, '\x00') {
+		return ""
+	}
+	return filepath.Clean(storeDir)
+}
+
+func environmentEntryValue(environment []string, wanted string) string {
+	for _, entry := range environment {
+		key, value, found := strings.Cut(entry, "=")
+		if found && strings.EqualFold(key, wanted) {
+			return value
+		}
+	}
+	return ""
+}
+
+func parsePNPMStoreDir(metadata []byte) string {
+	var document struct {
+		StoreDir string `json:"storeDir"`
+	}
+	if json.Unmarshal(metadata, &document) == nil && strings.TrimSpace(document.StoreDir) != "" {
+		return strings.TrimSpace(document.StoreDir)
+	}
+	for _, line := range strings.Split(string(metadata), "\n") {
+		key, value, found := strings.Cut(line, ":")
+		if !found || strings.TrimSpace(key) != "storeDir" {
+			continue
+		}
+		return strings.Trim(strings.TrimSpace(value), "\"'")
+	}
+	return ""
 }

@@ -18,13 +18,53 @@ const (
 	proxyProbeTimeout       = 800 * time.Millisecond
 )
 
-// childEnvironmentWithFallback 为失效的自定义代理选择无代理国内镜像，避免旧端口让普通包完全无法启动。
-// 返回值中的 fallback 表示 DSH 子进程也会直连；模型/API 请求若仍需代理，启动后应重新修正代理设置。
-func childEnvironmentWithFallback(environment []string, proxyMode, proxyURL string) ([]string, bool) {
-	if proxyMode == "custom" && !proxyEndpointReachable(proxyURL) {
-		return childEnvironment(environment, "disabled", ""), true
+const (
+	proxyFallbackNone   = ""
+	proxyFallbackSystem = "system"
+	proxyFallbackDirect = "direct"
+)
+
+// childEnvironmentWithFallback 按自定义代理、系统环境代理、国内镜像直连的顺序选择网络路径。
+// disabled 是用户明确选择的直连模式，不会再尝试任何代理。
+func childEnvironmentWithFallback(environment []string, proxyMode, proxyURL string) ([]string, string) {
+	systemProxy := systemProxyFromEnvironment(environment)
+	switch proxyMode {
+	case "custom":
+		if proxyEndpointReachable(proxyURL) {
+			return childEnvironment(environment, "custom", proxyURL), proxyFallbackNone
+		}
+		if systemProxy != "" && !strings.EqualFold(systemProxy, proxyURL) && proxyEndpointReachable(systemProxy) {
+			return childEnvironment(environment, "custom", systemProxy), proxyFallbackSystem
+		}
+		return childEnvironment(environment, "disabled", ""), proxyFallbackDirect
+	case "inherit":
+		if systemProxy != "" && proxyEndpointReachable(systemProxy) {
+			return childEnvironment(environment, "custom", systemProxy), proxyFallbackNone
+		}
+		if systemProxy != "" {
+			return childEnvironment(environment, "disabled", ""), proxyFallbackDirect
+		}
+		return childEnvironment(environment, "disabled", ""), proxyFallbackNone
+	default:
+		return childEnvironment(environment, "disabled", ""), proxyFallbackNone
 	}
-	return childEnvironment(environment, proxyMode, proxyURL), false
+}
+
+func systemProxyFromEnvironment(environment []string) string {
+	keys := []string{"HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY", "npm_config_https_proxy", "npm_config_proxy"}
+	for _, wanted := range keys {
+		for _, entry := range environment {
+			key, value, found := strings.Cut(entry, "=")
+			if !found || !strings.EqualFold(key, wanted) {
+				continue
+			}
+			parsed, err := url.Parse(strings.TrimSpace(value))
+			if err == nil && (parsed.Scheme == "http" || parsed.Scheme == "https") && parsed.Hostname() != "" {
+				return strings.TrimSpace(value)
+			}
+		}
+	}
+	return ""
 }
 
 func proxyEndpointReachable(rawURL string) bool {

@@ -56,10 +56,26 @@ func CheckDSHChannels(ctx context.Context, currentVersion string, settings confi
 	if err != nil {
 		return DSHRelease{}, err
 	}
-	return checkDSHChannelEndpoints(ctx, currentVersion, []registryEndpoint{
-		{registryMirrorDistTagsURL, normalized},
-		{registryDistTagsURL, normalized},
-	})
+	return checkDSHChannelEndpoints(ctx, currentVersion, manualRegistryEndpoints(normalized))
+}
+
+// manualRegistryEndpoints 先尝试用户明确配置，再尝试系统环境代理，最后直连；每条路径均优先国内镜像。
+func manualRegistryEndpoints(settings config.Settings) []registryEndpoint {
+	routes := []config.Settings{settings}
+	if settings.ProxyMode == config.ProxyModeCustom {
+		routes = append(routes, config.Settings{ProxyMode: config.ProxyModeInherit})
+	}
+	if settings.ProxyMode != config.ProxyModeDisabled {
+		routes = append(routes, config.Settings{ProxyMode: config.ProxyModeDisabled})
+	}
+	endpoints := make([]registryEndpoint, 0, len(routes)*2)
+	for _, route := range routes {
+		endpoints = append(endpoints,
+			registryEndpoint{url: registryMirrorDistTagsURL, settings: route},
+			registryEndpoint{url: registryDistTagsURL, settings: route},
+		)
+	}
+	return endpoints
 }
 
 func checkDSHChannelEndpoints(ctx context.Context, currentVersion string, endpoints []registryEndpoint) (DSHRelease, error) {
