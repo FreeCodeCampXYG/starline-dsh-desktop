@@ -2,6 +2,16 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 的组织方式，并使用语义化版本号。
 
+## [0.6.6] - 2026-08-20
+
+### 变更
+
+- Windows 主程序 manifest 显式请求管理员权限；启动时可能显示 UAC 确认，Node/DSH 子进程继承该令牌，macOS/Linux 行为不变。
+
+### 已知边界
+
+- 管理员令牌不能绕过火绒等安全软件的信誉、行为或勒索防护策略；最终 EXE 的嵌入 manifest 和 UAC 行为以 Windows CI 与设备验证为准。
+
 ## [未发布]
 
 ### 变更
@@ -259,7 +269,8 @@
 - Windows Setup.exe/便携 ZIP、macOS ZIP、Linux TAR.GZ 打包流程。
 - Windows、macOS、Linux 的 x64 与 ARM64 原生 CI/Release 构建矩阵。
 
-[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.5...HEAD
+[Unreleased]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.6...HEAD
+[0.6.6]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/FreeCodeCampXYG/starline-dsh-desktop/compare/v0.6.2...v0.6.3

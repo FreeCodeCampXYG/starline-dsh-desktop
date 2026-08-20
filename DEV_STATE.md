@@ -1,5 +1,7 @@
 # DEV_STATE
 
+当前待发布修复：本地提交 `a5dea50` 已为 Windows manifest 增加 `requireAdministrator`；版本记录已准备为 `v0.6.6`，尚待推送和 Windows CI/Release 验证。
+
 ## 2026-08-20 Windows 管理员权限修复
 
 - Windows 主程序 manifest 已显式声明 `requestedExecutionLevel=requireAdministrator`；正式 EXE 启动会请求 UAC 管理员令牌，Node/DSH 子进程继承该令牌，macOS/Linux 不变。

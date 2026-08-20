@@ -12,9 +12,9 @@ Starline DSH Desktop 是 [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 
 > 本项目是独立社区项目，与 DeepSeek 官方无隶属、背书或商业关系。DSH 仍处于开发者预览阶段，上游版本可能发生破坏性变化。
 
-> **v0.6.5 发布边界：** 本版修复其他项目修改全局 pnpm Store 后导致 DSH Market 插件操作失败的问题，并补齐自定义代理、系统环境代理、国内镜像直连的有界降级；同时增加项目主页、Desktop 手工更新和版权入口。跨平台证据以 `v0.6.5` tag 触发的六平台 Release 工作流为准。绿色 CI 不等同于代表性设备上的首次启动、覆盖升级和完整工作流验证，详情见 [已知问题与平台支持边界](docs/KNOWN_ISSUES.md)。
+> **v0.6.6 发布边界：** 本版在 v0.6.5 基础上为 Windows 主程序 manifest 增加 `requireAdministrator`，启动时会请求 UAC 管理员令牌；这不等于绕过火绒等安全软件策略。跨平台证据以 `v0.6.6` tag 触发的六平台 Release 工作流为准，Windows UAC 行为仍需设备验证。
 
-> 当前版本线是 v0.6.5；旧版本资产不会被反向修改，请以对应版本 Release 的矩阵结果为准。
+> 当前版本线是 v0.6.6；旧版本资产不会被反向修改，请以对应版本 Release 的矩阵结果为准。
 
 ## 功能
 
