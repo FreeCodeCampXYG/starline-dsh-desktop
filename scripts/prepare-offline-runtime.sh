@@ -1,12 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -ne 1 ]; then
-	echo "Usage: $0 <dsh-version>" >&2
+skip_lock_refresh=0
+skip_install=0
+dsh_version=""
+for argument in "$@"; do
+	case "$argument" in
+		--skip-lock-refresh) skip_lock_refresh=1 ;;
+		--skip-install) skip_install=1 ;;
+		-h|--help)
+			echo "Usage: $0 [--skip-lock-refresh] [--skip-install] <dsh-version>"
+			exit 0
+			;;
+		*)
+			if [ -n "$dsh_version" ]; then
+				echo "Usage: $0 [--skip-lock-refresh] [--skip-install] <dsh-version>" >&2
+				exit 2
+			fi
+			dsh_version="$argument"
+			;;
+	esac
+done
+if [ -z "$dsh_version" ]; then
+	echo "Usage: $0 [--skip-lock-refresh] [--skip-install] <dsh-version>" >&2
 	exit 2
 fi
-
-dsh_version="$1"
 script_directory="$(dirname "$0")"
 repository_root="$(cd "$script_directory/.." && pwd)"
 runtime_root="$repository_root/offline-runtime"
@@ -28,10 +46,34 @@ fi
 node_directory="$(dirname "$node_source")"
 node_root="$(cd "$node_directory/.." && pwd)"
 
-# 发布脚本只提交 package.json；runner 在安装前刷新 lock，避免维护者本机下载完整闭包。
-npm --prefix "$runtime_root" install --package-lock-only --ignore-scripts --workspaces=false
+fetch_options=(
+	--fetch-retries=2
+	--fetch-retry-mintimeout=5000
+	--fetch-retry-maxtimeout=30000
+	--fetch-timeout=120000
+)
 
-npm --prefix "$runtime_root" ci --omit=dev --ignore-scripts --workspaces=false
+# lock 只在单独的 runner 上解析一次；平台任务复用它，避免并发解析造成重复下载。
+if [ "$skip_lock_refresh" -eq 0 ]; then
+	for attempt in 1 2 3; do
+		if npm --prefix "$runtime_root" install --package-lock-only --ignore-scripts --workspaces=false "${fetch_options[@]}"; then
+			break
+		fi
+		if [ "$attempt" -eq 3 ]; then
+			echo "Offline package-lock resolution failed after 3 attempts." >&2
+			exit 1
+		fi
+		delay=$((attempt * 15))
+		echo "Package registry resolution failed; retrying in ${delay}s (attempt $((attempt + 1))/3)." >&2
+		sleep "$delay"
+	done
+fi
+if [ "$skip_install" -eq 0 ]; then
+	npm --prefix "$runtime_root" ci --omit=dev --ignore-scripts --workspaces=false "${fetch_options[@]}"
+elif [ ! -d "$runtime_root/node_modules" ]; then
+	echo "--skip-install requires an existing offline-runtime/node_modules cache." >&2
+	exit 1
+fi
 "$node_source" "$repository_root/scripts/sync-offline-runtime-metadata.mjs" "$runtime_root"
 "$node_source" "$verifier" preflight "$runtime_root"
 

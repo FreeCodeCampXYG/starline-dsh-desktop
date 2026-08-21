@@ -92,9 +92,7 @@ try {
     if ($DSHVersion -notmatch $semverPattern) {
         throw "DSH 版本格式无效：$DSHVersion"
     }
-    if ($DSHVersion -eq $oldDshVersion) {
-        throw "目标 DSH 版本与当前版本相同：$DSHVersion"
-    }
+    $dshChanged = $DSHVersion -ne $oldDshVersion
     if ([string]::IsNullOrWhiteSpace($DesktopVersion)) {
         $DesktopVersion = Get-NextDesktopVersion
     }
@@ -121,6 +119,7 @@ try {
         }
     }
 
+    if ($dshChanged) {
     $updatedPackage = [regex]::Replace(
         $packageContent,
         '("@deepseek-ai/dsh"\s*:\s*")[^"]+(")(,?)',
@@ -155,10 +154,16 @@ try {
 
     Replace-Required -Path (Join-Path $projectRoot 'docs\ARCHITECTURE.md') -Old '当前 main 把下一轮离线闭包固定为 rc.7' -New "当前 main 把下一轮离线闭包固定为 $dshLabel"
     Replace-Required -Path (Join-Path $projectRoot 'docs\KNOWN_ISSUES.md') -Old '当前 main 又针对 rc.7 的依赖变化更新了门禁' -New "当前 main 又针对 $dshLabel 的依赖变化更新了门禁"
+    }
 
     $changelogPath = Join-Path $projectRoot 'CHANGELOG.md'
     $changelog = Read-Utf8 $changelogPath
-    $entry = ('- `offline-full` 离线闭包和 Desktop 默认 DSH 版本更新为 `@deepseek-ai/dsh@{0}`；锁文件、依赖 integrity、原生模块和最终归档由本次 tag 的 GitHub Actions runner 下载并验证。' -f $DSHVersion)
+    if ($dshChanged) {
+        $entry = ('- `offline-full` 离线闭包和 Desktop 默认 DSH 版本更新为 `@deepseek-ai/dsh@{0}`；锁文件、依赖 integrity、原生模块和最终归档由本次 tag 的 GitHub Actions runner 下载并验证。' -f $DSHVersion)
+    }
+    else {
+        $entry = ('- Desktop 发布流程与构建门禁更新；离线包继续固定 `@deepseek-ai/dsh@{0}`，本次 tag 由 GitHub Actions 重新解析并验证跨平台依赖。' -f $DSHVersion)
+    }
     if (-not $changelog.Contains($entry)) {
         $replacement = '$1' + $entry + "`n"
         $changelog = [regex]::Replace($changelog, '(?s)(## \[未发布\].*?### 变更\r?\n)', $replacement, 1)

@@ -1,5 +1,11 @@
 # DEV_STATE
 
+## 2026-08-22 v0.6.8 Release runner 修复
+
+- `v0.6.7` 的三个失败均发生在离线 runtime 准备：Linux x64 为临时 npm `ETARGET`，两个 macOS 为 Node 24.19.0 默认 heap OOM；未发现 DSH/Node 引擎不兼容。
+- Release workflow 现在只解析一次 lock 并以 artifact 复用，按平台缓存 `node_modules`，Node heap 上限 4096 MiB；准备脚本提供缓存跳过选项和 npm 有界重试/超时，同时保留元数据同步、原生模块重建和冒烟测试。
+- 发布脚本允许 DSH 版本保持 `0.1.1-rc.2`、仅递增 Desktop 版本的修复发布；当前本地验证已通过 PowerShell、Git Bash、YAML 与 `git diff --check`，待 `v0.6.8` runner 验证。
+
 当前状态：`a5dea50` 的 Windows `requireAdministrator` 修复已由 `4c04b13` 同步为 `v0.6.6`，main 与 annotated tag 均已推送；GitHub CI `32368691430` 和 Release `32368740319` 已成功完成六平台构建、离线运行时冒烟测试与发布。
 
 ## 2026-08-22 标签驱动的 DSH 发布准备脚本

@@ -1,6 +1,8 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$DSHVersion
+    [string]$DSHVersion,
+    [switch]$SkipLockRefresh,
+    [switch]$SkipInstall
 )
 
 $ErrorActionPreference = 'Stop'
@@ -21,15 +23,31 @@ if ($actualNodeVersion -ne $nodeVersion) {
     throw "Node $actualNodeVersion is active, expected pinned Node $nodeVersion."
 }
 
-# 发布脚本只提交 package.json；runner 在安装前刷新 lock，避免维护者本机下载完整闭包。
-npm --prefix $runtimeRoot install --package-lock-only --ignore-scripts --workspaces=false
-if ($LASTEXITCODE -ne 0) {
-    throw "Offline package-lock refresh failed with exit code $LASTEXITCODE."
+if (-not $SkipLockRefresh) {
+    # lock 只在单独的 runner 上解析一次；平台任务复用它，避免并发解析造成重复下载。
+
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        npm --prefix $runtimeRoot install --package-lock-only --ignore-scripts --workspaces=false --fetch-retries=2 --fetch-retry-mintimeout=5000 --fetch-retry-maxtimeout=30000 --fetch-timeout=120000
+        if ($LASTEXITCODE -eq 0) {
+            break
+        }
+        if ($attempt -eq 3) {
+            throw "Offline package-lock resolution failed after 3 attempts (last exit code $LASTEXITCODE)."
+        }
+        $delay = $attempt * 15
+        Write-Warning "Package registry resolution failed; retrying in ${delay}s (attempt $($attempt + 1)/3)."
+        Start-Sleep -Seconds $delay
+    }
 }
 
-npm --prefix $runtimeRoot ci --omit=dev --ignore-scripts --workspaces=false
-if ($LASTEXITCODE -ne 0) {
-    throw "npm ci failed with exit code $LASTEXITCODE."
+if (-not $SkipInstall) {
+    npm --prefix $runtimeRoot ci --omit=dev --ignore-scripts --workspaces=false --fetch-retries=2 --fetch-retry-mintimeout=5000 --fetch-retry-maxtimeout=30000 --fetch-timeout=120000
+    if ($LASTEXITCODE -ne 0) {
+        throw "npm ci failed with exit code $LASTEXITCODE."
+    }
+}
+elseif (-not (Test-Path -LiteralPath (Join-Path $runtimeRoot 'node_modules') -PathType Container)) {
+    throw "-SkipInstall requires an existing offline-runtime/node_modules cache."
 }
 
 & $nodeSource (Join-Path $repositoryRoot 'scripts\sync-offline-runtime-metadata.mjs') $runtimeRoot
