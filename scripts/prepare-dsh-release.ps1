@@ -160,8 +160,15 @@ try {
     $changelog = Read-Utf8 $changelogPath
     $entry = ('- `offline-full` 离线闭包和 Desktop 默认 DSH 版本更新为 `@deepseek-ai/dsh@{0}`；锁文件、依赖 integrity、原生模块和最终归档由本次 tag 的 GitHub Actions runner 下载并验证。' -f $DSHVersion)
     if (-not $changelog.Contains($entry)) {
-        $changelog = [regex]::Replace($changelog, '(?s)(## \[未发布\].*?### 变更\r?\n)', "`$1$entry`n", 1)
+        $replacement = '$1' + $entry + "`n"
+        $changelog = [regex]::Replace($changelog, '(?s)(## \[未发布\].*?### 变更\r?\n)', $replacement, 1)
     }
+    $versionHeading = '## [' + $DesktopVersion + '] - ' + (Get-Date -Format 'yyyy-MM-dd')
+    if ($changelog.Contains('## [' + $DesktopVersion + ']')) {
+        throw "CHANGELOG 已存在 Desktop 版本段：$DesktopVersion"
+    }
+    $unreleasedReplacement = "## [未发布]`n`n### 变更`n`n" + $versionHeading + "`n"
+    $changelog = [regex]::Replace($changelog, '(?m)^## \[未发布\]\r?\n', $unreleasedReplacement, 1)
     Write-Utf8 $changelogPath $changelog
 
     Write-Output "已准备 DSH $DSHVersion；建议 Desktop tag：$tagName"
