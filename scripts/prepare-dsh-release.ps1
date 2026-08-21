@@ -196,8 +196,12 @@ try {
     }
     $scriptHash = (Get-FileHash -LiteralPath (Join-Path $packRoot 'package\scripts\ensure-spawn-helper.mjs') -Algorithm SHA256).Hash.ToLowerInvariant()
 
-    Replace-Required (Join-Path $projectRoot 'main.go') "defaultDSHVersion = \"$oldDshVersion\"" "defaultDSHVersion = \"$DSHVersion\""
-    Replace-Required (Join-Path $projectRoot 'frontend\src\main.ts') "dshVersion: \"$oldDshVersion\"" "dshVersion: \"$DSHVersion\""
+    $oldDefaultVersionText = 'defaultDSHVersion = "' + $oldDshVersion + '"'
+    $newDefaultVersionText = 'defaultDSHVersion = "' + $DSHVersion + '"'
+    Replace-Required (Join-Path $projectRoot 'main.go') $oldDefaultVersionText $newDefaultVersionText
+    $oldFrontendVersionText = 'dshVersion: "' + $oldDshVersion + '"'
+    $newFrontendVersionText = 'dshVersion: "' + $DSHVersion + '"'
+    Replace-Required (Join-Path $projectRoot 'frontend\src\main.ts') $oldFrontendVersionText $newFrontendVersionText
     Replace-Required (Join-Path $projectRoot 'offline-runtime\README.md') "@deepseek-ai/dsh@$oldDshVersion" "@deepseek-ai/dsh@$DSHVersion"
     Replace-Required (Join-Path $projectRoot 'docs\BUILDING.md') "prepare-offline-runtime.ps1 -DSHVersion $oldDshVersion" "prepare-offline-runtime.ps1 -DSHVersion $DSHVersion"
     Replace-Required (Join-Path $projectRoot 'docs\BUILDING.md') "prepare-offline-runtime.sh $oldDshVersion" "prepare-offline-runtime.sh $DSHVersion"
