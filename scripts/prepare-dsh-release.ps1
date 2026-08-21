@@ -173,15 +173,26 @@ try {
 
     $updatedPackage = [regex]::Replace(
         $packageContent,
-        '("@deepseek-ai/dsh"\s*:\s*")[^"]+("),',
-        "`$1$DSHVersion`$2,",
+        '("@deepseek-ai/dsh"\s*:\s*")[^"]+(")(,?)',
+        ('$1' + $DSHVersion + '$2$3'),
         1
     )
+    if ($updatedPackage -eq $packageContent) {
+        throw 'offline-runtime/package.json 中未找到 @deepseek-ai/dsh 版本字段。'
+    }
     Write-Utf8 $packagePath $updatedPackage
 
     # 仅更新锁文件，不安装依赖；完整 Node/native 闭包由 GitHub Actions 在 tag 构建。
     Invoke-Npm @('--prefix', 'offline-runtime', 'install', '--package-lock-only', '--ignore-scripts', '--workspaces=false', "--registry=$registry", '--fetch-timeout=10000', '--fetch-retries=1')
 
+    $packageAfter = (Read-Utf8 $packagePath) | ConvertFrom-Json
+    if ([string]$packageAfter.dependencies.'@deepseek-ai/dsh' -ne $DSHVersion) {
+        throw "package.json 版本未更新为 $DSHVersion。"
+    }
+    $lockRoot = (& node -e "const p=require('./offline-runtime/package-lock.json'); console.log(p.packages?.['']?.dependencies?.['@deepseek-ai/dsh'] || '');" | Out-String).Trim()
+    if ($lockRoot -ne $DSHVersion) {
+        throw "package-lock.json 根依赖未更新为 $DSHVersion。"
+    }
     $lockInfo = (& node -e "const p=require('./offline-runtime/package-lock.json'); const x=p.packages?.['node_modules/@deepseek-ai/dsh-subprocess-local']; if(!x) process.exit(2); console.log(JSON.stringify({version:x.version,integrity:x.integrity}));" | Out-String).Trim() | ConvertFrom-Json
     $packRoot = Join-Path $backupRoot 'pack'
     New-Item -ItemType Directory -Force -Path $packRoot | Out-Null
