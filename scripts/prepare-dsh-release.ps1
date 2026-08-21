@@ -174,7 +174,10 @@ try {
     $updatedPackage = [regex]::Replace(
         $packageContent,
         '("@deepseek-ai/dsh"\s*:\s*")[^"]+(")(,?)',
-        ('$1' + $DSHVersion + '$2$3'),
+        {
+            param($match)
+            return $match.Groups[1].Value + $DSHVersion + $match.Groups[2].Value + $match.Groups[3].Value
+        },
         1
     )
     if ($updatedPackage -eq $packageContent) {
