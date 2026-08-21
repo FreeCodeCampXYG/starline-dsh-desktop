@@ -16,6 +16,11 @@
 
 ### 变更
 
+## [0.6.7] - 2026-08-22
+
+### 变更
+- `offline-full` 离线闭包和 Desktop 默认 DSH 版本更新为 `@deepseek-ai/dsh@0.1.1-rc.2`；锁文件、依赖 integrity、原生模块和最终归档由本次 tag 的 GitHub Actions runner 下载并验证。
+
 - Windows 主程序 manifest 显式请求管理员权限，便于需要提升令牌的 DSH 子进程和本地运行时在火绒等安全软件策略下完成受控操作；每次启动可能显示 UAC 确认，macOS/Linux 行为不变。
 - 修复 `offline-full` 检查到新 DSH 版本后没有可应用按钮的问题：检测到系统 Node.js/npm 时，确认更新会通过现有代理降级链使用 npx 下载精确版本，不修改包内离线依赖，并支持失败后恢复默认离线版本。
 

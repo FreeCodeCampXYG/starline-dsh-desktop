@@ -25,11 +25,11 @@ npm --prefix frontend ci
 离线运行时有独立锁文件。使用平台准备脚本，不要手工只运行 `npm ci --ignore-scripts`：
 
 ```powershell
-.\scripts\prepare-offline-runtime.ps1 -DSHVersion 0.1.0-rc.7
+.\scripts\prepare-offline-runtime.ps1 -DSHVersion 0.1.1-rc.2
 ```
 
 ```bash
-bash scripts/prepare-offline-runtime.sh 0.1.0-rc.7
+bash scripts/prepare-offline-runtime.sh 0.1.1-rc.2
 ```
 
 准备脚本采用显式白名单，而不是开放所有依赖脚本：

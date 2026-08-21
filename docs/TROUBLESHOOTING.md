@@ -72,7 +72,7 @@ npx --version
 在线包的单次 npm 网络等待为 10 秒，最多重试 1 次；在线 DSH 本地页面整体就绪等待默认上限为 90 秒，可在“代理与启动设置”中调整为 30–600 秒。自定义代理不可达时，普通包先尝试应用启动时继承且可达的 HTTP(S) 环境代理，再切换到国内镜像直连；如果 DSH 的模型/API 请求仍需代理，应恢复可用代理后重启。这里的超时只控制 npm 运行时准备和本地 DSH 页面就绪，不控制 DeepSeek Harness 内部远程模型/API 请求；后者由 DSH 自身处理。
 
 ```bash
-npx --yes --package=@deepseek-ai/dsh@0.1.0-rc.7 dsh web
+npx --yes --package=@deepseek-ai/dsh@0.1.1-rc.2 dsh web
 ```
 
 ## DSH 启动后页面不就绪
