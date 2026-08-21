@@ -2,6 +2,12 @@
 
 当前状态：`a5dea50` 的 Windows `requireAdministrator` 修复已由 `4c04b13` 同步为 `v0.6.6`，main 与 annotated tag 均已推送；GitHub CI `32368691430` 和 Release `32368740319` 已成功完成六平台构建、离线运行时冒烟测试与发布。
 
+## 2026-08-22 标签驱动的 DSH 发布准备脚本
+
+- 新增 `scripts/prepare-dsh-release.ps1` 和 `docs/RELEASING.md` 使用说明。脚本默认通过 `127.0.0.1:1080` 查询 npm `latest`，只更新 `offline-runtime` 的 package-lock 元数据并同步 DSH/Desktop 版本、文档、依赖 integrity 和 `ensure-spawn-helper.mjs` SHA-256；不在本机安装完整离线闭包或构建原生包。
+- `-Commit -Tag -Push` 会在同一次运行中逐步确认提交、annotated tag 和 `main`/tag 推送；GitHub Actions 从新 tag 负责六平台 online/offline-full 原生构建与归档。省略这些开关只生成待审阅改动，不能在工作区变脏时重复运行。
+- 当前脚本和文档尚未推送到远端；上一项在线更新回退修复仍在本地提交 `55c51fd`，官方 DSH dist-tag 已确认 `0.1.1-rc.2`。待用户在具备 starline GitHub 凭据的机器上运行脚本并完成 CI/设备验证。
+
 ## 2026-08-22 DSH 在线更新回退
 
 - 官方 npm registry 与国内镜像当前均返回 `@deepseek-ai/dsh` 的 `latest=0.1.1-rc.2`、`next=0.1.1-rc.2`；之前用户看到的 `0.1.1-rc.1` 已不是当前 dist-tag。
