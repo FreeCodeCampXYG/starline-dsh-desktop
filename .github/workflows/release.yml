@@ -432,6 +432,8 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v8
         with:
+          # 锁文件只供构建复用，不能混入 Release 目录，否则会被资产校验误判为发布文件。
+          pattern: starline-dsh-desktop-*
           path: release
           merge-multiple: true
 
