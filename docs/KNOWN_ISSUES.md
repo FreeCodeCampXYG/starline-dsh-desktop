@@ -100,7 +100,7 @@ v0.3.2 已达到六平台原生 CI 和最终归档检查门槛；设备安装与
 
 - **未签名**：Windows 无代码签名；macOS 无 Developer ID 签名和 notarization。
 - **Linux 分发范围有限**：v0.5.0 增加 Ubuntu 24.04 x64/ARM64 在线 DEB，并继续提供动态链接 TAR.GZ；仍没有 AppImage、RPM 或软件仓库更新通道，也不支持旧 Ubuntu/其他发行版。
-- **没有 Desktop 二进制自动更新器**：DSH 在线依赖可以在界面确认切换，但新的桌面安装包或 `offline-full` 仍需用户自行下载并校验。
+- **没有 Desktop 二进制自动更新器**：DSH 在线依赖可以在界面确认切换；没有系统 Node/npm 的 `offline-full` 用户，以及所有新的桌面安装包，仍需自行下载并校验。
 - **v0.2.4 端口交接存在小窗口**：该版本让系统选择空闲端口后先关闭临时 listener，再把端口交给 DSH；当前 `main` 已改为 `--port 0` 并解析 DSH 实际公布的地址。
 - **DSH 用户数据不是便携隔离数据**：宿主当前不覆盖 `DSH_HOME`，桌面端和命令行 DSH 使用上游默认用户目录；移动便携包不会自动搬走工作区和会话状态。
 - **上游 Web UI 兼容性**：宿主通过 loopback iframe 承载 DSH。若上游将来增加禁止嵌入的 CSP 或 `X-Frame-Options`，内嵌页面可能失效；“在浏览器中打开”是当前回退入口。

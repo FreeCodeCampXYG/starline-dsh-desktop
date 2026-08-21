@@ -693,6 +693,10 @@ func resolveDSHVersion(fallback string, settings config.Settings) (string, error
 		return "", err
 	}
 	if bundled {
+		if settings.DSHVersion != "" {
+			// 离线包只保留内置版本；用户明确选择的新版本走系统 Node/npm，失败时仍可清除设置回到包内版本。
+			return dshversion.Normalize(settings.DSHVersion)
+		}
 		return bundledVersion, nil
 	}
 	if settings.DSHVersion != "" {
@@ -710,7 +714,14 @@ func canApplyDSHUpdate() (bool, string, error) {
 		return false, "", err
 	}
 	if bundled {
-		return false, "当前是 offline-full 离线包（内置 DSH " + bundledVersion + "）；请下载包含新版本的 Starline 离线包，避免破坏原生依赖闭包。", nil
+		canUseOnline, err := launcher.CanUseOnlineRuntime()
+		if err != nil {
+			return false, "", err
+		}
+		if !canUseOnline {
+			return false, "当前是 offline-full 离线包（内置 DSH " + bundledVersion + "），且系统未找到 Node.js/npm；请安装 Node.js 22.19+ 或下载包含新版本的 Starline 离线包。", nil
+		}
+		return true, "", nil
 	}
 	return true, "", nil
 }

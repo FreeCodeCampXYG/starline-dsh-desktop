@@ -2,6 +2,12 @@
 
 当前状态：`a5dea50` 的 Windows `requireAdministrator` 修复已由 `4c04b13` 同步为 `v0.6.6`，main 与 annotated tag 均已推送；GitHub CI `32368691430` 和 Release `32368740319` 已成功完成六平台构建、离线运行时冒烟测试与发布。
 
+## 2026-08-22 DSH 在线更新回退
+
+- 官方 npm registry 与国内镜像当前均返回 `@deepseek-ai/dsh` 的 `latest=0.1.1-rc.2`、`next=0.1.1-rc.2`；之前用户看到的 `0.1.1-rc.1` 已不是当前 dist-tag。
+- 修复 `offline-full` 检查到新版本后无应用按钮的问题：包内版本仍默认离线启动；确认新版本后，如果系统存在 Node.js 22.19+ 或 24+ 及 npm/npx，宿主改用系统在线运行时并沿用代理降级链下载，不改写包内依赖闭包；失败仍可通过恢复默认回到内置版本。缺少系统 Node/npm 时，界面明确提示需要安装运行时或下载新离线资产。
+- 关键代码为 `internal/launcher/runtime.go`、`internal/application/app.go`；回归覆盖离线包版本选择、在线运行时回退及 `0.1.1-rc.2` 跨 minor 版本检查。已通过前端构建、文档链接检查、JavaScript 语法检查和 `git diff --check`；本机没有 Go/Wails，Go 测试、原生构建、系统 Node/npm 在线下载和真实 Windows UAC/火绒行为仍待 CI/设备验证。
+
 ## 2026-08-20 Windows 管理员权限修复
 
 - Windows 主程序 manifest 已显式声明 `requestedExecutionLevel=requireAdministrator`；正式 EXE 启动会请求 UAC 管理员令牌，Node/DSH 子进程继承该令牌，macOS/Linux 不变。

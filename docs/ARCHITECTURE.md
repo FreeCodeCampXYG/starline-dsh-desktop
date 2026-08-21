@@ -127,7 +127,7 @@ Wails application
 - `internal/updater` 在前端启动后直连国内镜像读取固定 DSH dist-tags 端点；用户手动刷新时按自定义代理、系统环境代理和直连依次尝试国内镜像与官方 registry。请求限制响应大小、校验 `latest`/`next` SemVer、拒绝非受信 registry 重定向，并在结束后关闭 HTTP 空闲连接；检查本身不运行 npm、不下载软件包，失败也不阻塞 DSH。
 - 在线包应用更新时由后端再次查询指定的 `latest` 或 `next`，只把返回的精确版本写入用户配置，然后同步回收宿主持有的旧 DSH 子进程树并通过既有 npx 启动链重启；前端不能提交任意包名、版本或其他通道。
 - 环境变量 `DSH_DESKTOP_DSH_VERSION` 继续作为显式开发覆盖且优先级最高；存在覆盖时，界面不修改实际版本。
-- `offline-full` 始终以包内 `dsh-version.txt` 为准，即使同一用户配置曾保存在线版本也不会产生离线运行时版本冲突。离线升级仍是新的 Desktop Release 和六平台原生依赖门禁。
+- `offline-full` 默认以包内 `dsh-version.txt` 为准；用户确认在线新版本后，设置中的精确版本会让宿主改用系统 Node/npm，通过既有代理降级链下载而不改写包内依赖闭包，失败时可清除设置回到离线版本。没有系统 Node/npm 时，离线升级仍是新的 Desktop Release 和六平台原生依赖门禁。
 - 当前 main 把下一轮离线闭包固定为 rc.7；“最新”表示发布时审查并锁定的精确版本，不表示离线包在用户设备上跟随 npm `latest` 漂移。
 - 仓库 Dependabot 每周只检查 `offline-runtime` 的官方 DSH 直接依赖并提出 PR；它不自动合并、不发布，也不能代替原生 CI、最终归档和设备验证。
 

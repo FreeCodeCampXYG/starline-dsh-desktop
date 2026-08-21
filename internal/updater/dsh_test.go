@@ -48,6 +48,22 @@ func TestCheckDSHChannelsAllowsMissingNext(t *testing.T) {
 	}
 }
 
+func TestCheckDSHChannelsRecognizesNextMinorRelease(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"latest":"0.1.1-rc.2","next":"0.1.1-rc.2"}`))
+	}))
+	defer server.Close()
+
+	result, err := checkDSHChannels(context.Background(), server.Client(), server.URL, "0.1.0-rc.7")
+	if err != nil {
+		t.Fatalf("检查跨 minor 版本更新失败：%v", err)
+	}
+	if !result.LatestUpdateAvailable || !result.NextUpdateAvailable || result.LatestVersion != "0.1.1-rc.2" {
+		t.Fatalf("没有识别到官方新版本：%+v", result)
+	}
+}
+
 func TestRegistryClientUsesCustomProxy(t *testing.T) {
 	settings := config.Settings{
 		ProxyMode: config.ProxyModeCustom,

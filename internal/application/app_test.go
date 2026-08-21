@@ -2,6 +2,8 @@ package application
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"starline-dsh-desktop/internal/config"
@@ -60,6 +62,24 @@ func TestResolveDSHVersionUsesSavedOnlineVersion(t *testing.T) {
 	}
 	if got != "0.1.0-rc.8" {
 		t.Fatalf("保存的 DSH 版本未生效：%q", got)
+	}
+}
+
+func TestResolveDSHVersionUsesSavedOnlineVersionWithBundledRuntime(t *testing.T) {
+	runtimeRoot := t.TempDir()
+	if err := os.WriteFile(filepath.Join(runtimeRoot, "dsh-version.txt"), []byte("0.1.0-rc.7\n"), 0o600); err != nil {
+		t.Fatalf("写入离线运行时版本失败：%v", err)
+	}
+	t.Setenv("DSH_DESKTOP_OFFLINE_ROOT", runtimeRoot)
+	t.Setenv("DSH_DESKTOP_DSH_VERSION", "")
+	settings := config.Default()
+	settings.DSHVersion = "0.1.1-rc.2"
+	got, err := resolveDSHVersion("0.1.0-rc.7", settings)
+	if err != nil {
+		t.Fatalf("离线包切换在线版本失败：%v", err)
+	}
+	if got != "0.1.1-rc.2" {
+		t.Fatalf("离线包没有优先使用已确认的在线版本：%q", got)
 	}
 }
 

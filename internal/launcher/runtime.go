@@ -34,9 +34,20 @@ func resolveDSHCommand(version string) (dshCommandSpec, error) {
 		return dshCommandSpec{}, err
 	}
 	if found {
-		return offlineDSHCommand(root, version)
+		bundledVersion, readErr := readBundledDSHVersion(root)
+		if readErr != nil {
+			return dshCommandSpec{}, readErr
+		}
+		if bundledVersion == version {
+			return offlineDSHCommand(root, version)
+		}
+		// 离线闭包不能原地替换；用户确认新版本后切到系统 Node/npm，保留原包作为可回退的旧版本。
+		return onlineDSHCommand(version)
 	}
+	return onlineDSHCommand(version)
+}
 
+func onlineDSHCommand(version string) (dshCommandSpec, error) {
 	nodePath, err := exec.LookPath("node")
 	if err != nil {
 		return dshCommandSpec{}, errors.New("未找到 Node.js；请安装 Node.js 22.19+ 或 24+，或改用 offline-full 离线包")
@@ -53,6 +64,18 @@ func resolveDSHCommand(version string) (dshCommandSpec, error) {
 		mode:        "online",
 		label:       " npx",
 	}, nil
+}
+
+// CanUseOnlineRuntime 检查更新后是否能用系统 Node/npm 启动新版本，避免界面展示必然失败的更新按钮。
+func CanUseOnlineRuntime() (bool, error) {
+	nodePath, err := exec.LookPath("node")
+	if err != nil {
+		return false, nil
+	}
+	if _, _, err := npxCommand(nodePath); err != nil {
+		return false, nil
+	}
+	return true, nil
 }
 
 // BundledDSHVersion 返回当前可执行文件旁离线运行时的固定版本，不存在时不报错。

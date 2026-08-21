@@ -46,16 +46,24 @@ func TestResolveDSHCommandUsesOfflineRuntime(t *testing.T) {
 	}
 }
 
-func TestResolveDSHCommandRejectsOfflineVersionMismatch(t *testing.T) {
+func TestResolveDSHCommandFallsBackToOnlineVersion(t *testing.T) {
+	if canUseOnline, err := CanUseOnlineRuntime(); err != nil {
+		t.Fatalf("检查在线运行时失败：%v", err)
+	} else if !canUseOnline {
+		t.Skip("当前测试机没有可用的系统 Node/npm")
+	}
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "dsh-version.txt"), []byte("0.1.0-rc.5\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv(offlineRuntimeEnv, root)
 
-	_, err := resolveDSHCommand("0.1.0-rc.7")
-	if err == nil || !strings.Contains(err.Error(), "版本") {
-		t.Fatalf("expected version mismatch, got %v", err)
+	command, err := resolveDSHCommand("0.1.0-rc.7")
+	if err != nil {
+		t.Fatalf("在线版本回退失败：%v", err)
+	}
+	if command.mode != "online" || !strings.Contains(strings.Join(command.prefix, " "), "@deepseek-ai/dsh@0.1.0-rc.7") {
+		t.Fatalf("版本不匹配时未切换在线运行时：%#v", command)
 	}
 }
 
