@@ -6,6 +6,7 @@
 - Release workflow 现在只解析一次 lock 并以 artifact 复用，按平台缓存 `node_modules`，Node heap 上限 4096 MiB；准备脚本提供缓存跳过选项和 npm 有界重试/超时，同时保留元数据同步、原生模块重建和冒烟测试。
 - 发布脚本允许 DSH 版本保持 `0.1.1-rc.2`、仅递增 Desktop 版本的修复发布；当前本地验证已通过 PowerShell、Git Bash、YAML 与 `git diff --check`。
 - `v0.6.8` 的六个平台构建、离线运行时准备和冒烟测试均成功；发布说明步骤因下载了内部 `package-lock.json` artifact，触发资产清单不一致。发布 workflow 已改为只下载 `starline-dsh-desktop-*` artifact，下一修复版本使用 `v0.6.9`，不移动已公开的 `v0.6.8` tag。
+- 为避免重复构建，新增 `.github/workflows/publish-existing-release.yml`：可在 GitHub runner 上按历史 Release run ID 下载并过滤平台 artifact，直接为现有 tag 生成 notes 和 Release；本机不搬运构建包。
 
 当前状态：main 已包含 DSH 0.1.1-rc.2 / Desktop 0.6.8 的 runner 修复与发布提交；`v0.6.8` 的平台产物已验证成功，但 GitHub Release 尚未生成，待 `v0.6.9` 修复标签重新发布。
 

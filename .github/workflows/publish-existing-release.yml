@@ -1,0 +1,76 @@
+name: Publish existing release artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Successful Release run ID whose platform artifacts should be reused
+        required: true
+        type: string
+      tag:
+        description: Existing annotated tag to publish, for example v0.6.8
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: publish-existing-release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish ${{ inputs.tag }} from existing artifacts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout release metadata
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: offline-runtime/node-version.txt
+
+      - name: Download platform artifacts from source run
+        uses: actions/download-artifact@v8
+        with:
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          # 只取正式平台归档；离线 lock artifact 属于构建中间物，不能进入 Release 资产。
+          pattern: starline-dsh-desktop-*
+          path: release
+          merge-multiple: true
+
+      - name: Generate combined checksum manifest
+        shell: bash
+        run: |
+          cd release
+          find . -maxdepth 1 -type f ! -name '*.sha256' ! -name 'SHA256SUMS.txt' -printf '%f\0' | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
+
+      - name: Generate release notes from changelog and assets
+        shell: bash
+        run: |
+          VERSION="${{ inputs.tag }}"
+          VERSION="${VERSION#v}"
+          node scripts/generate-release-notes.mjs \
+            --version "$VERSION" \
+            --tag "${{ inputs.tag }}" \
+            --repository "$GITHUB_REPOSITORY" \
+            --asset-dir release \
+            --output "$RUNNER_TEMP/release-notes.md"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ inputs.tag }}
+          name: Starline DSH Desktop ${{ inputs.tag }}
+          body_path: ${{ runner.temp }}/release-notes.md
+          fail_on_unmatched_files: true
+          prerelease: ${{ contains(inputs.tag, '-') }}
+          files: release/*
