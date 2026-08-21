@@ -20,7 +20,7 @@ wails doctor
 npm --prefix frontend ci
 ```
 
-仓库使用 `package-lock.json`。CI、Release 和正式构建都使用 `npm ci`，不在构建时更新依赖解析结果。
+仓库使用 `package-lock.json`。前端 CI、Release 和正式构建都使用 `npm ci`；DSH 离线闭包升级由 tag runner 在安装前刷新独立锁文件，维护者不需要在本机下载 npm 依赖。
 
 离线运行时有独立锁文件。使用平台准备脚本，不要手工只运行 `npm ci --ignore-scripts`：
 
@@ -34,7 +34,7 @@ bash scripts/prepare-offline-runtime.sh 0.1.0-rc.7
 
 准备脚本采用显式白名单，而不是开放所有依赖脚本：
 
-1. `npm ci --ignore-scripts` 安装锁定依赖；
+1. runner 先根据 `offline-runtime/package.json` 执行仅更新 lock 元数据的 npm 操作，再用 `npm ci --ignore-scripts` 安装精确依赖；
 2. `verify-offline-runtime.mjs preflight` 核对包版本、lockfile integrity、生命周期命令和已审查脚本 SHA-256；
 3. 只执行审查过的 `node-pty` install/postinstall，再执行锁定 DSH 提供的 `ensure-spawn-helper.mjs`；
 4. 使用包内 Node 真实启动平台 Shell，并核对输出和退出码；同时实际执行 Sharp 图像转换、Koffi 动态库/函数调用和 ripgrep。

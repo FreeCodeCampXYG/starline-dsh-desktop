@@ -13,13 +13,13 @@ Dependabot 每周只检查 `/offline-runtime` 中固定的 `@deepseek-ai/dsh` �
 
 ### DSH 离线闭包升级脚本
 
-Windows 维护者可使用 `scripts/prepare-dsh-release.ps1` 准备下一次 DSH 离线闭包升级。脚本默认通过 `http://127.0.0.1:1080` 查询 `latest`，只执行 `npm install --package-lock-only --ignore-scripts` 更新锁文件，并自动同步 Desktop 默认版本、文档、`dsh-subprocess-local` integrity 与 `ensure-spawn-helper.mjs` 的 SHA-256。完整 Node/native 闭包、六平台构建和归档仍只由 tag 触发的 GitHub Actions 完成。
+Windows 维护者可使用 `scripts/prepare-dsh-release.ps1` 准备下一次 DSH 离线闭包升级。脚本只修改精确版本、Desktop 默认版本、文档和 CHANGELOG，不在本机查询 npm、不下载依赖、不执行 `npm pack`，也不构建离线包。推送 tag 后，GitHub Actions runner 会刷新 `package-lock.json`、依赖 integrity 和白名单脚本 SHA-256，再执行六平台原生构建与归档。
 
 ```powershell
-# 推荐一次性执行：脚本会先生成并展示 diff，再逐步确认提交、annotated tag 和推送：
-.\scripts\prepare-dsh-release.ps1 -DSHVersion 0.1.1-rc.2 -DesktopVersion 0.6.7 -ProxyUrl http://127.0.0.1:1080 -Commit -Tag -Push
-# 只准备并查看差异时省略 -Commit/-Tag/-Push；这次改动随后请手工提交，不要在工作区变脏时重复运行脚本。
-.\scripts\prepare-dsh-release.ps1 -ProxyUrl http://127.0.0.1:1080
+# 推荐一次性执行：脚本会逐步确认提交、annotated tag 和推送：
+.\scripts\prepare-dsh-release.ps1 -DSHVersion 0.1.1-rc.2 -DesktopVersion 0.6.7 -Commit -Tag -Push
+# 只准备并查看差异时省略 -Commit/-Tag/-Push；审阅后请手工提交和打 tag。
+.\scripts\prepare-dsh-release.ps1 -DSHVersion 0.1.1-rc.2 -DesktopVersion 0.6.7
 ```
 
 脚本不会移动既有 tag；`-Push` 只推送当前 `main` 和本次新 tag。没有显式指定 `-DesktopVersion` 时，会按仓库最高稳定 `v*` tag 自动递增 patch 版本。

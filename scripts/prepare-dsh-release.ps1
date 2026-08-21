@@ -1,8 +1,6 @@
 ﻿param(
+    [Parameter(Mandatory = $true)]
     [string]$DSHVersion,
-    [ValidateSet('latest', 'next')]
-    [string]$Channel = 'latest',
-    [string]$ProxyUrl = 'http://127.0.0.1:1080',
     [string]$DesktopVersion,
     [switch]$Commit,
     [switch]$Tag,
@@ -12,7 +10,6 @@
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
-$registry = 'https://registry.npmjs.org'
 $semverPattern = '^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$'
 $targetFiles = @(
     'CHANGELOG.md',
@@ -24,9 +21,7 @@ $targetFiles = @(
     'frontend/src/main.ts',
     'main.go',
     'offline-runtime/README.md',
-    'offline-runtime/package.json',
-    'offline-runtime/package-lock.json',
-    'scripts/verify-offline-runtime.mjs'
+    'offline-runtime/package.json'
 )
 
 function Assert-Command {
@@ -59,14 +54,6 @@ function Replace-Required {
     Write-Utf8 $Path ($content.Replace($Old, $New))
 }
 
-function Invoke-Npm {
-    param([Parameter(Mandatory)][string[]]$Arguments)
-    & npm @Arguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "npm failed with exit code ${LASTEXITCODE}: npm $($Arguments -join ' ')"
-    }
-}
-
 function Confirm-Step {
     param([Parameter(Mandatory)][string]$Prompt)
     $answer = Read-Host "$Prompt [y/N]"
@@ -85,41 +72,12 @@ function Get-NextDesktopVersion {
     return '{0}.{1}.{2}' -f [int]$match.Groups[1].Value, [int]$match.Groups[2].Value, ([int]$match.Groups[3].Value + 1)
 }
 
-function Set-ProxyEnvironment {
-    param([string]$Value)
-    $names = @('HTTP_PROXY', 'HTTPS_PROXY', 'NPM_CONFIG_PROXY', 'NPM_CONFIG_HTTPS_PROXY')
-    $saved = @{}
-    foreach ($name in $names) {
-        $saved[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
-        if ([string]::IsNullOrWhiteSpace($Value)) {
-            Remove-Item "Env:$name" -ErrorAction SilentlyContinue
-        }
-        else {
-            Set-Item "Env:$name" $Value
-        }
-    }
-    return $saved
-}
-
-function Restore-ProxyEnvironment {
-    param([hashtable]$Saved)
-    foreach ($entry in $Saved.GetEnumerator()) {
-        if ($null -eq $entry.Value) {
-            Remove-Item "Env:$($entry.Key)" -ErrorAction SilentlyContinue
-        }
-        else {
-            Set-Item "Env:$($entry.Key)" $entry.Value
-        }
-    }
-}
-
 Push-Location $projectRoot
-$proxyEnvironment = $null
 $commitCreated = $false
 $gitStageStarted = $false
 $backupRoot = Join-Path ([IO.Path]::GetTempPath()) ('starline-dsh-release-' + [guid]::NewGuid().ToString('N'))
 try {
-    foreach ($command in @('git', 'node', 'npm', 'tar.exe')) {
+    foreach ($command in @('git', 'node')) {
         Assert-Command $command
     }
     if ((git status --porcelain)) {
@@ -131,14 +89,6 @@ try {
     $package = $packageContent | ConvertFrom-Json
     $oldDshVersion = [string]$package.dependencies.'@deepseek-ai/dsh'
 
-    $proxyEnvironment = Set-ProxyEnvironment $ProxyUrl
-    if ([string]::IsNullOrWhiteSpace($DSHVersion)) {
-        $packageSelector = '@deepseek-ai/dsh@' + $Channel
-        $DSHVersion = (& npm view $packageSelector version --json --registry=$registry --fetch-timeout=10000 --fetch-retries=1 | Out-String | ConvertFrom-Json)
-        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($DSHVersion)) {
-            throw "无法从 npm $Channel dist-tag 解析 DSH 版本。"
-        }
-    }
     if ($DSHVersion -notmatch $semverPattern) {
         throw "DSH 版本格式无效：$DSHVersion"
     }
@@ -185,41 +135,16 @@ try {
     }
     Write-Utf8 $packagePath $updatedPackage
 
-    # 仅更新锁文件，不安装依赖；完整 Node/native 闭包由 GitHub Actions 在 tag 构建。
-    Invoke-Npm @('--prefix', 'offline-runtime', 'install', '--package-lock-only', '--ignore-scripts', '--workspaces=false', "--registry=$registry", '--fetch-timeout=10000', '--fetch-retries=1')
-
-    $packageAfter = (Read-Utf8 $packagePath) | ConvertFrom-Json
-    if ([string]$packageAfter.dependencies.'@deepseek-ai/dsh' -ne $DSHVersion) {
-        throw "package.json 版本未更新为 $DSHVersion。"
-    }
-    $lockRoot = (& node -e "const p=require('./offline-runtime/package-lock.json'); console.log(p.packages?.['']?.dependencies?.['@deepseek-ai/dsh'] || '');" | Out-String).Trim()
-    if ($lockRoot -ne $DSHVersion) {
-        throw "package-lock.json 根依赖未更新为 $DSHVersion。"
-    }
-    $lockInfo = (& node -e "const p=require('./offline-runtime/package-lock.json'); const x=p.packages?.['node_modules/@deepseek-ai/dsh-subprocess-local']; if(!x) process.exit(2); console.log(JSON.stringify({version:x.version,integrity:x.integrity}));" | Out-String).Trim() | ConvertFrom-Json
-    $packRoot = Join-Path $backupRoot 'pack'
-    New-Item -ItemType Directory -Force -Path $packRoot | Out-Null
-    Invoke-Npm @('pack', "@deepseek-ai/dsh-subprocess-local@$($lockInfo.version)", '--pack-destination', $packRoot, '--silent', "--registry=$registry")
-    $archive = Get-ChildItem -LiteralPath $packRoot -Filter '*.tgz' | Select-Object -First 1
-    if (-not $archive) {
-        throw '未找到 dsh-subprocess-local tarball，无法更新离线校验白名单。'
-    }
-    tar.exe -xzf $archive.FullName -C $packRoot
-    if ($LASTEXITCODE -ne 0) {
-        throw '解压 dsh-subprocess-local tarball 失败。'
-    }
-    $scriptHash = (Get-FileHash -LiteralPath (Join-Path $packRoot 'package\scripts\ensure-spawn-helper.mjs') -Algorithm SHA256).Hash.ToLowerInvariant()
-
     $oldDefaultVersionText = 'defaultDSHVersion = "' + $oldDshVersion + '"'
     $newDefaultVersionText = 'defaultDSHVersion = "' + $DSHVersion + '"'
-    Replace-Required (Join-Path $projectRoot 'main.go') $oldDefaultVersionText $newDefaultVersionText
+    Replace-Required -Path (Join-Path $projectRoot 'main.go') -Old $oldDefaultVersionText -New $newDefaultVersionText
     $oldFrontendVersionText = 'dshVersion: "' + $oldDshVersion + '"'
     $newFrontendVersionText = 'dshVersion: "' + $DSHVersion + '"'
-    Replace-Required (Join-Path $projectRoot 'frontend\src\main.ts') $oldFrontendVersionText $newFrontendVersionText
-    Replace-Required (Join-Path $projectRoot 'offline-runtime\README.md') "@deepseek-ai/dsh@$oldDshVersion" "@deepseek-ai/dsh@$DSHVersion"
-    Replace-Required (Join-Path $projectRoot 'docs\BUILDING.md') "prepare-offline-runtime.ps1 -DSHVersion $oldDshVersion" "prepare-offline-runtime.ps1 -DSHVersion $DSHVersion"
-    Replace-Required (Join-Path $projectRoot 'docs\BUILDING.md') "prepare-offline-runtime.sh $oldDshVersion" "prepare-offline-runtime.sh $DSHVersion"
-    Replace-Required (Join-Path $projectRoot 'docs\TROUBLESHOOTING.md') "@deepseek-ai/dsh@$oldDshVersion" "@deepseek-ai/dsh@$DSHVersion"
+    Replace-Required -Path (Join-Path $projectRoot 'frontend\src\main.ts') -Old $oldFrontendVersionText -New $newFrontendVersionText
+    Replace-Required -Path (Join-Path $projectRoot 'offline-runtime\README.md') -Old "@deepseek-ai/dsh@$oldDshVersion" -New "@deepseek-ai/dsh@$DSHVersion"
+    Replace-Required -Path (Join-Path $projectRoot 'docs\BUILDING.md') -Old "prepare-offline-runtime.ps1 -DSHVersion $oldDshVersion" -New "prepare-offline-runtime.ps1 -DSHVersion $DSHVersion"
+    Replace-Required -Path (Join-Path $projectRoot 'docs\BUILDING.md') -Old "prepare-offline-runtime.sh $oldDshVersion" -New "prepare-offline-runtime.sh $DSHVersion"
+    Replace-Required -Path (Join-Path $projectRoot 'docs\TROUBLESHOOTING.md') -Old "@deepseek-ai/dsh@$oldDshVersion" -New "@deepseek-ai/dsh@$DSHVersion"
 
     $readmePath = Join-Path $projectRoot 'README.md'
     $readme = Read-Utf8 $readmePath
@@ -228,27 +153,19 @@ try {
     $readme = $readme.Replace('当前 main 的下一轮 `offline-full` 已固定 rc.7', ('当前 main 的下一轮 `offline-full` 已固定 {0}' -f $dshLabel))
     Write-Utf8 $readmePath $readme
 
-    Replace-Required (Join-Path $projectRoot 'docs\ARCHITECTURE.md') '当前 main 把下一轮离线闭包固定为 rc.7' "当前 main 把下一轮离线闭包固定为 $dshLabel"
-    Replace-Required (Join-Path $projectRoot 'docs\KNOWN_ISSUES.md') '当前 main 又针对 rc.7 的依赖变化更新了门禁' "当前 main 又针对 $dshLabel 的依赖变化更新了门禁"
-    Replace-Required (Join-Path $projectRoot 'docs\KNOWN_ISSUES.md') "@deepseek-ai/dsh-subprocess-local@$oldDshVersion" "@deepseek-ai/dsh-subprocess-local@$($lockInfo.version)"
-
-    $verifyPath = Join-Path $projectRoot 'scripts\verify-offline-runtime.mjs'
-    $verify = Read-Utf8 $verifyPath
-    $verify = [regex]::Replace($verify, "(?s)(node_modules/@deepseek-ai/dsh-subprocess-local'\s*:\s*\{.*?version:\s*')[^']+('.*?integrity:\s*')[^']+(')", "`$1$($lockInfo.version)`$2$($lockInfo.integrity)`$3", 1)
-    $verify = [regex]::Replace($verify, "(\['node_modules/@deepseek-ai/dsh-subprocess-local/scripts/ensure-spawn-helper\.mjs',\s*')[^']+('])", "`$1$scriptHash`$2", 1)
-    Write-Utf8 $verifyPath $verify
+    Replace-Required -Path (Join-Path $projectRoot 'docs\ARCHITECTURE.md') -Old '当前 main 把下一轮离线闭包固定为 rc.7' -New "当前 main 把下一轮离线闭包固定为 $dshLabel"
+    Replace-Required -Path (Join-Path $projectRoot 'docs\KNOWN_ISSUES.md') -Old '当前 main 又针对 rc.7 的依赖变化更新了门禁' -New "当前 main 又针对 $dshLabel 的依赖变化更新了门禁"
 
     $changelogPath = Join-Path $projectRoot 'CHANGELOG.md'
     $changelog = Read-Utf8 $changelogPath
-    $entry = ('- `offline-full` 离线闭包和 Desktop 默认 DSH 版本更新为 `@deepseek-ai/dsh@{0}`；完整依赖、原生模块和最终归档由本次 tag 的 GitHub Actions 原生 runner 构建验证。' -f $DSHVersion)
+    $entry = ('- `offline-full` 离线闭包和 Desktop 默认 DSH 版本更新为 `@deepseek-ai/dsh@{0}`；锁文件、依赖 integrity、原生模块和最终归档由本次 tag 的 GitHub Actions runner 下载并验证。' -f $DSHVersion)
     if (-not $changelog.Contains($entry)) {
         $changelog = [regex]::Replace($changelog, '(?s)(## \[未发布\].*?### 变更\r?\n)', "`$1$entry`n", 1)
     }
     Write-Utf8 $changelogPath $changelog
 
-    $desktopFiles = @('main.go', 'frontend/src/main.ts', 'offline-runtime/package.json', 'offline-runtime/package-lock.json', 'scripts/verify-offline-runtime.mjs')
     Write-Output "已准备 DSH $DSHVersion；建议 Desktop tag：$tagName"
-    Write-Output "将由 GitHub Actions 从 $tagName 构建六平台 online/offline-full 资产。"
+    Write-Output '本机未执行 npm 下载、npm pack 或离线包构建；GitHub Actions 将在 tag runner 上刷新 lock/approval 并构建六平台资产。'
     git diff --check
     node scripts/check-doc-links.mjs
     if ($LASTEXITCODE -ne 0) { throw '文档链接检查失败。' }
@@ -294,9 +211,6 @@ catch {
     throw
 }
 finally {
-    if ($proxyEnvironment) {
-        Restore-ProxyEnvironment $proxyEnvironment
-    }
     if (Test-Path -LiteralPath $backupRoot) {
         Remove-Item -LiteralPath $backupRoot -Recurse -Force -ErrorAction SilentlyContinue
     }

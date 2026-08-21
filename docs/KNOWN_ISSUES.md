@@ -65,7 +65,7 @@ v0.5.0 已增加 Ubuntu 24.04 x64/ARM64 在线 DEB；正式工作流确认 contr
 v0.2.5 起已经加入以下修复，并在 v0.3.2 的六平台构建与最终归档检查中通过；这仍不反向改变 v0.2.4 的已发布资产。当前 main 又针对 rc.7 的依赖变化更新了门禁，但需要新的线上证据：
 
 1. 仍使用 `npm ci --ignore-scripts` 默认禁止全部依赖脚本；
-2. 在执行任何白名单脚本前，核对锁文件 integrity、已安装版本、生命周期命令和已审查脚本 SHA-256；当前 main 精确批准 `node-pty@1.2.0-beta.15` 与 `@deepseek-ai/dsh-subprocess-local@0.1.0-rc.7`；
+2. 在执行任何白名单脚本前，核对锁文件 integrity、已安装版本、生命周期命令和已审查脚本 SHA-256；tag runner 根据本次 DSH 锁文件精确批准 `node-pty` 与 `@deepseek-ai/dsh-subprocess-local`，不会沿用旧版本白名单；
 3. 只允许 `node-pty` 的 install/postinstall 重建，以及 DSH 官方 `ensure-spawn-helper.mjs` 权限修复；
 4. 在 Windows x64/ARM64、macOS Intel/ARM64、Linux x64/ARM64 原生 runner 上真实调用 `node-pty.spawn()`，启动平台 Shell、核对唯一输出标记和退出码；
 5. macOS 明确检查 `spawn-helper` 可执行位；当前 main 按新依赖布局检查 Linux `prebuilds/linux-<arch>/pty.node`，Windows 检查 ConPTY 绑定和 helper，再由真实 PTY 测试证明可加载；

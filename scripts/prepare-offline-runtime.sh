@@ -28,7 +28,11 @@ fi
 node_directory="$(dirname "$node_source")"
 node_root="$(cd "$node_directory/.." && pwd)"
 
+# 发布脚本只提交 package.json；runner 在安装前刷新 lock，避免维护者本机下载完整闭包。
+npm --prefix "$runtime_root" install --package-lock-only --ignore-scripts --workspaces=false
+
 npm --prefix "$runtime_root" ci --omit=dev --ignore-scripts --workspaces=false
+"$node_source" "$repository_root/scripts/sync-offline-runtime-metadata.mjs" "$runtime_root"
 "$node_source" "$verifier" preflight "$runtime_root"
 
 # npm ci keeps every lifecycle script disabled. Only the pinned and hash-checked

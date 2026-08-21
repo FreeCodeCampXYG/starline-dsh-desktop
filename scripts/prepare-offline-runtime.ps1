@@ -21,9 +21,20 @@ if ($actualNodeVersion -ne $nodeVersion) {
     throw "Node $actualNodeVersion is active, expected pinned Node $nodeVersion."
 }
 
+# 发布脚本只提交 package.json；runner 在安装前刷新 lock，避免维护者本机下载完整闭包。
+npm --prefix $runtimeRoot install --package-lock-only --ignore-scripts --workspaces=false
+if ($LASTEXITCODE -ne 0) {
+    throw "Offline package-lock refresh failed with exit code $LASTEXITCODE."
+}
+
 npm --prefix $runtimeRoot ci --omit=dev --ignore-scripts --workspaces=false
 if ($LASTEXITCODE -ne 0) {
     throw "npm ci failed with exit code $LASTEXITCODE."
+}
+
+& $nodeSource (Join-Path $repositoryRoot 'scripts\sync-offline-runtime-metadata.mjs') $runtimeRoot
+if ($LASTEXITCODE -ne 0) {
+    throw "Offline approval metadata synchronization failed with exit code $LASTEXITCODE."
 }
 
 & $nodeSource $verifier preflight $runtimeRoot
