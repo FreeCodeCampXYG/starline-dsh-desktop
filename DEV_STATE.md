@@ -1,5 +1,11 @@
 # DEV_STATE
 
+## 2026-08-22 v0.6.10 旧 DSH 在线覆盖修复
+
+- `v0.6.8` Windows 构建日志已确认通过 `-X main.defaultDSHVersion=0.1.1-rc.2` 嵌入默认版本，并在 runner 上输出 `Synced offline DSH 0.1.1-rc.2`；截图中的 `0.1.0-rc.7 · 系统 Node / npx` 来自用户配置保留的旧在线版本，离线包不匹配时按设计切换到系统 npx。
+- `internal/application` 现在比较保存版本与包内版本：包内版本更新时优先使用离线闭包，保留旧配置供“恢复默认”清理；仅保存版本高于包内版本时继续使用在线 npx。新增回归测试覆盖 `0.1.0-rc.7` 配置被 `0.1.1-rc.2` 离线包覆盖的场景。
+- 提交 `18a51e8` 已进入 `v0.6.10` annotated tag；本机 `git diff --check` 通过，未执行 Go test（当前机器没有 Go），Release run `32559326375` 和 CI `32559324126` 正在验证。
+
 ## 2026-08-22 v0.6.8 Release runner 修复
 
 - `v0.6.7` 的三个失败均发生在离线 runtime 准备：Linux x64 为临时 npm `ETARGET`，两个 macOS 为 Node 24.19.0 默认 heap OOM；未发现 DSH/Node 引擎不兼容。
