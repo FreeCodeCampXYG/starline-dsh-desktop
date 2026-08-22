@@ -694,8 +694,20 @@ func resolveDSHVersion(fallback string, settings config.Settings) (string, error
 	}
 	if bundled {
 		if settings.DSHVersion != "" {
-			// 离线包只保留内置版本；用户明确选择的新版本走系统 Node/npm，失败时仍可清除设置回到包内版本。
-			return dshversion.Normalize(settings.DSHVersion)
+			savedVersion, err := dshversion.Normalize(settings.DSHVersion)
+			if err != nil {
+				return "", err
+			}
+			comparison, err := dshversion.Compare(savedVersion, bundledVersion)
+			if err != nil {
+				return "", err
+			}
+			if comparison < 0 {
+				// 新离线包已包含更高版本；旧配置通常来自上一版在线回退，优先闭包并保留配置供用户清理，避免再次启动旧 npx。
+				return bundledVersion, nil
+			}
+			// 用户明确选择的新版本仍走系统 Node/npm，失败时可通过“恢复默认”回到包内版本。
+			return savedVersion, nil
 		}
 		return bundledVersion, nil
 	}

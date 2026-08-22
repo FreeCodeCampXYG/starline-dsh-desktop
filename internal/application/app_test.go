@@ -83,6 +83,24 @@ func TestResolveDSHVersionUsesSavedOnlineVersionWithBundledRuntime(t *testing.T)
 	}
 }
 
+func TestResolveDSHVersionPrefersNewerBundledRuntimeOverOlderSavedVersion(t *testing.T) {
+	runtimeRoot := t.TempDir()
+	if err := os.WriteFile(filepath.Join(runtimeRoot, "dsh-version.txt"), []byte("0.1.1-rc.2\n"), 0o600); err != nil {
+		t.Fatalf("写入离线运行时版本失败：%v", err)
+	}
+	t.Setenv("DSH_DESKTOP_OFFLINE_ROOT", runtimeRoot)
+	t.Setenv("DSH_DESKTOP_DSH_VERSION", "")
+	settings := config.Default()
+	settings.DSHVersion = "0.1.0-rc.7"
+	got, err := resolveDSHVersion("0.1.1-rc.2", settings)
+	if err != nil {
+		t.Fatalf("新离线包覆盖旧在线配置失败：%v", err)
+	}
+	if got != "0.1.1-rc.2" {
+		t.Fatalf("新离线包没有覆盖旧在线版本：%q", got)
+	}
+}
+
 func TestSelectDSHUpdateTarget(t *testing.T) {
 	release := updater.DSHRelease{
 		LatestVersion:         "0.1.0-rc.7",
