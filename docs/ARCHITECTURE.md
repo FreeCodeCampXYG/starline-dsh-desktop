@@ -66,8 +66,10 @@ Wails application
 8. 子进程执行精确版本的 `@deepseek-ai/dsh`：默认使用 Desktop 发布时验证的固定版本；前端启动后通过 Go 后端直连国内镜像查询 `latest`/`next`，只显示通道状态；用户手动刷新或应用更新时按自定义代理、应用启动时继承的系统环境代理、国内镜像直连依次查询。普通包准备沿用同一有界降级，并在日志和状态中提示实际路径。在线包经用户确认后再次核对 dist-tag、保存对应精确版本，并可清除设置恢复默认；新版本在默认 90 秒（可在设置中调整为 30–600 秒）内无法完成本地页面指纹校验时，宿主恢复更新前的配置并自动重启旧版本。这个等待上限只保护 npm 运行时准备和本地 DSH Web 就绪，DeepSeek Harness 内部远程模型/API 请求仍由 DSH 自己处理。普通包使用：
 
    ```text
-   npx --yes --package=@deepseek-ai/dsh@<version> dsh web --host 127.0.0.1 --port 0
+   npx --yes --package=@deepseek-ai/dsh@<version> dsh web --host 127.0.0.1 --port 0 --no-open
    ```
+
+   宿主传入 `--no-open` 关闭官方 Web 表层默认的系统浏览器交接；页面 URL 仍会打印并由宿主校验后交给内嵌 iframe，用户需要时可通过“在浏览器中打开”手动回退。
 
    `offline-full` 直接执行 `offline-runtime/node[.exe] offline-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js web ...`，不调用 npm registry，也不允许界面原地替换包内依赖闭包。
 

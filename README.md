@@ -45,8 +45,10 @@ Starline DSH Desktop (Go + Wails)
 ├─ 启动、错误、代理、帮助和日志界面
 ├─ 官方 DSH Web UI（iframe，仅加载 loopback）
 └─ @deepseek-ai/dsh 子进程
-   └─ dsh web --host 127.0.0.1 --port <动态端口>
+   └─ dsh web --host 127.0.0.1 --port <动态端口> --no-open
 ```
+
+宿主会显式传入 `--no-open`：官方 DSH 默认会把 Web 地址交给系统浏览器，但桌面端已经在内嵌 WebView 的 iframe 中加载同一 loopback 页面，因此启动时不会额外弹出浏览器；“在浏览器中打开”仍可从桌面工具菜单手动触发。
 
 详细边界见 [架构说明](docs/ARCHITECTURE.md)，全部维护资料从 [文档导航](docs/README.md) 进入。
 

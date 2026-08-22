@@ -83,6 +83,14 @@ func TestOnlineDSHPrefixLetsNPMRefreshMetadata(t *testing.T) {
 	}
 }
 
+func TestDSHWebArgsDisableBrowserHandoff(t *testing.T) {
+	args := dshWebArgs()
+	want := []string{"web", "--host", "127.0.0.1", "--port", "0", "--no-open"}
+	if strings.Join(args, "\x00") != strings.Join(want, "\x00") {
+		t.Fatalf("dshWebArgs() = %#v, want %#v", args, want)
+	}
+}
+
 func TestBundledDSHVersionReadsPinnedRuntime(t *testing.T) {
 	runtimeRoot := t.TempDir()
 	if err := os.WriteFile(filepath.Join(runtimeRoot, "dsh-version.txt"), []byte("0.1.0-rc.7\n"), 0o600); err != nil {

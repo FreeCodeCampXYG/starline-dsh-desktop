@@ -129,13 +129,7 @@ func Start(_ context.Context, config Config) (*Process, error) {
 		emitProgress(config.OnProgress, 56, "代理不可达，已切换国内镜像直连（模型/API 可能仍需代理）", command.mode)
 	}
 	_, _ = fmt.Fprintln(logFile, "DSH 命令兼容入口：Agent 执行 dsh plugin 且未指定 --profile 时，默认使用当前 web profile。")
-	args := append(append([]string{}, command.prefix...), []string{
-		"web",
-		"--host",
-		"127.0.0.1",
-		"--port",
-		"0",
-	}...)
+	args := append(append([]string{}, command.prefix...), dshWebArgs()...)
 	cmd := exec.Command(command.commandPath, args...)
 	cmd.Dir = config.WorkingDir
 	cmd.Env = childEnv
@@ -163,6 +157,18 @@ func Start(_ context.Context, config Config) (*Process, error) {
 		close(process.done)
 	}()
 	return process, nil
+}
+
+// dshWebArgs 固定桌面宿主的 Web 启动参数；内嵌 iframe 已负责展示页面，因此禁止上游把同一 URL 交给系统浏览器。
+func dshWebArgs() []string {
+	return []string{
+		"web",
+		"--host",
+		"127.0.0.1",
+		"--port",
+		"0",
+		"--no-open",
+	}
 }
 
 // WaitReady 使用不经过代理的 HTTP 请求，并校验页面指纹以确认 DSH 已就绪。
