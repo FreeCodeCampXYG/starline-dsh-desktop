@@ -9,6 +9,13 @@ on:
 permissions:
   contents: read
 
+env:
+  NODE_OPTIONS: --max-old-space-size=4096
+  NPM_CONFIG_FETCH_RETRIES: 2
+  NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: 5000
+  NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: 30000
+  NPM_CONFIG_FETCH_TIMEOUT: 120000
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -34,10 +41,6 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version-file: offline-runtime/node-version.txt
-          cache: npm
-          cache-dependency-path: |
-            frontend/package-lock.json
-            offline-runtime/package-lock.json
 
       - name: Test launcher command compatibility
         run: go test ./internal/launcher
@@ -72,10 +75,25 @@ jobs:
           go test -tags webkit2_41 ./...
           go vet -tags webkit2_41 ./...
 
+      - name: Validate tracked offline lock
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const packageJson = JSON.parse(fs.readFileSync('offline-runtime/package.json', 'utf8'));
+          const packageLock = JSON.parse(fs.readFileSync('offline-runtime/package-lock.json', 'utf8'));
+          const expected = packageJson.dependencies['@deepseek-ai/dsh'];
+          const actual = packageLock.packages?.['']?.dependencies?.['@deepseek-ai/dsh'];
+          if (expected !== actual) {
+            throw new Error(`Offline lock DSH version mismatch: expected ${expected}, got ${actual}. Run the Refresh offline lock workflow.`);
+          }
+          NODE
+
       - name: Verify offline DSH dependency closure
         run: |
           DSH_VERSION="$(node -p "require('./offline-runtime/package.json').dependencies['@deepseek-ai/dsh']")"
-          bash scripts/prepare-offline-runtime.sh "$DSH_VERSION"
+          # CI 只消费已提交且已校验的锁；在线刷新放在手动 workflow，避免每个平台重复解析 registry。
+          bash scripts/prepare-offline-runtime.sh --skip-lock-refresh "$DSH_VERSION"
 
   native-build:
     name: Build ${{ matrix.name }}
@@ -134,10 +152,6 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version-file: offline-runtime/node-version.txt
-          cache: npm
-          cache-dependency-path: |
-            frontend/package-lock.json
-            offline-runtime/package-lock.json
 
       - name: Test launcher command compatibility on native OS
         run: go test ./internal/launcher
@@ -198,11 +212,11 @@ jobs:
         shell: pwsh
         run: |
           $dshVersion = node -p "require('./offline-runtime/package.json').dependencies['@deepseek-ai/dsh']"
-          ./scripts/prepare-offline-runtime.ps1 -DSHVersion $dshVersion
+          ./scripts/prepare-offline-runtime.ps1 -DSHVersion $dshVersion -SkipLockRefresh
 
       - name: Prepare and function-test macOS/Linux offline runtime
         if: runner.os != 'Windows'
         shell: bash
         run: |
           DSH_VERSION="$(node -p "require('./offline-runtime/package.json').dependencies['@deepseek-ai/dsh']")"
-          bash scripts/prepare-offline-runtime.sh "$DSH_VERSION"
+          bash scripts/prepare-offline-runtime.sh --skip-lock-refresh "$DSH_VERSION"

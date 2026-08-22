@@ -3,8 +3,8 @@
 ## 2026-08-22 GitHub Actions offline packaging optimization
 
 - Remote run `32520690184` confirmed the main delay was the `resolve-offline-lock` job: repeated `npm install --package-lock-only` took about 13 minutes. The v0.6.7 macOS OOM also occurred in that step, not while creating the final archives.
-- `.github/workflows/release.yml` now removes npm download caching and the per-platform offline `node_modules` cache. Each runner prepares its own runtime from the resolved lock, avoiding repeated compression/restoration of a large dependency tree.
-- A small resolved-lock snapshot cache is retained, keyed by `offline-runtime/package.json` and the Node version. It is validated against the pinned DSH version before the lock artifact is passed to the matrix, so unchanged releases skip registry lock resolution without caching the offline package contents.
+- `.github/workflows/release.yml` now removes npm download caching, the per-platform offline `node_modules` cache, and the separate lock-resolution job. Each runner prepares its own runtime from the committed lock, avoiding repeated compression/restoration and registry resolution.
+- `.github/workflows/refresh-offline-lock.yml` is the only online lock refresh path. It runs on GitHub, validates the pinned DSH version, and commits `offline-runtime/package-lock.json` to `main`; release and CI workflows fail loudly if the tracked lock is stale.
 - Release artifacts keep their existing zip/tar/deb formats, while `actions/upload-artifact` uses `compression-level: 0` to avoid compressing already-compressed files a second time. Split-volume archives were not introduced because they would add multi-file download/extraction requirements without addressing the lock-resolution OOM.
 - Local verification: workflow YAML parsed successfully and `git diff --check` passed. No local npm/Go build or artifact download was performed; remote GitHub Actions validation remains pending after push.
 
