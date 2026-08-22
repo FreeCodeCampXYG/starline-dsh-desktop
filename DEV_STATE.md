@@ -6,7 +6,7 @@
 - `.github/workflows/release.yml` now removes npm download caching, the per-platform offline `node_modules` cache, and the separate lock-resolution job. Each runner prepares its own runtime from the committed lock, avoiding repeated compression/restoration and registry resolution.
 - `.github/workflows/refresh-offline-lock.yml` is the only online lock refresh path. It runs on GitHub, validates the pinned DSH version, and commits `offline-runtime/package-lock.json` to `main`; release and CI workflows fail loudly if the tracked lock is stale.
 - Release artifacts keep their existing zip/tar/deb formats, while `actions/upload-artifact` uses `compression-level: 0` to avoid compressing already-compressed files a second time. Split-volume archives were not introduced because they would add multi-file download/extraction requirements without addressing the lock-resolution OOM.
-- Local verification: workflow YAML parsed successfully and `git diff --check` passed. No local npm/Go build or artifact download was performed; remote GitHub Actions validation remains pending after push.
+- Local verification: workflow YAML parsed successfully and `git diff --check` passed. GitHub lock refresh run `32561978384` succeeded and committed `1bba8dc`; CI run `32562729911` then passed its quality gates and all six native-build jobs. No local npm/Go build or artifact download was performed.
 
 ## 2026-08-22 v0.6.10 旧 DSH 在线覆盖修复
 
