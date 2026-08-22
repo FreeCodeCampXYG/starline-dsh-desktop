@@ -1,5 +1,12 @@
 # DEV_STATE
 
+## 2026-08-22 v0.6.12 DSH Web 浏览器交接拦截
+
+- 根因已确认：`@deepseek-ai/dsh-web-app@0.1.1-rc.2` 的 Web 启动默认开启系统浏览器交接，并提供 `--no-open`；Wails 宿主此前未传该参数，所以启动时会额外拉起浏览器。
+- `internal/launcher/launcher.go` 将宿主启动参数集中为 `dshWebArgs()`，固定追加 `--no-open`；loopback URL 仍由宿主校验后交给内嵌 iframe，手动“在浏览器中打开”未移除。`internal/launcher/launcher_test.go` 新增参数契约回归；README、架构和排错文档已同步。
+- 本地已通过 `node scripts/check-doc-links.mjs`（15 个 Markdown）和 `git diff --check`；当前机器没有 Go/gofmt，未执行 Go 单测。待 `v0.6.12` GitHub Actions 完成跨平台构建与 Release 验证。
+- 代码提交为 `8485649`；发布准备已生成 `CHANGELOG.md` 的 `v0.6.12` 条目，尚未创建或推送该 tag。
+
 ## 2026-08-22 GitHub Actions offline packaging optimization
 
 - Remote run `32520690184` confirmed the main delay was the `resolve-offline-lock` job: repeated `npm install --package-lock-only` took about 13 minutes. The v0.6.7 macOS OOM also occurred in that step, not while creating the final archives.
