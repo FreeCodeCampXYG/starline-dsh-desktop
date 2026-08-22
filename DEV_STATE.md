@@ -1,5 +1,13 @@
 # DEV_STATE
 
+## 2026-08-22 GitHub Actions offline packaging optimization
+
+- Remote run `32520690184` confirmed the main delay was the `resolve-offline-lock` job: repeated `npm install --package-lock-only` took about 13 minutes. The v0.6.7 macOS OOM also occurred in that step, not while creating the final archives.
+- `.github/workflows/release.yml` now removes npm download caching and the per-platform offline `node_modules` cache. Each runner prepares its own runtime from the resolved lock, avoiding repeated compression/restoration of a large dependency tree.
+- A small resolved-lock snapshot cache is retained, keyed by `offline-runtime/package.json` and the Node version. It is validated against the pinned DSH version before the lock artifact is passed to the matrix, so unchanged releases skip registry lock resolution without caching the offline package contents.
+- Release artifacts keep their existing zip/tar/deb formats, while `actions/upload-artifact` uses `compression-level: 0` to avoid compressing already-compressed files a second time. Split-volume archives were not introduced because they would add multi-file download/extraction requirements without addressing the lock-resolution OOM.
+- Local verification: workflow YAML parsed successfully and `git diff --check` passed. No local npm/Go build or artifact download was performed; remote GitHub Actions validation remains pending after push.
+
 ## 2026-08-22 v0.6.10 旧 DSH 在线覆盖修复
 
 - `v0.6.8` Windows 构建日志已确认通过 `-X main.defaultDSHVersion=0.1.1-rc.2` 嵌入默认版本，并在 runner 上输出 `Synced offline DSH 0.1.1-rc.2`；截图中的 `0.1.0-rc.7 · 系统 Node / npx` 来自用户配置保留的旧在线版本，离线包不匹配时按设计切换到系统 npx。

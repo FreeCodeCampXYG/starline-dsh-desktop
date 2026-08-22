@@ -35,14 +35,30 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Prepare resolved lock cache directory
+        shell: bash
+        run: mkdir -p .cache/offline-lock
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version-file: offline-runtime/node-version.txt
-          cache: npm
-          cache-dependency-path: offline-runtime/package-lock.json
+
+      - name: Cache resolved offline lock snapshot
+        id: offline-lock-cache
+        uses: actions/cache@v4
+        with:
+          # 仅缓存锁文件快照，避免把数百 MB 的离线 node_modules 反复压缩和恢复。
+          path: .cache/offline-lock/package-lock.json
+          key: starline-dsh-offline-lock-v2-${{ hashFiles('offline-runtime/package.json', 'offline-runtime/node-version.txt') }}
+
+      - name: Restore cached offline lock
+        if: steps.offline-lock-cache.outputs.cache-hit == 'true'
+        shell: bash
+        run: cp .cache/offline-lock/package-lock.json offline-runtime/package-lock.json
 
       - name: Resolve package lock with bounded retries
+        if: steps.offline-lock-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -64,6 +80,22 @@ jobs:
             echo "Package registry resolution failed; retrying in ${delay}s (attempt $((attempt + 1))/3)." >&2
             sleep "$delay"
           done
+
+          cp offline-runtime/package-lock.json .cache/offline-lock/package-lock.json
+
+      - name: Validate resolved offline lock
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const packageJson = JSON.parse(fs.readFileSync('offline-runtime/package.json', 'utf8'));
+          const packageLock = JSON.parse(fs.readFileSync('offline-runtime/package-lock.json', 'utf8'));
+          const expected = packageJson.dependencies['@deepseek-ai/dsh'];
+          const actual = packageLock.packages?.['']?.dependencies?.['@deepseek-ai/dsh'];
+          if (expected !== actual) {
+            throw new Error(`Offline lock DSH version mismatch: expected ${expected}, got ${actual}`);
+          }
+          NODE
 
       - name: Upload resolved offline lock
         uses: actions/upload-artifact@v7
@@ -136,10 +168,6 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version-file: offline-runtime/node-version.txt
-          cache: npm
-          cache-dependency-path: |
-            frontend/package-lock.json
-            offline-runtime/package-lock.json
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
@@ -251,13 +279,6 @@ jobs:
           fi
           echo "dsh=$DSH_VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Cache offline runtime modules
-        uses: actions/cache@v4
-        id: offline-runtime-cache
-        with:
-          path: offline-runtime/node_modules
-          key: starline-dsh-offline-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('offline-runtime/node-version.txt', 'offline-runtime/package-lock.json') }}
-
       - name: Build Windows package
         if: runner.os == 'Windows'
         run: wails build -clean -trimpath -platform ${{ matrix.platform }} -nsis -installscope user -ldflags "-s -w -H=windowsgui -X main.version=${{ steps.version.outputs.value }} -X main.defaultDSHVersion=${{ steps.offline.outputs.dsh }}"
@@ -275,23 +296,14 @@ jobs:
         timeout-minutes: 20
         shell: pwsh
         run: |
-          if ('${{ steps.offline-runtime-cache.outputs.cache-hit }}' -eq 'true') {
-            ./scripts/prepare-offline-runtime.ps1 -DSHVersion '${{ steps.offline.outputs.dsh }}' -SkipLockRefresh -SkipInstall
-          }
-          else {
-            ./scripts/prepare-offline-runtime.ps1 -DSHVersion '${{ steps.offline.outputs.dsh }}' -SkipLockRefresh
-          }
+          ./scripts/prepare-offline-runtime.ps1 -DSHVersion '${{ steps.offline.outputs.dsh }}' -SkipLockRefresh
 
       - name: Prepare macOS/Linux offline runtime
         if: runner.os != 'Windows'
         timeout-minutes: 20
         shell: bash
         run: |
-          prepare_args=(--skip-lock-refresh '${{ steps.offline.outputs.dsh }}')
-          if [[ '${{ steps.offline-runtime-cache.outputs.cache-hit }}' == 'true' ]]; then
-            prepare_args+=(--skip-install)
-          fi
-          bash scripts/prepare-offline-runtime.sh "${prepare_args[@]}"
+          bash scripts/prepare-offline-runtime.sh --skip-lock-refresh '${{ steps.offline.outputs.dsh }}'
 
       - name: Smoke-test Windows offline web runtime
         if: runner.os == 'Windows'
@@ -409,6 +421,8 @@ jobs:
           path: release/*
           if-no-files-found: error
           retention-days: 14
+          # Release 文件本身已经是 zip/tar/deb/installer，关闭二次压缩以降低 CPU 和内存峰值。
+          compression-level: 0
 
   publish:
     name: Publish GitHub Release
