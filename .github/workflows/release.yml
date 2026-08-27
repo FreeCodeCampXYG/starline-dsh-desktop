@@ -84,7 +84,7 @@ jobs:
 
       - name: Cache NSIS
         if: runner.os == 'Windows'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             C:\Program Files (x86)\NSIS
@@ -139,7 +139,7 @@ jobs:
           npm --prefix frontend run docs:check
 
       - name: Install Wails CLI
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         id: wails-cache
         with:
           path: |
