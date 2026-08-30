@@ -184,6 +184,10 @@ func (p *Process) WaitReady(ctx context.Context, timeout time.Duration) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-timer.C:
+		if p.runtimeMode == "online" {
+			// 在线包首次准备可能先下载完整依赖树；超时信息必须指向 npx/网络边界，避免误判为已启动服务的端口故障。
+			return fmt.Errorf("在线 npx 在 %s 内未完成依赖准备或公布监听地址；请检查 npm registry/代理，或改用 offline-full 离线包（日志：%s）", timeout, p.logPath)
+		}
 		return fmt.Errorf("等待监听地址超时（日志：%s）", p.logPath)
 	}
 

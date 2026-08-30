@@ -16,7 +16,7 @@ const (
 	ProxyModeInherit                   = "inherit"
 	ProxyModeCustom                    = "custom"
 	ProxyModeDisabled                  = "disabled"
-	DefaultOnlineStartupTimeoutSeconds = 90
+	DefaultOnlineStartupTimeoutSeconds = 300
 	MinOnlineStartupTimeoutSeconds     = 30
 	MaxOnlineStartupTimeoutSeconds     = 600
 )

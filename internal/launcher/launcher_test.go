@@ -188,6 +188,19 @@ func TestWaitReadyRequiresDSHPageFingerprint(t *testing.T) {
 	}
 }
 
+func TestWaitReadyExplainsOnlinePreparationTimeout(t *testing.T) {
+	process := &Process{
+		logPath:     "test.log",
+		runtimeMode: "online",
+		urlReady:    make(chan struct{}),
+		done:        make(chan struct{}),
+	}
+	err := process.WaitReady(context.Background(), 10*time.Millisecond)
+	if err == nil || !strings.Contains(err.Error(), "npm registry/代理") || !strings.Contains(err.Error(), "offline-full") {
+		t.Fatalf("在线准备超时提示不完整：%v", err)
+	}
+}
+
 func TestSafeLoopbackURL(t *testing.T) {
 	for _, value := range []string{
 		"http://127.0.0.1:3080",
@@ -360,8 +373,8 @@ func TestInheritedProxyStillPrefersDomesticMirror(t *testing.T) {
 }
 
 func TestOnlineStartupTimeoutIsBounded(t *testing.T) {
-	if OnlineStartupTimeout(0) != 90*time.Second {
-		t.Fatalf("默认在线启动超时 = %s, want 90s", OnlineStartupTimeout(0))
+	if OnlineStartupTimeout(0) != 5*time.Minute {
+		t.Fatalf("默认在线启动超时 = %s, want 5m", OnlineStartupTimeout(0))
 	}
 	if OnlineStartupTimeout(180) != 180*time.Second {
 		t.Fatalf("可配置在线启动超时 = %s, want 180s", OnlineStartupTimeout(180))
