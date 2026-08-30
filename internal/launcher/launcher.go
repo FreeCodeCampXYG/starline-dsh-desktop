@@ -16,7 +16,7 @@ import (
 
 var webURLPattern = regexp.MustCompile(`dsh web:\s+(http://[^\s]+)`)
 
-const onlineStartupTimeout = 90 * time.Second
+const onlineStartupTimeout = 5 * time.Minute
 
 type Config struct {
 	Version    string
