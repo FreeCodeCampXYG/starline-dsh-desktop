@@ -189,15 +189,11 @@ func TestWaitReadyRequiresDSHPageFingerprint(t *testing.T) {
 	}
 }
 
-func TestWaitReadyPreservesTokenExchangeCookie(t *testing.T) {
+func TestWaitReadyDoesNotConsumeTokenExchange(t *testing.T) {
+	var tokenRequests int
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.URL.Query().Get("token") == "one-time" {
-			http.SetCookie(writer, &http.Cookie{Name: "dsh_session", Value: "signed", Path: "/"})
-			http.Redirect(writer, request, "/", http.StatusFound)
-			return
-		}
-		cookie, err := request.Cookie("dsh_session")
-		if err != nil || cookie.Value != "signed" {
+			tokenRequests++
 			writer.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -208,7 +204,10 @@ func TestWaitReadyPreservesTokenExchangeCookie(t *testing.T) {
 	close(ready)
 	process := &Process{url: server.URL + "/?token=one-time", urlReady: ready, done: make(chan struct{})}
 	if err := process.WaitReady(context.Background(), time.Second); err != nil {
-		t.Fatalf("WaitReady() token exchange error = %v", err)
+		t.Fatalf("WaitReady() token-preserving health check error = %v", err)
+	}
+	if tokenRequests != 0 {
+		t.Fatalf("WaitReady() consumed one-time token %d time(s)", tokenRequests)
 	}
 }
 

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/cookiejar"
+	"net/url"
 	"os"
 	"os/exec"
 	"regexp"
@@ -210,13 +210,17 @@ func (p *Process) WaitReady(ctx context.Context, timeout time.Duration) error {
 		return fmt.Errorf("等待监听地址超时（日志：%s）", p.logPath)
 	}
 
-	jar, err := cookiejar.New(nil)
+	// alpha.3 的 token URL 只能消费一次，健康检查不能先替 WebView 换 cookie，
+	// 否则 iframe 再访问原 URL 会收到 authentication required。检查无查询参数的根地址，
+	// 将一次性认证 URL 原样留给内嵌页面完成握手。
+	pageURL, err := url.Parse(p.URL())
 	if err != nil {
-		return fmt.Errorf("无法创建本地 DSH 会话 cookie 容器：%w", err)
+		return fmt.Errorf("DSH 监听地址无效：%w", err)
 	}
+	pageURL.RawQuery = ""
+	pageURL.Fragment = ""
 	client := &http.Client{
 		Timeout: 2 * time.Second,
-		Jar:     jar,
 		Transport: &http.Transport{
 			Proxy: nil,
 		},
@@ -224,13 +228,15 @@ func (p *Process) WaitReady(ctx context.Context, timeout time.Duration) error {
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	for {
-		request, err := http.NewRequestWithContext(ctx, http.MethodGet, p.URL(), nil)
+		request, err := http.NewRequestWithContext(ctx, http.MethodGet, pageURL.String(), nil)
 		if err == nil {
 			response, requestErr := client.Do(request)
 			if requestErr == nil {
 				body, readErr := io.ReadAll(io.LimitReader(response.Body, 128*1024))
 				_ = response.Body.Close()
-				if readErr == nil && response.StatusCode == http.StatusOK && dshWebTitlePattern.Match(body) {
+				// 未认证根页可能返回 401；这同样证明服务已监听，token 认证交给 WebView。
+				if readErr == nil && (response.StatusCode == http.StatusUnauthorized ||
+					(response.StatusCode == http.StatusOK && dshWebTitlePattern.Match(body))) {
 					p.reportProgress(98, "本地 DSH 页面校验通过")
 					return nil
 				}
