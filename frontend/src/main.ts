@@ -53,11 +53,17 @@ let renderSequence = 0;
 let dshUpdateInfo: DSHUpdateInfo | null = null;
 let dshUpdateError = "";
 let dshUpdateRequest: Promise<DSHUpdateInfo> | null = null;
+let lastPluginCompatibilityNotice = "";
 
 const runtimeLabel = (status: Status): string => {
   if (status.runtimeMode === "offline") return "包内离线运行时";
   if (status.runtimeMode === "online") return "系统 Node / npx";
   return "正在检测运行时";
+};
+
+const isPluginCompatibilityError = (detail: string | undefined): boolean => {
+  if (!detail) return false;
+  return /dsh-settings|installSettingsSection|settingsNamespace|dshmarket|dsh-web-ui/i.test(detail);
 };
 
 const syncUpdateIndicator = (): void => {
@@ -557,9 +563,29 @@ const showErrorDialog = (title: string, error: unknown): void => {
   `);
 };
 
+const showPluginCompatibilityDialog = (detail: string): void => {
+  const dialog = showDialog(`
+    <header class="dialog-header"><h2>检测到旧版 DSH 插件</h2><button class="icon-button" data-dialog-close aria-label="关闭">×</button></header>
+    <div class="help-content">
+      <p>当前 DSH alpha.3 与 Web Profile 中的旧插件接口不兼容，插件加载失败，页面不会继续启动。</p>
+      <section><h3>请先保留数据</h3><p>完全退出 Desktop 后，备份 <code>~/.dsh/profiles/web</code>。不要删除 sessions、credentials、attachments 或整个 <code>~/.dsh</code>。</p></section>
+      <section><h3>处理方式</h3><p>在备份完成后移除或升级触发错误的插件，再点击“重新启动”。插件未提供 alpha.3 兼容版本前，不要强行恢复旧 bundle。</p></section>
+      <pre class="detail">${escapeHTML(detail)}</pre>
+    </div>
+    <div class="dialog-actions"><button class="button primary" data-dialog-close>知道了</button></div>
+  `);
+  dialog.querySelector<HTMLButtonElement>("[data-dialog-close]")?.focus();
+};
+
 render(initialStatus);
 for (const eventName of ["dsh:progress", "dsh:ready", "dsh:failed", "dsh:stopped"] as const) {
-  onStatusEvent(eventName, render);
+  onStatusEvent(eventName, (status) => {
+    render(status);
+    if (eventName === "dsh:failed" && isPluginCompatibilityError(status.detail) && status.detail !== lastPluginCompatibilityNotice) {
+      lastPluginCompatibilityNotice = status.detail ?? "";
+      showPluginCompatibilityDialog(status.detail ?? "");
+    }
+  });
 }
 onCommandEvent("shell:open-settings", () => void openSettings());
 onCommandEvent("shell:open-help", openHelp);

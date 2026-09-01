@@ -147,6 +147,10 @@ dsh plugin --profile web add <package>
 
 v0.5.1 起会在 Starline 启动的 DSH 进程环境中提供临时兼容入口：只有 `dsh plugin` 完全没写 `--profile` 时才补为当前 `web` profile；`--profile tui` 等显式选择保持不变，其他 DSH 命令也不会被改写。该入口不修改系统 PATH 或全局 npm 文件，也不会绕过 DSH/PowerShell 权限；插件管理仍依赖官方要求的 pnpm、网络或本地缓存。v0.5.0 及更早版本可先按上面的完整语法执行。
 
+### alpha.3 提示旧插件不兼容
+
+如果错误详情包含 `dsh-settings`、`installSettingsSection`、`settingsNamespace`、`dshmarket` 或 `dsh-web-ui`，说明当前 Web Profile 中的插件仍使用旧版 DSH API。Desktop 会弹框提示处理边界：先完全退出并备份 `~/.dsh/profiles/web`，再移除或升级触发错误的插件，最后重新启动。不要删除 sessions、credentials、attachments 或整个 `~/.dsh`；插件没有发布 alpha.3 兼容版本前，不要恢复旧 bundle。
+
 ## DSH Market 提示 pnpm Store 位置不一致
 
 如果错误堆栈来自 `pnpm.mjs`，并且此前在其他项目执行过 `pnpm config set store-dir ... --global`，先检查 `pnpm config get store-dir`。不要为了 DSH 修改不相关项目的全局缓存脚本；确认全局值是误配置后，可使用 `pnpm config delete store-dir --global` 恢复默认。v0.6.5 起，Starline 会读取现有 `web` Profile 的 `.modules.yaml`，仅在 DSH 子进程内固定该 Profile 已记录的 Store，避免全局目录改变后插件安装/更新失败；它不会删除插件、Profile 或全局缓存。若仍失败，请保留完整错误开头而不只截取 JavaScript 调用栈尾部。
