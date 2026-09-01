@@ -85,7 +85,7 @@ func TestOnlineDSHPrefixLetsNPMRefreshMetadata(t *testing.T) {
 
 func TestDSHWebArgsDisableBrowserHandoff(t *testing.T) {
 	args := dshWebArgs()
-	want := []string{"web", "--host", "127.0.0.1", "--port", "0", "--no-open"}
+	want := []string{"--profile", "web", "--host", "127.0.0.1", "--port", "0", "--no-open"}
 	if strings.Join(args, "\x00") != strings.Join(want, "\x00") {
 		t.Fatalf("dshWebArgs() = %#v, want %#v", args, want)
 	}

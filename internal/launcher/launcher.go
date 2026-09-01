@@ -172,9 +172,11 @@ func Start(_ context.Context, config Config) (*Process, error) {
 	return process, nil
 }
 
-// dshWebArgs 固定桌面宿主的 Web 启动参数；内嵌 iframe 已负责展示页面，因此禁止上游把同一 URL 交给系统浏览器。
+// dshWebArgs 使用上游 alpha.3 的 Web profile 入口；不能继续把旧的 dsh web 子命令当作兼容契约。
+// 内嵌 iframe 已负责展示页面，因此禁止上游把同一 URL 交给系统浏览器。
 func dshWebArgs() []string {
 	return []string{
+		"--profile",
 		"web",
 		"--host",
 		"127.0.0.1",

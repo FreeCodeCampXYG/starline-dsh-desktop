@@ -1,5 +1,11 @@
 # DEV_STATE
 
+## 2026-09-01 v0.6.16 alpha.3 Web profile compatibility repair
+
+- `v0.6.15` 的六平台二进制构建成功，但所有离线 Web 冒烟测试在 90 秒健康检查超时，Release 被跳过，不能视为发布成功。
+- 回读 alpha.3 官方 Web bundle 源码后确认 Web profile 入口为 `dsh --profile web`，而宿主仍传旧 `dsh web`；现已修正启动参数、回归测试、README/架构/排错/Issue 模板。
+- Release workflow 失败时新增按平台收集并上传 DSH 启动日志。修复尚待 CI 和新递增 tag 的六平台实际启动验证；不移动 `v0.6.15`。
+
 ## 2026-09-01 v0.6.15 release preparation
 
 - 上游 `@deepseek-ai/dsh@0.1.2-alpha.3` 已确认可从官方 npm registry 获取；本轮将更新离线运行时固定版本、启动默认版本、文档和 CHANGELOG。

@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         感谢反馈。Starline DSH Desktop 只负责启动和承载官方 DSH Web UI。
-        如果问题在浏览器直接运行 `dsh web` 时也能复现，请优先向 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness/issues) 反馈。
+        如果问题在浏览器直接运行 `dsh --profile web` 时也能复现，请优先向 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness/issues) 反馈。
 
   - type: checkboxes
     id: checks
@@ -97,7 +97,7 @@ body:
     id: context
     attributes:
       label: 其他信息
-      description: 代理模式、是否能用界面显示的精确版本直接运行 `npx --yes --package=@deepseek-ai/dsh@<版本> dsh web` 等信息会很有帮助。
+      description: 代理模式、是否能用界面显示的精确版本直接运行 `npx --yes --package=@deepseek-ai/dsh@<版本> dsh --profile web` 等信息会很有帮助。
 
   - type: checkboxes
     id: privacy

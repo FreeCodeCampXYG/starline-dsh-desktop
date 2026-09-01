@@ -8,7 +8,7 @@
 [![Release](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/workflows/release.yml/badge.svg)](https://github.com/FreeCodeCampXYG/starline-dsh-desktop/actions/workflows/release.yml)
 [![License](https://img.shields.io/github/license/FreeCodeCampXYG/starline-dsh-desktop)](LICENSE)
 
-Starline DSH Desktop 是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的轻量跨平台桌面宿主。它负责启动官方 `dsh web`、等待服务就绪，并在系统 WebView 中承载官方页面；不 fork DSH，不复制 Agent、会话、插件或模型调用逻辑。
+Starline DSH Desktop 是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的轻量跨平台桌面宿主。它负责启动官方 `dsh --profile web`、等待服务就绪，并在系统 WebView 中承载官方页面；不 fork DSH，不复制 Agent、会话、插件或模型调用逻辑。
 
 > 本项目是独立社区项目，与 DeepSeek 官方无隶属、背书或商业关系。DSH 仍处于开发者预览阶段，上游版本可能发生破坏性变化。
 
@@ -45,7 +45,7 @@ Starline DSH Desktop (Go + Wails)
 ├─ 启动、错误、代理、帮助和日志界面
 ├─ 官方 DSH Web UI（iframe，仅加载 loopback）
 └─ @deepseek-ai/dsh 子进程
-   └─ dsh web --host 127.0.0.1 --port <动态端口> --no-open
+   └─ dsh --profile web --host 127.0.0.1 --port <动态端口> --no-open
 ```
 
 宿主会显式传入 `--no-open`：官方 DSH 默认会把 Web 地址交给系统浏览器，但桌面端已经在内嵌 WebView 的 iframe 中加载同一 loopback 页面，因此启动时不会额外弹出浏览器；“在浏览器中打开”仍可从桌面工具菜单手动触发。

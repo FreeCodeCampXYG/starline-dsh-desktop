@@ -72,7 +72,7 @@ npx --version
 在线包的单次 npm 网络等待为 10 秒，最多重试 1 次；在线 DSH 本地页面整体就绪等待默认上限为 5 分钟，可在“代理与启动设置”中调整为 30–600 秒。自定义代理不可达时，普通包先尝试应用启动时继承且可达的 HTTP(S) 环境代理，再切换到国内镜像直连；如果 DSH 的模型/API 请求仍需代理，应恢复可用代理后重启。这里的超时只控制 npm 运行时准备和本地 DSH 页面就绪，不控制 DeepSeek Harness 内部远程模型/API 请求；后者由 DSH 自身处理。
 
 ```bash
-npx --yes --package=@deepseek-ai/dsh@0.1.2-alpha.3 dsh web --no-open
+npx --yes --package=@deepseek-ai/dsh@0.1.2-alpha.3 dsh --profile web --no-open
 ```
 
 上面的命令用于模拟桌面宿主的启动方式，`--no-open` 会阻止官方 DSH 自动拉起系统浏览器；如果需要单独验证浏览器交接，再去掉该参数。
@@ -130,11 +130,11 @@ npx --yes --package=@deepseek-ai/dsh@0.1.2-alpha.3 dsh web --no-open
 
 - v0.3.3 在正式构建中启用 WebView 默认右键菜单，可用手工选择、复制和粘贴作为回退；v0.3.2 及更早资产不包含这一改动。
 - iframe 已声明 `clipboard-read` / `clipboard-write`，但 DSH 自身复制按钮的降级逻辑仍属于上游页面。若按钮无反馈，先测试右键复制、键盘快捷键以及“在浏览器中打开”，再分别报告结果。
-- Starline 不伪装 Electron Desktop，也不注入 DSH 原生目录选择器；工作区选择保留 Web 版浏览路径。不要设置 `SSH_CONNECTION=1` 伪装 SSH 环境作为长期修复。如果浏览器 `dsh web` 正常而内嵌页面失败，请附平台、WebView 版本和脱敏日志。
+- Starline 不伪装 Electron Desktop，也不注入 DSH 原生目录选择器；工作区选择保留 Web 版浏览路径。不要设置 `SSH_CONNECTION=1` 伪装 SSH 环境作为长期修复。如果浏览器 `dsh --profile web` 正常而内嵌页面失败，请附平台、WebView 版本和脱敏日志。
 
 ## MCP 或插件配置后启动很久
 
-宿主最多等待五分钟，并在 DSH 提前退出或超时后显示日志入口。MCP 启动阻塞、profile 中重复插入已经由 bundle 自动注册的插件、无效 `cordis.patch.yml` 都可能让 DSH 在 readiness 前失败；同类案例见 [#45](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/45) 和 [#8](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/8)。先在浏览器直接运行同版本 `dsh web` 并检查同一份 profile；Starline 不自动删除或禁用用户插件。
+宿主最多等待五分钟，并在 DSH 提前退出或超时后显示日志入口。MCP 启动阻塞、profile 中重复插入已经由 bundle 自动注册的插件、无效 `cordis.patch.yml` 都可能让 DSH 在 readiness 前失败；同类案例见 [#45](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/45) 和 [#8](https://github.com/anywhere-labs/deepseek-harness-desktop/issues/8)。先在浏览器直接运行同版本 `dsh --profile web` 并检查同一份 profile；Starline 不自动删除或禁用用户插件。
 
 ## Agent 执行 `dsh plugin` 提示缺少 `--profile`
 
@@ -213,4 +213,4 @@ v0.3.2 Release 已增加真实 PTY/ripgrep 执行、Sharp/Koffi 加载和最终�
 | Agent 回复、模型 provider、会话、轨迹、插件、官方 UI | deepseek-harness |
 | Wails 本身的 WebView/原生窗口最小复现 | wails |
 
-提交前尽量在浏览器直接运行 `dsh web`，这一步能快速判断问题属于宿主还是上游。
+提交前尽量在浏览器直接运行 `dsh --profile web`，这一步能快速判断问题属于宿主还是上游。

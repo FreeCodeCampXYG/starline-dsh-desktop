@@ -242,6 +242,45 @@ jobs:
           DSH_DESKTOP_RUN_OFFLINE_INTEGRATION=1 \
           go test ./internal/launcher -run TestOfflineRuntimeStartsWeb -count=1 -timeout 2m
 
+      - name: Collect Windows DSH startup logs on failure
+        if: failure() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $source = Join-Path $env:LOCALAPPDATA 'starline-dsh-desktop\logs'
+          $destination = Join-Path $env:RUNNER_TEMP 'dsh-startup-logs'
+          if (Test-Path -LiteralPath $source) {
+            Copy-Item -LiteralPath $source -Destination $destination -Recurse -Force
+          } else {
+            "DSH startup log directory was not created: $source" | Out-File -LiteralPath (Join-Path $env:RUNNER_TEMP 'dsh-startup-logs-missing.txt') -Encoding utf8
+          }
+
+      - name: Collect macOS/Linux DSH startup logs on failure
+        if: failure() && runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          destination="$RUNNER_TEMP/dsh-startup-logs"
+          mkdir -p "$destination"
+          for source in "$HOME/.cache/starline-dsh-desktop/logs" "$HOME/Library/Caches/starline-dsh-desktop/logs"; do
+            if [ -d "$source" ]; then
+              cp -R "$source" "$destination/"
+            fi
+          done
+          if [ -z "$(find "$destination" -type f -name 'dsh-*.log' -print -quit)" ]; then
+            printf 'DSH startup log directory was not created.\n' > "$RUNNER_TEMP/dsh-startup-logs-missing.txt"
+          fi
+
+      - name: Upload DSH startup logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: starline-dsh-startup-logs-${{ matrix.asset }}
+          path: |
+            ${{ runner.temp }}/dsh-startup-logs
+            ${{ runner.temp }}/dsh-startup-logs-missing.txt
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Package Windows artifacts
         if: runner.os == 'Windows'
         shell: pwsh

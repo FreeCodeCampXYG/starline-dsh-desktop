@@ -16,6 +16,18 @@
 
 ### 变更
 
+- 对齐 `@deepseek-ai/dsh@0.1.2-alpha.3` 的 Web profile 启动契约，宿主改用 `dsh --profile web`；Release 冒烟失败时保留各平台 DSH 启动日志供诊断。
+
+## [0.6.16] - 2026-09-01
+
+### 修复
+
+- 修复升级到 DSH 0.1.2-alpha.3 后仍传递旧 `dsh web` 子命令导致的六平台离线 Web 启动超时。
+
+### 构建
+
+- 离线 Web 冒烟失败时上传 DSH 启动日志，避免只报告 HTTP 健康检查超时。
+
 - `offline-full` 离线闭包和 Desktop 默认 DSH 版本更新为 `@deepseek-ai/dsh@0.1.2-alpha.3`；锁文件、依赖完整性、原生模块和最终归档由本次 tag 的 GitHub Actions runner 下载并验证。
 
 ## [0.6.15] - 2026-09-01
