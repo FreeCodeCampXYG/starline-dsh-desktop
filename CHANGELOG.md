@@ -16,6 +16,15 @@
 
 ### 变更
 
+- `offline-full` 离线闭包和 Desktop 默认 DSH 版本更新为 `@deepseek-ai/dsh@0.1.2-alpha.3`；锁文件、依赖完整性、原生模块和最终归档由本次 tag 的 GitHub Actions runner 下载并验证。
+
+## [0.6.15] - 2026-09-01
+
+### 变更
+
+- 将 `offline-runtime` 固定版本、启动默认版本和相关文档更新为 `@deepseek-ai/dsh@0.1.2-alpha.3`。
+- GitHub Actions 将重新解析离线 lock，并执行六平台原生构建、离线闭包校验和最终归档检查。
+
 - Issue #6：普通包启动先探测官方 npm registry，官方不可达时回退国内镜像；沿用用户代理设置，不再假定用户无法访问 npm。
 
 ## [0.6.14] - 2026-09-01

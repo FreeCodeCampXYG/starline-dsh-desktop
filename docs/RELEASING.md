@@ -17,9 +17,9 @@ Windows 维护者可使用 `scripts/prepare-dsh-release.ps1` 准备下一次 DSH
 
 ```powershell
 # 推荐一次性执行：脚本会逐步确认提交、annotated tag 和推送：
-.\scripts\prepare-dsh-release.ps1 -DSHVersion 0.1.1-rc.2 -DesktopVersion 0.6.7 -Commit -Tag -Push
+.\scripts\prepare-dsh-release.ps1 -DSHVersion 0.1.2-alpha.3 -DesktopVersion 0.6.15 -Commit -Tag -Push
 # 只准备并查看差异时省略 -Commit/-Tag/-Push；审阅后请手工提交和打 tag。
-.\scripts\prepare-dsh-release.ps1 -DSHVersion 0.1.1-rc.2 -DesktopVersion 0.6.7
+.\scripts\prepare-dsh-release.ps1 -DSHVersion 0.1.2-alpha.3 -DesktopVersion 0.6.15
 ```
 
 脚本不会移动既有 tag；`-Push` 只推送当前 `main` 和本次新 tag。没有显式指定 `-DesktopVersion` 时，会按仓库最高稳定 `v*` tag 自动递增 patch 版本。

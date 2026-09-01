@@ -1,5 +1,11 @@
 # DEV_STATE
 
+## 2026-09-01 v0.6.15 release preparation
+
+- 上游 `@deepseek-ai/dsh@0.1.2-alpha.3` 已确认可从官方 npm registry 获取；本轮将更新离线运行时固定版本、启动默认版本、文档和 CHANGELOG。
+- 当前工作区已完成源文件版本更新，离线 `package-lock.json` 需由 GitHub Actions 的 Refresh offline lock workflow 重新解析后再打 tag；六平台构建、原生模块和最终归档尚未验证。
+- 目标 tag 为 `v0.6.15`，不移动已发布的 `v0.6.14`；本轮变更原因是跟进上游 DSH alpha.3 版本并重新生成可审计的离线闭包。
+
 ## 2026-09-01 Issue #6 npm registry 启动回退
 
 - 在线普通包启动改为先探测官方 `https://registry.npmjs.org` 的 DSH dist-tags 端点；官方不可达时才使用 `https://registry.npmmirror.com`，避免假定用户无法访问官方 npm。

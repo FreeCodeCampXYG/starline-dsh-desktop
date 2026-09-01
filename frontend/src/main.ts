@@ -44,7 +44,7 @@ const initialStatus: Status = {
   state: "starting",
   message: "正在连接桌面宿主…",
   version: "dev",
-  dshVersion: "0.1.1-rc.2",
+  dshVersion: "0.1.2-alpha.3",
   runtimeMode: "auto",
 };
 

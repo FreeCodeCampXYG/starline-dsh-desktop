@@ -2,7 +2,7 @@
 
 This directory defines the pinned DSH production dependency closure used only by `offline-full` release artifacts.
 
-The current main branch pins `@deepseek-ai/dsh@0.1.1-rc.2`. This is a release-time exact version, not a dynamic `latest` dependency.
+The current main branch pins `@deepseek-ai/dsh@0.1.2-alpha.3`. This is a release-time exact version, not a dynamic `latest` dependency.
 
 Release jobs install it with the committed lock file and all lifecycle scripts disabled. They then verify the approved package versions, lockfile integrity values, lifecycle commands, and script hashes before running only the reviewed `node-pty` lifecycle pair and DSH's spawn-helper permission repair. Each native runner uses the Node version pinned in `node-version.txt`, performs a real PTY shell spawn, and repeats the functional check after unpacking the final archive.
 
