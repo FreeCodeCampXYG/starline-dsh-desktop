@@ -9,6 +9,7 @@
 - `v0.6.18` 实机仍显示认证错误，确认 alpha.3 token 的同站顶层导航约束与 `wails://` iframe 不兼容；即使 Go 健康检查不再消费 token，iframe 也不能取得会话。已改为 WebView 顶层导航，待前端构建、CI 和新递增版本实机验证。
 - `ae162ae` 的前端构建通过，CI `33533837944` 已完成质量门禁并继续运行六平台原生构建；按用户明确要求不等待完成，准备发布 `v0.6.19`，Release 结果与 Windows 实机认证交接仍待回读。
 - `v0.6.19` Windows 实机确认即使 WebView 顶层导航，WebView2 仍不能在 alpha.3 的 loopback `303 + HttpOnly + SameSite=Strict` 认证链中回送 cookie；系统浏览器可用。改为宿主自动打开已校验 URL，Desktop 退回运行控制页；待前端构建、CI、递增版本和真实设备验证。
+- `6271fca` 已通过前端构建和定向 application/launcher Go 测试，使用系统浏览器交接 DSH alpha.3 认证，Desktop 保留运行控制页。按用户要求不等待 CI，准备 `v0.6.20`；新二进制与 Windows 实机行为待验证。
 
 ## 2026-09-01 v0.6.16 alpha.3 Web profile compatibility repair
 
