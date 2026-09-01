@@ -7,6 +7,7 @@
 - 定向 `go test ./internal/launcher -run 'TestWaitReadyDoesNotConsumeTokenExchange|TestWaitReadyExplainsOnlinePreparationTimeout'` 通过；完整包测试仍被既有 Windows 兼容入口测试所需的 `pwsh.exe` 缺失阻断。当前 `D:\winsofts\dsh-desktop\starline-dsh-desktop.exe` 尚未包含此修复，需 CI 构建新的递增版本后实机验证。
 - `1e5fb85` 已增加旧 Web Profile 插件 API 不兼容弹框和排错说明；用户须先备份 `~/.dsh/profiles/web`，再移除或升级插件，Desktop 不会自动删除 sessions、credentials、attachments 或整个 `.dsh`。CI `33529286465` 的质量门禁和六平台原生/离线运行时构建均通过，待 `v0.6.18` Release 与 Windows 实机验证。
 - `v0.6.18` 实机仍显示认证错误，确认 alpha.3 token 的同站顶层导航约束与 `wails://` iframe 不兼容；即使 Go 健康检查不再消费 token，iframe 也不能取得会话。已改为 WebView 顶层导航，待前端构建、CI 和新递增版本实机验证。
+- `ae162ae` 的前端构建通过，CI `33533837944` 已完成质量门禁并继续运行六平台原生构建；按用户明确要求不等待完成，准备发布 `v0.6.19`，Release 结果与 Windows 实机认证交接仍待回读。
 
 ## 2026-09-01 v0.6.16 alpha.3 Web profile compatibility repair
 
