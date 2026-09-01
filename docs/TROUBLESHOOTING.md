@@ -153,7 +153,7 @@ v0.5.1 起会在 Starline 启动的 DSH 进程环境中提供临时兼容入口�
 
 ### alpha.3 提示 `dsh web authentication required`
 
-alpha.3 的带 token 启动 URL 必须由同站顶层页面完成 cookie 交换。Desktop `v0.6.19` 起会让内嵌 WebView 顶层导航到已校验的 loopback URL，不再使用 `wails://` iframe。若旧版本仍出现该提示，可在本次启动日志中直接打开刚打印的 URL；不要复用此前日志或聊天记录中的 URL，因为 token 仅可使用一次。
+alpha.3 的带 token 启动 URL 必须由浏览器完成 cookie 交换。Windows WebView2 在此 loopback 的 `303 + HttpOnly + SameSite=Strict` 链上不能稳定回送 cookie，因此 Desktop `v0.6.20` 起会自动使用系统浏览器打开已校验的 URL，并保留自身作为启动、日志、代理和进程控制窗口。若旧版本仍出现该提示，可在本次启动日志中直接打开刚打印的 URL；不要复用此前日志或聊天记录中的 URL。
 
 ## DSH Market 提示 pnpm Store 位置不一致
 

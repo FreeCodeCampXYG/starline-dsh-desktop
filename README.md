@@ -134,7 +134,7 @@ sudo apt-get install libgtk-3-0t64 libwebkit2gtk-4.1-0
 1. 应用优先检查可执行文件旁的完整 `offline-runtime/`；
 2. 存在匹配离线运行时就直接启动包内 Node/DSH；否则检查系统 Node.js 和 `npx`，复用 npm 内容缓存，缓存缺失时第一次准备可能需要数分钟；
 3. DSH 启动在随机的 `127.0.0.1` 高位端口；
-4. 原生窗口先短暂隐藏预热；宿主确认本地 DSH 已监听后，让 WebView 顶层打开一次性认证 URL 并进入官方页面；alpha.3 不支持通过 `wails://` iframe 交换会话 cookie；
+4. 原生窗口先短暂隐藏预热；宿主确认本地 DSH 已监听后，让系统浏览器打开一次性认证 URL；Desktop 保留启动、日志、代理和进程控制，alpha.3 当前不能在 Windows WebView2 中稳定交换会话 cookie；
 5. 第一次选择工作区是 DSH 自身的正常初始化；
 6. 模型、插件和工作区权限继续在官方 DSH 页面中设置。
 

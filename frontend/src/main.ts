@@ -180,9 +180,9 @@ const renderSplash = (status: Status): string => {
 
 const render = (status: Status): void => {
   currentStatus = status;
-  const sequence = ++renderSequence;
+  ++renderSequence;
   if (status.state === "ready" && status.url) {
-    renderReady(status, sequence);
+    renderReady(status);
     return;
   }
 
@@ -230,12 +230,33 @@ const render = (status: Status): void => {
   if (!isBusy) showWindow();
 };
 
-const renderReady = (status: Status, sequence: number): void => {
-  const source = status.url ?? "";
-  if (!source || sequence !== renderSequence) return;
-  // alpha.3 token 仅能在与 DSH 同站的顶层导航中换取 cookie；iframe 属于 wails:// 跨站嵌入，
-  // 即使 URL 未被宿主消费也不会携带会话。后端已限制为安全 loopback URL，这里只负责交接。
-  window.location.replace(source);
+const renderReady = (status: Status): void => {
+  root.innerHTML = `
+    <section class="workspace workspace-status">
+      ${renderRuntimeBar(status, true)}
+      <div class="status-banner is-busy" role="status">
+        <div class="status-summary">
+          <span class="status-indicator" aria-hidden="true"></span>
+          <div>
+            <strong>DeepSeek Harness 已在系统浏览器打开</strong>
+            <small>当前 alpha.3 的认证 cookie 无法在 Windows WebView2 中稳定交接；Desktop 继续管理启动、日志、代理和重启。</small>
+          </div>
+        </div>
+        <div class="status-actions">
+          <button class="status-action primary" data-action="browser">重新在浏览器打开</button>
+          <button class="status-action" data-action="restart">重新启动</button>
+          <button class="status-action" data-action="logs">日志</button>
+        </div>
+      </div>
+      <div class="startup-stage">
+        <div class="startup-mark" aria-hidden="true"><span>DSH</span><i></i></div>
+        <p>浏览器中的 DSH 会话正在运行</p>
+        <small>关闭此窗口不会终止 DSH；从托盘选择“退出”才会回收当前进程。</small>
+      </div>
+    </section>
+  `;
+  bindCommonActions();
+  showWindow();
 };
 
 const restart = (): void => {
