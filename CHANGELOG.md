@@ -16,6 +16,8 @@
 
 ### 变更
 
+- DSH alpha.3 就绪后改由 Desktop WebView 顶层导航到一次性认证 URL，避免 `wails://` iframe 跨站嵌入导致 `dsh web authentication required`。
+
 ## [0.6.18] - 2026-09-02
 
 ### 修复

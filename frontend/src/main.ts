@@ -232,44 +232,10 @@ const render = (status: Status): void => {
 
 const renderReady = (status: Status, sequence: number): void => {
   const source = status.url ?? "";
-  const startupStatus: Status = {
-    ...status,
-    state: "starting",
-    message: "正在载入 DeepSeek Harness…",
-    detail: undefined,
-    progress: 99,
-    stage: "DSH 已就绪，正在载入桌面 WebView…",
-  };
-  root.innerHTML = `
-    <section class="workspace workspace-ready">
-      ${renderRuntimeBar(status, true)}
-      <div class="frame-stage">
-        <iframe
-          class="dsh-frame"
-          title="DeepSeek Harness"
-          allow="clipboard-read; clipboard-write"
-        ></iframe>
-        <div class="startup-overlay">${renderSplash(startupStatus)}</div>
-      </div>
-    </section>
-  `;
-  bindCommonActions();
-  const frame = root.querySelector<HTMLIFrameElement>(".dsh-frame");
-  const overlay = root.querySelector<HTMLElement>(".startup-overlay");
-  if (!frame) {
-    showWindow();
-    return;
-  }
-  frame.addEventListener("load", () => {
-    if (sequence !== renderSequence || !frame.isConnected) return;
-    showWindow();
-    requestAnimationFrame(() => {
-      frame.classList.add("is-loaded");
-      overlay?.classList.add("is-hidden");
-    });
-    window.setTimeout(() => overlay?.remove(), 360);
-  }, { once: true });
-  frame.src = source;
+  if (!source || sequence !== renderSequence) return;
+  // alpha.3 token 仅能在与 DSH 同站的顶层导航中换取 cookie；iframe 属于 wails:// 跨站嵌入，
+  // 即使 URL 未被宿主消费也不会携带会话。后端已限制为安全 loopback URL，这里只负责交接。
+  window.location.replace(source);
 };
 
 const restart = (): void => {
