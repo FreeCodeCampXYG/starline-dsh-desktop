@@ -61,7 +61,7 @@ Wails application
 3. 前端显示由 Go 报告的单调阶段百分比；百分比对应运行时检测、Node 校验、子进程启动、监听地址和 HTTP 指纹等可验证里程碑，不等同于 npm 下载字节。
 4. 宿主优先查找与可执行文件同包的 `offline-runtime/`；macOS 在应用包 `Contents/Resources` 中查找。
 5. 离线运行时必须同时包含匹配版本文件、Node 可执行文件和 DSH 入口，缺损或版本不一致时明确失败，不静默联网回退。
-6. 未发现离线运行时时，宿主查找系统 Node.js 并验证版本；Windows 直接让 Node 执行 `npx-cli.js`，Unix 使用 PATH 中的 `npx`。npm 请求单次等待 10 秒、最多重试 1 次；普通包准备固定优先 `registry.npmmirror.com`，自定义端口不可达时快速直连镜像。
+6. 未发现离线运行时时，宿主查找系统 Node.js 并验证版本；Windows 直接让 Node 执行 `npx-cli.js`，Unix 使用 PATH 中的 `npx`。npm 请求单次等待 10 秒、最多重试 1 次；普通包准备先探测官方 npm registry，失败回退 `registry.npmmirror.com`；自定义端口不可达时快速直连镜像。
 7. 宿主向 DSH 传入 `--port 0`，由 DSH 保持 listener 所有权并选择可用 loopback 端口；宿主不再预占后释放端口。
 8. 子进程执行精确版本的 `@deepseek-ai/dsh`：默认使用 Desktop 发布时验证的固定版本；前端启动后通过 Go 后端直连国内镜像查询 `latest`/`next`，只显示通道状态；用户手动刷新或应用更新时按自定义代理、应用启动时继承的系统环境代理、国内镜像直连依次查询。普通包准备沿用同一有界降级，并在日志和状态中提示实际路径。在线包经用户确认后再次核对 dist-tag、保存对应精确版本，并可清除设置恢复默认；新版本在默认 5 分钟（可在设置中调整为 30–600 秒）内无法完成本地页面指纹校验时，宿主恢复更新前的配置并自动重启旧版本。这个等待上限只保护 npm 运行时准备和本地 DSH Web 就绪，DeepSeek Harness 内部远程模型/API 请求仍由 DSH 自己处理。普通包使用：
 

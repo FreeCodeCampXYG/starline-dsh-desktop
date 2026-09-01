@@ -94,6 +94,16 @@ func Start(_ context.Context, config Config) (*Process, error) {
 		return nil, err
 	}
 	childBaseEnv, proxyFallbackRoute := childEnvironmentWithFallback(os.Environ(), config.ProxyMode, config.ProxyURL)
+	selectedRegistry := npmMirrorRegistry
+	if command.mode == "online" {
+		for _, candidate := range npmRegistryCandidates() {
+			if npmRegistryReachable(candidate, childBaseEnv) {
+				selectedRegistry = candidate
+				break
+			}
+		}
+	}
+	childBaseEnv = withNPMRegistry(childBaseEnv, selectedRegistry)
 	childEnv, err := withDSHCommandShim(childBaseEnv, shimDir, command)
 	if err != nil {
 		_ = os.RemoveAll(shimDir)
@@ -118,7 +128,10 @@ func Start(_ context.Context, config Config) (*Process, error) {
 	} else {
 		_, _ = fmt.Fprintf(logFile, "[%s] Starline DSH Desktop 正在通过 npx 准备 @deepseek-ai/dsh@%s；npm 会校验版本元数据并复用可用内容缓存。\n", time.Now().Format(time.RFC3339), config.Version)
 		_, _ = fmt.Fprintf(logFile, "npm 调试日志目录：%s\n", npmLogDir())
-		_, _ = fmt.Fprintf(logFile, "npm registry：%s；单次网络等待：%sms；重试次数：%s。\n", npmRegistry(childEnv), npmFetchTimeout, npmFetchRetries)
+		_, _ = fmt.Fprintf(logFile, "npm registry：%s（官方优先，失败回退国内镜像）；单次网络等待：%sms；重试次数：%s。\n", npmRegistry(childEnv), npmFetchTimeout, npmFetchRetries)
+		if npmRegistry(childEnv) == npmMirrorRegistry {
+			_, _ = fmt.Fprintln(logFile, "官方 npm registry 探测失败，已回退国内镜像；如本机代理监听 1080，请在代理设置中填写 http://127.0.0.1:1080 后重试。")
+		}
 	}
 	switch proxyFallbackRoute {
 	case proxyFallbackSystem:

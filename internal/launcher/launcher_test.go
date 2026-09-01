@@ -322,6 +322,20 @@ func TestChildEnvironmentCanDisableInheritedProxy(t *testing.T) {
 	}
 }
 
+func TestNPMRegistryCandidatesPreferOfficial(t *testing.T) {
+	candidates := npmRegistryCandidates()
+	if len(candidates) != 2 || candidates[0] != npmOfficialRegistry || candidates[1] != npmMirrorRegistry {
+		t.Fatalf("npm registry 回退顺序 = %#v", candidates)
+	}
+}
+
+func TestChildEnvironmentCanSelectOfficialRegistry(t *testing.T) {
+	environment := childEnvironmentWithRegistry([]string{"PATH=/bin"}, "disabled", "", npmOfficialRegistry)
+	if !strings.Contains(strings.Join(environment, "\n"), "npm_config_registry="+npmOfficialRegistry) {
+		t.Fatalf("未选择官方 npm registry：%v", environment)
+	}
+}
+
 func TestChildEnvironmentWithFallbackUsesMirrorForUnreachableCustomProxy(t *testing.T) {
 	environment, fallbackRoute := childEnvironmentWithFallback(
 		[]string{"PATH=/bin"},

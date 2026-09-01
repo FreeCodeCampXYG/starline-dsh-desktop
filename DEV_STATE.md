@@ -1,5 +1,25 @@
 # DEV_STATE
 
+## 2026-09-01 Issue #6 npm registry 启动回退
+
+- 在线普通包启动改为先探测官方 `https://registry.npmjs.org` 的 DSH dist-tags 端点；官方不可达时才使用 `https://registry.npmmirror.com`，避免假定用户无法访问官方 npm。
+- 探测沿用用户选择的 HTTP(S) 代理环境；本机 1080 可作为自定义代理填写 `http://127.0.0.1:1080`，未将该端口硬编码为全局默认值。
+- 新增 registry 顺序与环境选择单测；定向 Go 测试通过。完整 launcher 测试受当前机器缺少 `pwsh.exe` 的既有 Windows 兼容入口测试阻断；GitHub Actions 仍需完成全量验证。
+
+## 2026-08-31 online Linux DEB 首次启动超时
+
+- Issue #5 的 Linux/KDE 日志显示 online DEB 的 npx 准备阶段在 90 秒内未输出 DSH 监听地址；现有片段不足以断言无网络，仍需 npm debug log 区分 registry、代理和首次依赖准备问题。
+- 默认 online 就绪上限改为 5 分钟，设置范围仍为 30–600 秒；在线超时会明确提示检查 npm registry/代理或改用 `offline-full`。`--no-open` 已回读精确的 `@deepseek-ai/dsh-web-app@0.1.1-rc.2` 发行包确认受支持，必须保留以避免 DSH 自动交接到系统浏览器。
+- 本地通过文档链接检查和差异空白检查；当前机器未安装 Go，因此 Go 格式化、单测、Wails/DEB 构建仍待 CI/Linux 设备验证。Issue 已回复，建议使用匹配版本和架构的 `offline-full` DEB，并补充完整宿主/npm 脱敏日志。
+
+## 2026-08-23 V2 浏览器回归测试
+
+- 使用 ChromeGo CDP 9222，以工号 10999、演示机构、管理员只读边界执行本地 V2 与公司旧版回归；本地前端 `127.0.0.1:4200`、后端 `127.0.0.1:9200`，公司旧版 `10.1.50.47`。
+- 交付物位于 `v2-test-run/`：测试计划、Markdown/HTML 报告、V2/旧版对比、问题清单、接口证据草案、截图和局部 outerHTML。
+- 已确认：V2 query/page、query/audit、字段/模板接口可达并返回 HTTP 200；本地自造模板保存与删除成功且已清理。
+- 已确认问题：组合查询字段选择嵌套抽屉移出视口（P0）；空值条件先保存/查询后提示（P1）；应用与主查询重复 query/page（P1）；导出前提示残留（P2）；1366 结果区横向滚动（P2）；旧版导出以 HTTP 200 携带业务错误（P1）。
+- 未验证：真实有数据结果、导出大于 5000 条、双击病案打开、完整字段类型矩阵和后端 SQL 日志根因；需要修复 P0 后继续浏览器回归。
+
 ## 2026-08-22 v0.6.12 DSH Web 浏览器交接拦截
 
 - 根因已确认：`@deepseek-ai/dsh-web-app@0.1.1-rc.2` 的 Web 启动默认开启系统浏览器交接，并提供 `--no-open`；Wails 宿主此前未传该参数，所以启动时会额外拉起浏览器。

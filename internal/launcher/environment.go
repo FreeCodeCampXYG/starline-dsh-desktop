@@ -3,6 +3,7 @@ package launcher
 import (
 	"context"
 	"net"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -10,12 +11,14 @@ import (
 )
 
 const (
+	npmOfficialRegistry     = "https://registry.npmjs.org"
 	npmMirrorRegistry       = "https://registry.npmmirror.com"
 	npmFetchTimeout         = "10000"
 	npmFetchRetries         = "1"
 	npmFetchRetryMinTimeout = "1000"
 	npmFetchRetryMaxTimeout = "3000"
 	proxyProbeTimeout       = 800 * time.Millisecond
+	npmRegistryProbeTimeout = 3 * time.Second
 )
 
 const (
@@ -95,6 +98,11 @@ func proxyEndpointReachable(rawURL string) bool {
 }
 
 func childEnvironment(environment []string, proxyMode, proxyURL string) []string {
+	return childEnvironmentWithRegistry(environment, proxyMode, proxyURL, npmMirrorRegistry)
+}
+
+// childEnvironmentWithRegistry 为子进程固定本次已选择的 registry；默认代理语义保持不变。
+func childEnvironmentWithRegistry(environment []string, proxyMode, proxyURL, registry string) []string {
 	if proxyMode == "custom" || proxyMode == "disabled" {
 		environment = withoutProxyVariables(environment)
 	}
@@ -109,7 +117,7 @@ func childEnvironment(environment []string, proxyMode, proxyURL string) []string
 			"npm_config_https_proxy="+proxyURL,
 		)
 	}
-	environment = withNPMRegistry(environment, npmMirrorRegistry)
+	environment = withNPMRegistry(environment, registry)
 	// 限制 npm 的单次网络等待和重试，避免代理端口失效时 npx 长时间无响应。
 	environment = append(environment,
 		"npm_config_fetch_timeout="+npmFetchTimeout,
@@ -119,6 +127,44 @@ func childEnvironment(environment []string, proxyMode, proxyURL string) []string
 		"npm_config_update_notifier=false",
 	)
 	return mergeNoProxy(environment, []string{"127.0.0.1", "localhost", "::1"})
+}
+
+// npmRegistryCandidates 保证官方 npm 是普通启动的第一选择，镜像只作为失败回退。
+func npmRegistryCandidates() []string {
+	return []string{npmOfficialRegistry, npmMirrorRegistry}
+}
+
+// npmRegistryReachable 只探测受信任 registry 的 dist-tags 端点，不下载包体。
+func npmRegistryReachable(registry string, environment []string) bool {
+	client := &http.Client{Timeout: npmRegistryProbeTimeout}
+	client.Transport = &http.Transport{Proxy: proxyFromEnvironment(environment)}
+	request, err := http.NewRequest(http.MethodGet, registry+"/-/package/@deepseek-ai%2Fdsh/dist-tags", nil)
+	if err != nil {
+		return false
+	}
+	response, err := client.Do(request)
+	if err != nil {
+		return false
+	}
+	defer response.Body.Close()
+	return response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices
+}
+
+func proxyFromEnvironment(environment []string) func(*http.Request) (*url.URL, error) {
+	return func(request *http.Request) (*url.URL, error) {
+		for _, key := range []string{"HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY"} {
+			for _, entry := range environment {
+				name, value, found := strings.Cut(entry, "=")
+				if found && strings.EqualFold(name, key) && strings.TrimSpace(value) != "" {
+					parsed, err := url.Parse(strings.TrimSpace(value))
+					if err == nil && (parsed.Scheme == "http" || parsed.Scheme == "https") {
+						return parsed, nil
+					}
+				}
+			}
+		}
+		return nil, nil
+	}
 }
 
 func withNPMRegistry(environment []string, registry string) []string {

@@ -346,7 +346,7 @@ const openSettings = async (checkUpdate = false): Promise<void> => {
       <div><p class="eyebrow">STARTUP SETTINGS</p><h2>代理与启动设置</h2></div>
       <button class="icon-button" data-dialog-close aria-label="关闭">×</button>
     </header>
-    <p class="dialog-intro">普通包和自动版本检查默认优先国内镜像；手动刷新和应用版本按“自定义代理 → 系统环境代理 → 国内镜像直连”依次尝试。这里的代理也会传给 DSH 模型/API 和 DSH Market 插件操作。保存后会立即重启 DSH。</p>
+    <p class="dialog-intro">普通包和自动版本检查默认优先官方 npm registry，失败回退国内镜像；手动刷新和应用版本按“自定义代理 → 系统环境代理 → 国内镜像直连”依次尝试。这里的代理也会传给 DSH 模型/API 和 DSH Market 插件操作。保存后会立即重启 DSH。</p>
     <form class="settings-form">
       <label class="mode-option">
         <input type="radio" name="proxy-mode" value="inherit" ${settings.proxyMode === "inherit" ? "checked" : ""}>
@@ -505,13 +505,13 @@ const openHelp = (): void => {
       <button class="icon-button" data-dialog-close aria-label="关闭">×</button>
     </header>
     <div class="help-content">
-      <section><h3>首次启动</h3><p>普通包需要系统 Node.js 22.19+ 或 24+，并会通过 npx 下载固定版本的 DSH。没有代理时优先使用国内 npm 镜像；自定义代理端口不可达时，普通包会快速切换到国内镜像直连，避免旧端口阻塞启动，但 DSH 的模型/API 请求仍可能需要可用代理。在线启动等待上限可在设置中调整（30–600 秒）。<code>offline-full</code> 已包含 Node 与 DSH，不访问 npm registry；第一次选择工作区仍是 DSH 自身的正常初始化。</p></section>
+      <section><h3>首次启动</h3><p>普通包需要系统 Node.js 22.19+ 或 24+，并会通过 npx 下载固定版本的 DSH。先尝试官方 npm registry；官方不可达时回退国内 npm 镜像；自定义代理端口不可达时，普通包会快速切换到国内镜像直连，避免旧端口阻塞启动，但 DSH 的模型/API 请求仍可能需要可用代理。在线启动等待上限可在设置中调整（30–600 秒）。<code>offline-full</code> 已包含 Node 与 DSH，不访问 npm registry；第一次选择工作区仍是 DSH 自身的正常初始化。</p></section>
       <section><h3>代理怎么填</h3><p>如果代理软件监听本机端口，选择“自定义代理”，填写 <code>http://127.0.0.1:端口</code>。例如端口 10808 就填 <code>http://127.0.0.1:10808</code>。</p></section>
       <section><h3>出错排查</h3><p>先打开日志检查 Node、npm 下载或网络错误；改完代理后保存，外壳会自动重启 DSH。模型服务的密钥仍在官方 DSH 页面中配置。</p></section>
       <section><h3>PowerShell 与权限</h3><p>权限模式由官方 DSH 页面选择。<code>danger-full-access</code> 可以按当前 Windows 用户权限执行更广泛的命令和文件操作，但会失去工作区沙箱保护；宿主不会因命令失败自动切换。该模式也不等于“以管理员身份运行”，不会自动获得 UAC 管理员令牌。</p></section>
       <section><h3>普通包与离线包</h3><p>Setup.exe 和普通 ZIP 体积较小，需要系统 Node/npm。<code>offline-full</code> 是较大的便携包，内含发布时固定并经原生门禁的 DSH 依赖，但模型服务、远程 MCP 和联网工具仍可能需要网络。</p></section>
       <section><h3>安装与覆盖升级</h3><p>Windows Setup 使用同一应用身份；关闭正在运行的应用后，新版会复用已记录的安装目录并覆盖程序文件，用户配置和 DSH 工作区不在安装目录中。<code>offline-full</code> 当前是便携压缩包，不属于安装器；请解压到新目录验证后再删除旧目录，不要覆盖正在运行的文件。</p></section>
-      <section><h3>DSH 与插件更新</h3><p>应用启动后直连国内镜像查询 <code>latest</code> 与 <code>next</code>，顶栏只提示版本，不会静默切换。手动刷新或应用版本依次尝试自定义代理、系统环境代理和国内镜像直连；新版本启动不完整时会恢复上一版配置并重新启动。DSH Market 插件操作沿用同一子进程网络，并固定现有 Profile 已记录的 pnpm Store，避免全局缓存目录变化造成 Store 冲突。</p></section>
+      <section><h3>DSH 与插件更新</h3><p>应用启动后先尝试官方 npm registry 查询 <code>latest</code> 与 <code>next</code>，失败回退国内镜像；顶栏只提示版本，不会静默切换。手动刷新或应用版本依次尝试自定义代理、系统环境代理和国内镜像直连；新版本启动不完整时会恢复上一版配置并重新启动。DSH Market 插件操作沿用同一子进程网络，并固定现有 Profile 已记录的 pnpm Store，避免全局缓存目录变化造成 Store 冲突。</p></section>
       <section><h3>Desktop 更新</h3><p>Desktop 不会静默覆盖自身；使用“检查 Desktop 更新”打开 GitHub 最新 Release，查看变更说明并选择对应系统资产。离线包升级需要下载内置新 DSH、重新通过六平台原生门禁的 <code>offline-full</code>。</p></section>
       <section><h3>卸载与重装</h3><p>Windows Setup 会创建系统卸载记录和“卸载 Starline DSH Desktop”开始菜单入口；便携 ZIP/离线包应从托盘退出后直接删除解压目录。macOS 退出后删除应用，Ubuntu DEB 使用 <code>sudo apt remove starline-dsh-desktop</code>。卸载默认保留用户配置、日志和工作区，重装后可以继续使用。</p></section>
     </div>
