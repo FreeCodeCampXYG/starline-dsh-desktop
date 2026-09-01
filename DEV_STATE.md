@@ -5,6 +5,8 @@
 - `v0.6.15` 的六平台二进制构建成功，但所有离线 Web 冒烟测试在 90 秒健康检查超时，Release 被跳过，不能视为发布成功。
 - 回读 alpha.3 官方 Web bundle 源码后确认 Web profile 入口为 `dsh --profile web`，而宿主仍传旧 `dsh web`；现已修正启动参数、回归测试、README/架构/排错/Issue 模板。
 - Release workflow 失败时新增按平台收集并上传 DSH 启动日志。修复尚待 CI 和新递增 tag 的六平台实际启动验证；不移动 `v0.6.15`。
+- 新日志证明 alpha.3 已打印 loopback URL；官方前端标题改为 `DSH Local Build`，旧健康检查只接受 `DeepSeek Harness` 造成误报。现已兼容两个官方标题，并在上传失败日志前脱敏一次性 token；待 `v0.6.17` 验证。
+- alpha.3 官方说明确认一次性 token URL 会换取签名 session cookie 后重定向；旧健康检查客户端没有 CookieJar，跟随重定向时会丢失 cookie。现已补 CookieJar 和 token 交换回归测试，仍待 `v0.6.17` 六平台 Release 验证。
 
 ## 2026-09-01 v0.6.15 release preparation
 

@@ -16,7 +16,16 @@
 
 ### 变更
 
-- 对齐 `@deepseek-ai/dsh@0.1.2-alpha.3` 的 Web profile 启动契约，宿主改用 `dsh --profile web`；Release 冒烟失败时保留各平台 DSH 启动日志供诊断。
+## [0.6.17] - 2026-09-01
+
+### 修复
+
+- 对齐 `@deepseek-ai/dsh@0.1.2-alpha.3` 的 Web profile 启动契约，宿主改用 `dsh --profile web`。
+- 接受 DSH alpha.3 的 `DSH Local Build` 页面标题，并在健康检查中保留一次性启动 URL 换取的会话 cookie，避免服务已启动时被误判为超时。
+
+### 安全
+
+- Release 冒烟失败时保留各平台 DSH 启动日志供诊断，并对一次性 Web 启动 token 做脱敏后再上传。
 
 ## [0.6.16] - 2026-09-01
 

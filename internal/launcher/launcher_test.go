@@ -169,6 +169,7 @@ func TestWaitReadyRequiresDSHPageFingerprint(t *testing.T) {
 		wantErr bool
 	}{
 		{"DSH 页面", "<!doctype html><title>DeepSeek Harness</title>", false},
+		{"DSH alpha.3 页面", "<!doctype html><title>DSH Local Build</title>", false},
 		{"其他页面", "<!doctype html><title>Other App</title>", true},
 	}
 	for _, test := range tests {
@@ -185,6 +186,29 @@ func TestWaitReadyRequiresDSHPageFingerprint(t *testing.T) {
 				t.Fatalf("WaitReady() error = %v, wantErr = %v", err, test.wantErr)
 			}
 		})
+	}
+}
+
+func TestWaitReadyPreservesTokenExchangeCookie(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Query().Get("token") == "one-time" {
+			http.SetCookie(writer, &http.Cookie{Name: "dsh_session", Value: "signed", Path: "/"})
+			http.Redirect(writer, request, "/", http.StatusFound)
+			return
+		}
+		cookie, err := request.Cookie("dsh_session")
+		if err != nil || cookie.Value != "signed" {
+			writer.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		_, _ = writer.Write([]byte("<!doctype html><title>DSH Local Build</title>"))
+	}))
+	defer server.Close()
+	ready := make(chan struct{})
+	close(ready)
+	process := &Process{url: server.URL + "/?token=one-time", urlReady: ready, done: make(chan struct{})}
+	if err := process.WaitReady(context.Background(), time.Second); err != nil {
+		t.Fatalf("WaitReady() token exchange error = %v", err)
 	}
 }
 

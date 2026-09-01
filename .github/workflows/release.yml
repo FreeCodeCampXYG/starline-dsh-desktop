@@ -250,6 +250,11 @@ jobs:
           $destination = Join-Path $env:RUNNER_TEMP 'dsh-startup-logs'
           if (Test-Path -LiteralPath $source) {
             Copy-Item -LiteralPath $source -Destination $destination -Recurse -Force
+            # 启动 URL 含一次性 token；失败日志用于诊断，不得将可用会话令牌上传为 artifact。
+            Get-ChildItem -LiteralPath $destination -Filter 'dsh-*.log' -Recurse | ForEach-Object {
+              $content = Get-Content -LiteralPath $_.FullName -Raw
+              [IO.File]::WriteAllText($_.FullName, ($content -replace 'token=[^\s&]+', 'token=<redacted>'), (New-Object Text.UTF8Encoding($false)))
+            }
           } else {
             "DSH startup log directory was not created: $source" | Out-File -LiteralPath (Join-Path $env:RUNNER_TEMP 'dsh-startup-logs-missing.txt') -Encoding utf8
           }
@@ -266,6 +271,9 @@ jobs:
               cp -R "$source" "$destination/"
             fi
           done
+          # 启动 URL 含一次性 token；失败日志用于诊断，不得将可用会话令牌上传为 artifact。
+          find "$destination" -type f -name 'dsh-*.log' -exec sed -i.bak -E 's/token=[^[:space:]&]+/token=<redacted>/g' {} \;
+          find "$destination" -type f -name '*.bak' -delete
           if [ -z "$(find "$destination" -type f -name 'dsh-*.log' -print -quit)" ]; then
             printf 'DSH startup log directory was not created.\n' > "$RUNNER_TEMP/dsh-startup-logs-missing.txt"
           fi

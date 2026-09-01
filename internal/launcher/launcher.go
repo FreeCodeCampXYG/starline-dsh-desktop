@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"os"
 	"os/exec"
 	"regexp"
@@ -14,7 +15,10 @@ import (
 	"time"
 )
 
-var webURLPattern = regexp.MustCompile(`dsh web:\s+(http://[^\s]+)`)
+var (
+	webURLPattern      = regexp.MustCompile(`dsh web:\s+(http://[^\s]+)`)
+	dshWebTitlePattern = regexp.MustCompile(`<title>(?:DeepSeek Harness|DSH Local Build)</title>`)
+)
 
 const onlineStartupTimeout = 5 * time.Minute
 
@@ -206,8 +210,13 @@ func (p *Process) WaitReady(ctx context.Context, timeout time.Duration) error {
 		return fmt.Errorf("等待监听地址超时（日志：%s）", p.logPath)
 	}
 
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		return fmt.Errorf("无法创建本地 DSH 会话 cookie 容器：%w", err)
+	}
 	client := &http.Client{
 		Timeout: 2 * time.Second,
+		Jar:     jar,
 		Transport: &http.Transport{
 			Proxy: nil,
 		},
@@ -221,7 +230,7 @@ func (p *Process) WaitReady(ctx context.Context, timeout time.Duration) error {
 			if requestErr == nil {
 				body, readErr := io.ReadAll(io.LimitReader(response.Body, 128*1024))
 				_ = response.Body.Close()
-				if readErr == nil && response.StatusCode == http.StatusOK && strings.Contains(string(body), "<title>DeepSeek Harness</title>") {
+				if readErr == nil && response.StatusCode == http.StatusOK && dshWebTitlePattern.Match(body) {
 					p.reportProgress(98, "本地 DSH 页面校验通过")
 					return nil
 				}
