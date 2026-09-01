@@ -5,6 +5,7 @@
 - 用户实机 `v0.6.17` 出现 `dsh web authentication required`。根因是宿主健康检查先请求一次性 token URL，Go 的 CookieJar 获得会话后，内嵌 iframe 再请求同一 token 已失效且不共享该 cookie。
 - `internal/launcher/launcher.go` 已改为剥离查询参数后检查根地址；401 视为服务已监听，将带 token 的原始 URL留给 WebView 完成认证。新增回归测试确认健康检查不消费 token。
 - 定向 `go test ./internal/launcher -run 'TestWaitReadyDoesNotConsumeTokenExchange|TestWaitReadyExplainsOnlinePreparationTimeout'` 通过；完整包测试仍被既有 Windows 兼容入口测试所需的 `pwsh.exe` 缺失阻断。当前 `D:\winsofts\dsh-desktop\starline-dsh-desktop.exe` 尚未包含此修复，需 CI 构建新的递增版本后实机验证。
+- `1e5fb85` 已增加旧 Web Profile 插件 API 不兼容弹框和排错说明；用户须先备份 `~/.dsh/profiles/web`，再移除或升级插件，Desktop 不会自动删除 sessions、credentials、attachments 或整个 `.dsh`。CI `33529286465` 的质量门禁和六平台原生/离线运行时构建均通过，待 `v0.6.18` Release 与 Windows 实机验证。
 
 ## 2026-09-01 v0.6.16 alpha.3 Web profile compatibility repair
 

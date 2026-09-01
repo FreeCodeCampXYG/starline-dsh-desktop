@@ -16,6 +16,14 @@
 
 ### 变更
 
+## [0.6.18] - 2026-09-02
+
+### 修复
+
+- 健康检查不再消费 DSH alpha.3 的一次性 Web token，保留给内嵌 WebView 完成会话认证，避免出现 `dsh web authentication required`。
+
+### 变更
+
 - 启动检测到旧 Web Profile 插件与 DSH alpha.3 API 不兼容时弹框说明影响范围，要求先备份 Profile 再移除或升级插件；不会自动删除用户数据。
 
 ## [0.6.17] - 2026-09-01
