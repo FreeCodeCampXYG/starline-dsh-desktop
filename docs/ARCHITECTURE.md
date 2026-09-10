@@ -69,18 +69,18 @@ Wails application
    npx --yes --package=@deepseek-ai/dsh@<version> dsh --profile web --host 127.0.0.1 --port 0 --no-open
    ```
 
-   宿主传入 `--no-open` 关闭官方 Web 表层默认的系统浏览器交接；页面 URL 仍会打印并由宿主校验后交给内嵌 iframe，用户需要时可通过“在浏览器中打开”手动回退。
+   宿主传入 `--no-open` 关闭官方 Web 表层默认的系统浏览器交接；就绪后由 Go 在内存中完成一次 token→cookie 握手并建立仅监听 loopback 的反向代理，内嵌 iframe 和“在浏览器中打开”都使用不含 token 的代理 URL。
 
    `offline-full` 直接执行 `offline-runtime/node[.exe] offline-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js web ...`，不调用 npm registry，也不允许界面原地替换包内依赖闭包。
 
 9. 宿主从 DSH 输出的 `dsh web: http://...` 行解析实际地址，只接受通过 loopback 安全校验的 HTTP URL，再使用禁用代理的 HTTP client 轮询并验证状态码和 DSH 页面标题。
 10. 宿主只在该 DSH 子进程的 `PATH` 前置临时命令目录；Agent 调用 `dsh plugin` 且完全遗漏 `--profile` 时，兼容入口按当前桌面 profile 补为 `web`，再转发给同一固定版本运行时。显式 profile、其他 DSH 命令、系统 PATH 和全局 npm shim 均不修改，DSH 退出后临时目录删除。
-11. 就绪后前端先在遮罩后让 iframe 导航到该 loopback URL；iframe `load` 后主动显示原生窗口并淡入页面。启动失败或进程意外退出时跳过等待，立即显示顶部错误状态栏。
+11. 就绪后宿主为当前 DSH URL 建立内存认证代理；代理首访只执行一次 token→cookie 握手，后续转发 HTML、API、SSE 和 WebSocket 请求并注入宿主 CookieJar。前端在遮罩后让 iframe 导航到不含 token 的代理 URL，`load` 后显示原生窗口并淡入页面；启动失败或进程意外退出时跳过等待，立即显示顶部错误状态栏。
 
 ## 安全边界
 
-- iframe 只接收由宿主生成或从 DSH 日志中验证过的 loopback HTTP URL；
-- iframe 只显式开放剪贴板读写权限，不开放任意外部页面的 Wails 绑定；
+- iframe 只接收宿主生成的 loopback 代理 HTTP URL；原始 DSH token URL 只存在于宿主内存中的首次握手请求，不进入前端状态；
+- iframe 只显式开放剪贴板读写权限，不开放任意外部页面的 Wails 绑定；代理只转发当前宿主持有的 DSH 进程；
 - 健康检查不使用系统代理，防止 loopback 请求泄漏；
 - `NO_PROXY` 始终合并 `127.0.0.1`、`localhost`、`::1`；
 - 自定义代理用于手动 registry 检查并传递给 DSH/npm 子进程；不可达时先尝试启动应用时继承的 HTTP(S) 环境代理，再直连国内 npm 镜像；镜像只影响 npm 运行时元数据和包下载，不替代 DeepSeek Harness 的模型/API 服务地址；
@@ -130,7 +130,7 @@ Wails application
 - 在线包应用更新时由后端再次查询指定的 `latest` 或 `next`，只把返回的精确版本写入用户配置，然后同步回收宿主持有的旧 DSH 子进程树并通过既有 npx 启动链重启；前端不能提交任意包名、版本或其他通道。
 - 环境变量 `DSH_DESKTOP_DSH_VERSION` 继续作为显式开发覆盖且优先级最高；存在覆盖时，界面不修改实际版本。
 - `offline-full` 默认以包内 `dsh-version.txt` 为准；用户确认在线新版本后，设置中的精确版本会让宿主改用系统 Node/npm，通过既有代理降级链下载而不改写包内依赖闭包，失败时可清除设置回到离线版本。没有系统 Node/npm 时，离线升级仍是新的 Desktop Release 和六平台原生依赖门禁。
-- 当前 main 把下一轮离线闭包固定为 0.1.2-alpha.3；“最新”表示发布时审查并锁定的精确版本，不表示离线包在用户设备上跟随 npm `latest` 漂移。
+- 当前 main 把下一轮离线闭包固定为 0.1.5-rc.1；“最新”表示发布时审查并锁定的精确版本，不表示离线包在用户设备上跟随 npm `latest` 漂移。
 - 仓库 Dependabot 每周只检查 `offline-runtime` 的官方 DSH 直接依赖并提出 PR；它不自动合并、不发布，也不能代替原生 CI、最终归档和设备验证。
 
 ## 安装目录与路径语义
@@ -155,7 +155,7 @@ Wails application
 
 ## 当前兼容性边界
 
-- 官方 DSH Web UI 通过 iframe 承载；若上游将来启用禁止嵌入的 CSP 或 `X-Frame-Options`，需要改用浏览器回退或与上游协调；
+- 官方 DSH Web UI 通过 loopback 认证代理的 iframe 承载；若上游将来启用禁止嵌入的 CSP 或 `X-Frame-Options`，需要改用系统浏览器回退或与上游协调；
 - Web/CLI 启动检查不等于 Node 原生扩展或工具调用检查；平台缺陷、离线包 PTY 状态和设备证据统一记录在 [已知问题与平台支持边界](KNOWN_ISSUES.md)。
 - 离线门禁实际生成一张 Sharp PNG、通过 Koffi 加载平台动态库并调用本机进程 ID 函数、运行 ripgrep，并启动真实 PTY；Windows 还加载 `ole32.dll`，防止只 `require` 模块却遗漏运行时 FFI 崩溃。
 

@@ -24,7 +24,7 @@ var trayIcon []byte
 
 var (
 	version           = "dev"
-	defaultDSHVersion = "0.1.2-alpha.3"
+	defaultDSHVersion = "0.1.5-rc.1"
 )
 
 func main() {

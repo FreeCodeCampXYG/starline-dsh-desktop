@@ -44,7 +44,7 @@ const initialStatus: Status = {
   state: "starting",
   message: "正在连接桌面宿主…",
   version: "dev",
-  dshVersion: "0.1.2-alpha.3",
+  dshVersion: "0.1.5-rc.1",
   runtimeMode: "auto",
 };
 
@@ -182,7 +182,7 @@ const render = (status: Status): void => {
   currentStatus = status;
   ++renderSequence;
   if (status.state === "ready" && status.url) {
-    renderReady(status);
+    renderReady(status, renderSequence);
     return;
   }
 
@@ -230,33 +230,49 @@ const render = (status: Status): void => {
   if (!isBusy) showWindow();
 };
 
-const renderReady = (status: Status): void => {
+const renderReady = (status: Status, sequence: number): void => {
+  const source = status.url ?? "";
+  if (!source || sequence !== renderSequence) return;
+  // 仅把后端已校验的 loopback 地址交给 iframe；加载完成后再显示窗口，失败时保留浏览器回退入口。
   root.innerHTML = `
-    <section class="workspace workspace-status">
+    <section class="workspace workspace-ready">
       ${renderRuntimeBar(status, true)}
-      <div class="status-banner is-busy" role="status">
-        <div class="status-summary">
-          <span class="status-indicator" aria-hidden="true"></span>
-          <div>
-            <strong>DeepSeek Harness 已在系统浏览器打开</strong>
-            <small>当前 alpha.3 的认证 cookie 无法在 Windows WebView2 中稳定交接；Desktop 继续管理启动、日志、代理和重启。</small>
-          </div>
+      <div class="frame-stage">
+        <iframe
+          class="dsh-frame"
+          title="DeepSeek Harness"
+          allow="clipboard-read; clipboard-write"
+        ></iframe>
+        <div class="startup-overlay">
+          ${renderSplash({
+            ...status,
+            state: "starting",
+            message: "正在载入 DeepSeek Harness…",
+            detail: undefined,
+            progress: 99,
+            stage: "DSH 已就绪，正在载入桌面 WebView…",
+          })}
         </div>
-        <div class="status-actions">
-          <button class="status-action primary" data-action="browser">重新在浏览器打开</button>
-          <button class="status-action" data-action="restart">重新启动</button>
-          <button class="status-action" data-action="logs">日志</button>
-        </div>
-      </div>
-      <div class="startup-stage">
-        <div class="startup-mark" aria-hidden="true"><span>DSH</span><i></i></div>
-        <p>浏览器中的 DSH 会话正在运行</p>
-        <small>关闭此窗口不会终止 DSH；从托盘选择“退出”才会回收当前进程。</small>
       </div>
     </section>
   `;
   bindCommonActions();
-  showWindow();
+  const frame = root.querySelector<HTMLIFrameElement>(".dsh-frame");
+  const overlay = root.querySelector<HTMLElement>(".startup-overlay");
+  if (!frame) {
+    showWindow();
+    return;
+  }
+  frame.addEventListener("load", () => {
+    if (sequence !== renderSequence || !frame.isConnected) return;
+    showWindow();
+    requestAnimationFrame(() => {
+      frame.classList.add("is-loaded");
+      overlay?.classList.add("is-hidden");
+    });
+    window.setTimeout(() => overlay?.remove(), 360);
+  }, { once: true });
+  frame.src = source;
 };
 
 const restart = (): void => {

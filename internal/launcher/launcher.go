@@ -54,6 +54,7 @@ type Process struct {
 	progressMu sync.Mutex
 	progress   int
 	onProgress func(Progress)
+	webProxy   *webProxy
 }
 
 // OnlineStartupTimeout 返回在线 npx 运行时的整体启动上限；零值使用宿主默认值。
@@ -171,6 +172,12 @@ func Start(_ context.Context, config Config) (*Process, error) {
 		_ = lineSink.Flush()
 		_ = logFile.Close()
 		_ = os.RemoveAll(process.shimDir)
+		process.mu.RLock()
+		proxy := process.webProxy
+		process.mu.RUnlock()
+		if proxy != nil {
+			_ = proxy.Close()
+		}
 		close(process.done)
 	}()
 	return process, nil
@@ -292,6 +299,33 @@ func (p *Process) URL() string {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.url
+}
+
+// StartWebProxy 为内嵌页面建立受控的访问入口，并把 DSH 会话留在宿主内存中。
+func (p *Process) StartWebProxy() (string, error) {
+	p.mu.Lock()
+	if p.webProxy != nil {
+		url := p.webProxy.URL()
+		p.mu.Unlock()
+		return url, nil
+	}
+	targetURL := p.url
+	p.mu.Unlock()
+
+	proxy, err := newWebProxy(targetURL, targetURL)
+	if err != nil {
+		return "", err
+	}
+	p.mu.Lock()
+	if p.webProxy != nil {
+		url := p.webProxy.URL()
+		p.mu.Unlock()
+		_ = proxy.Close()
+		return url, nil
+	}
+	p.webProxy = proxy
+	p.mu.Unlock()
+	return proxy.URL(), nil
 }
 
 // RuntimeMode 返回当前进程使用 online 还是 offline 运行时。

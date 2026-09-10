@@ -17,8 +17,8 @@ const APPROVED_PACKAGES = {
     },
   },
   'node_modules/@deepseek-ai/dsh-subprocess-local': {
-    version: '0.1.0-rc.7',
-    integrity: 'sha512-Q1zl35fRNSASv2FOi6viwR29cn3vtOcyKfamcmRB789m6sb6CdlhIMettvcxxDDHwTSH/jjz3hqb0JAx2GT32g==',
+    version: '0.1.5-rc.1',
+    integrity: 'sha512-TKcqaIf1fJzjraXhwmSAQAqkPMvIjS0Y7b9fC4n7+G8eQpb3gaF/eJXn6Tx4OgFSDV5R/NLUqHaU/ogxTjdWhQ==',
     scripts: {
       postinstall: 'node scripts/ensure-spawn-helper.mjs',
     },

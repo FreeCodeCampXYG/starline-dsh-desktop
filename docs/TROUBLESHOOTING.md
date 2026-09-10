@@ -72,7 +72,7 @@ npx --version
 在线包的单次 npm 网络等待为 10 秒，最多重试 1 次；在线 DSH 本地页面整体就绪等待默认上限为 5 分钟，可在“代理与启动设置”中调整为 30–600 秒。自定义代理不可达时，普通包先尝试应用启动时继承且可达的 HTTP(S) 环境代理，再切换到国内镜像直连；如果 DSH 的模型/API 请求仍需代理，应恢复可用代理后重启。这里的超时只控制 npm 运行时准备和本地 DSH 页面就绪，不控制 DeepSeek Harness 内部远程模型/API 请求；后者由 DSH 自身处理。
 
 ```bash
-npx --yes --package=@deepseek-ai/dsh@0.1.2-alpha.3 dsh --profile web --no-open
+npx --yes --package=@deepseek-ai/dsh@0.1.5-rc.1 dsh --profile web --no-open
 ```
 
 上面的命令用于模拟桌面宿主的启动方式，`--no-open` 会阻止官方 DSH 自动拉起系统浏览器；如果需要单独验证浏览器交接，再去掉该参数。
@@ -153,7 +153,7 @@ v0.5.1 起会在 Starline 启动的 DSH 进程环境中提供临时兼容入口�
 
 ### alpha.3 提示 `dsh web authentication required`
 
-alpha.3 的带 token 启动 URL 必须由浏览器完成 cookie 交换。Windows WebView2 在此 loopback 的 `303 + HttpOnly + SameSite=Strict` 链上不能稳定回送 cookie，因此 Desktop `v0.6.20` 起会自动使用系统浏览器打开已校验的 URL，并保留自身作为启动、日志、代理和进程控制窗口。若旧版本仍出现该提示，可在本次启动日志中直接打开刚打印的 URL；不要复用此前日志或聊天记录中的 URL。
+alpha.3/rc.1 的带 token 启动 URL 要求浏览器完成 cookie 交换，直接放进 Wails iframe 会受到第三方 cookie 和 WebView2 同站策略影响。本版由 Go 代理在内存中完成一次 token→cookie 握手，再让 iframe 访问不含 token 的代理地址；如果代理初始化失败，可从桌面工具手动在系统浏览器中打开同一代理入口。不要复用旧日志或聊天记录中的 token URL。
 
 ## DSH Market 提示 pnpm Store 位置不一致
 

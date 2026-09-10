@@ -445,9 +445,16 @@ func (a *App) launch(generation uint64, settings config.Settings, dshVersion str
 		return
 	}
 
+	webURL, err := process.StartWebProxy()
+	if err != nil {
+		_ = process.Stop(3 * time.Second)
+		a.failIfCurrent(generation, dshVersion, "内嵌 DSH 页面代理启动失败", err)
+		return
+	}
+
 	status := Status{
 		State:       "ready",
-		URL:         process.URL(),
+		URL:         webURL,
 		Message:     "DeepSeek Harness 已就绪",
 		Version:     a.version,
 		DSHVersion:  dshVersion,
@@ -458,11 +465,6 @@ func (a *App) launch(generation uint64, settings config.Settings, dshVersion str
 	if !a.setStatusIfCurrent(generation, status) {
 		_ = process.Stop(3 * time.Second)
 		return
-	}
-	// Windows WebView2 未能在 alpha.3 的 loopback 认证跳转中回送 session cookie；
-	// 仅将当前进程已校验的 URL 交给系统浏览器，避免桌面窗口陷入不可恢复的 401 页面。
-	if a.ctx != nil {
-		runtime.BrowserOpenURL(a.ctx, process.URL())
 	}
 	a.mu.Lock()
 	if a.pendingRollback != nil && a.pendingRollback.generation == generation {

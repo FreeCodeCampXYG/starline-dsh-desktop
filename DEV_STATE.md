@@ -1,5 +1,16 @@
 # DEV_STATE
 
+## 2026-09-10 v0.6.21 内嵌 WebView 与离线包准备
+
+- 已确认 npm `latest` 为 `@deepseek-ai/dsh@0.1.5-rc.1`；`main.go`、前端初始状态、`offline-runtime/package.json`、锁文件和离线版本元数据已同步到该版本，Desktop 目标版本为 `0.6.21`。
+- 恢复就绪后的内嵌 iframe 流程：后端不再自动调用系统浏览器，前端加载由宿主建立的 loopback 认证代理 URL；代理只在内存中完成 DSH token→cookie 握手，浏览器入口仍是手动回退。保留 `--no-open` 防止上游重复拉起浏览器。
+- 新增 `internal/launcher/web_proxy.go`：代理绑定 `127.0.0.1:0`，只转发当前 DSH 进程，清理跨源请求头并由宿主 CookieJar 注入会话；代理与 DSH 进程一同关闭，不保存 token 或 cookie。
+- 本机验证通过：前端 `docs:check`、typecheck、production build；`go test ./...`、`go vet ./...`；离线运行时白名单、DSH CLI、Sharp、Koffi、ripgrep、Windows x64 node-pty 和真实 PTY shell；Wails Windows/amd64 production build。
+- 已生成 `dist/starline-dsh-desktop-v0.6.21-windows-x64-portable-offline-full.zip`（约 108.4 MB）及 SHA-256 文件，解包后的最终运行时 verifier 仍通过。完整包包含约 25,000 个松散文件，需保留首次解包、签名和安全软件扫描风险提示。
+- Wails 结构审计通过 26 项；通用离线归档审计因当前 Windows `node-pty` 使用 `conpty.node` 而审计脚本仅匹配 `pty.node` 报 1 项工具误报，归档内实际路径和项目 verifier 均已核对。真实离线 DSH 通过代理返回页面已验证，但尚未启动最终 GUI 验证 WebView2 视觉交互，跨平台和真实设备行为仍待验证。
+- 首次 Wails 构建因 `proxy.golang.org` 网络失败，改用本次命令级 `goproxy.cn` 后成功；未写入全局代理配置。构建过程将 `golang.org/x/sys` 从间接依赖整理为直接依赖，因 Windows 文件锁源码直接导入，属于有效 go.mod 变更。
+- 外部 GitHub 推送、annotated tag `v0.6.21` 和 Release 尚未执行；需先审阅工作区，再按 Git 交付门禁由用户确认执行。当前未验证六平台 CI、GitHub Release 资产和 Windows 实机内嵌登录。
+
 ## 2026-09-02 alpha.3 一次性 Web token 交接修复
 
 - 用户实机 `v0.6.17` 出现 `dsh web authentication required`。根因是宿主健康检查先请求一次性 token URL，Go 的 CookieJar 获得会话后，内嵌 iframe 再请求同一 token 已失效且不共享该 cookie。

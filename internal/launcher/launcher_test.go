@@ -2,6 +2,7 @@ package launcher
 
 import (
 	"context"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -140,6 +141,20 @@ func TestOfflineRuntimeStartsWeb(t *testing.T) {
 	defer cancel()
 	if err := process.WaitReady(ctx, 90*time.Second); err != nil {
 		t.Fatalf("WaitReady() error = %v", err)
+	}
+	webURL, err := process.StartWebProxy()
+	if err != nil {
+		t.Fatalf("StartWebProxy() error = %v", err)
+	}
+	client := &http.Client{Transport: &http.Transport{Proxy: nil}, Timeout: 10 * time.Second}
+	response, err := client.Get(webURL + "/")
+	if err != nil {
+		t.Fatalf("通过内嵌代理访问 DSH 页面失败：%v", err)
+	}
+	body, _ := io.ReadAll(response.Body)
+	_ = response.Body.Close()
+	if response.StatusCode != http.StatusOK || !dshWebTitlePattern.Match(body) {
+		t.Fatalf("内嵌代理页面异常：status=%d body=%q", response.StatusCode, body)
 	}
 }
 

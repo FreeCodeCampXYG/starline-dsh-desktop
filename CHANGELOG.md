@@ -16,6 +16,16 @@
 
 ### 变更
 
+## [0.6.21] - 2026-09-10
+
+### 修复
+
+- 通过仅监听 loopback 的 Go 认证代理恢复 DSH Web 的内嵌 iframe 打开流程；宿主在内存中完成 token→cookie 握手，iframe 不再直接接触一次性 token，就绪后也不自动拉起系统浏览器。
+
+### 构建
+
+- 将 `offline-full` 和 Desktop 默认 DSH 版本更新为 `@deepseek-ai/dsh@0.1.5-rc.1`；离线依赖锁、原生模块和最终归档由本次 tag 的 GitHub Actions runner 重新验证。
+
 ## [0.6.20] - 2026-09-02
 
 ### 修复
