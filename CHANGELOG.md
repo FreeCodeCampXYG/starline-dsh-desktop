@@ -16,6 +16,14 @@
 
 ### 变更
 
+- 桌面端改为同一登录会话只允许一个宿主机进程：第二个实例不再启动第二份 DSH，而是把已有窗口带回前台后退出。两个宿主会共用同一份 DSH 用户数据目录，后启动者 resume 会话时会被 DSH 的会话写锁拒绝，前端显示 `command directory warmup failed … SessionAlreadyOwnedError: session "…" is already owned by an active write handle`；该报错与认证或 token 交接无关，只有消除重复宿主才能解决。
+- Windows 宿主为 DSH 子进程树建立带 `KILL_ON_JOB_CLOSE` 的 Job 对象：宿主崩溃或被任务管理器强杀时由内核回收整棵进程树，不残留继续占用 DSH 会话写锁的孤儿进程。
+
+### 已知边界
+
+- 单实例边界按 Windows 登录会话（`Local\` 命名空间）隔离，不同 Windows 用户可以各自运行一个宿主；macOS/Linux 使用记录文件上的 `flock`。
+- macOS/Linux 在第二个实例退出时只写标准错误，不做跨进程窗口恢复，也没有 Job 对象的等价物；旧版本构建残留或被强杀留下的 DSH 进程仍需人工结束。
+
 ## [0.6.21] - 2026-09-10
 
 ### 修复

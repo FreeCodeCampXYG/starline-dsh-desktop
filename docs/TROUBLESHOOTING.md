@@ -89,6 +89,28 @@ npx --yes --package=@deepseek-ai/dsh@0.1.5-rc.1 dsh --profile web --no-open
 
 请保留完整启动日志并重试一次。如果浏览器直接运行 DSH 正常而桌面端失败，向本仓库报告。
 
+## 页面顶部提示会话已被占用（`SessionAlreadyOwnedError`）
+
+如果 DSH 页面弹出类似下面的红条：
+
+```text
+command directory warmup failed: command.list failed: gateway/internal: resume failed
+for session "session-…": SessionAlreadyOwnedError: session "…" is already owned by an
+active write handle
+```
+
+这是 DSH 的**会话写锁**报错，与登录、token 或认证交接无关。DSH 对每个会话目录加内核级写锁，同一时刻只允许一个写句柄；两个进程同时打开同一个会话时，后到的那个会在恢复会话时被拒绝，于是命令目录预热失败并在页面上报错。
+
+最常见的原因是同时跑了两份桌面端，它们各带一个 DSH 进程，却共用同一份 DSH 用户数据目录：
+
+1. 检查托盘图标是否出现两个，或在任务管理器里查看 `starline-dsh-desktop.exe` 以及它启动的 `node.exe`，确认存在多个并行实例；
+2. 用托盘菜单“退出”结束多余实例，不要只关窗口（关窗口只隐藏到托盘），也不要按名字批量结束不属于本应用的 Node 进程；
+3. 保留一个实例重新启动，再打开出错的会话确认可以继续。
+
+0.6.22 起宿主自己保证同一登录会话只运行一个实例：第二次启动只会把已有窗口带回前台，不会再启动第二份 DSH。剩下的风险来自升级前留下的旧实例：如果确认没有窗口在运行却仍看到该提示，说明有被强杀后残留的 DSH 进程仍占着会话锁，需要人工结束它（Windows 上结束残留的 `node.exe`，或重启系统）。Windows 新构建会在宿主被强杀时由内核回收整棵 DSH 进程树，不再产生这种残留。
+
+同一条提示也可能出现在另外两种用法下：手工执行 `dsh --profile web` 打开桌面端正在使用的会话，或在内嵌页面之外又用系统浏览器操作同一会话。此时先只保留一个写入方。
+
 ## 代理改完没有生效
 
 保存设置会重启 DSH。确认日志时间已经变化，并检查：

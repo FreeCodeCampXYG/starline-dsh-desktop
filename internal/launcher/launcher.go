@@ -161,6 +161,10 @@ func Start(_ context.Context, config Config) (*Process, error) {
 		_ = logFile.Close()
 		return nil, fmt.Errorf("无法启动%s：%w（日志：%s）", command.label, err, logPath)
 	}
+	// 绑定失败不阻断启动：正常关闭仍走既有进程树回收，只是宿主被强杀时可能残留子进程。
+	if err := containProcessTree(cmd.Process); err != nil {
+		_, _ = fmt.Fprintf(logFile, "无法把 DSH 进程树绑定到宿主生命周期：%v；宿主异常退出时可能残留占用会话锁的子进程。\n", err)
+	}
 	stage := "包内 DSH 进程已启动，正在等待监听地址…"
 	if command.mode == "online" {
 		stage = "npx 已启动，正在校验元数据并准备 DSH 依赖…"

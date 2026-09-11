@@ -19,6 +19,7 @@ main.go                         Wails 组合入口、前端嵌入、版本注入
 internal/
 ├─ application/                Wails 生命周期、绑定方法、系统菜单、状态机
 ├─ config/                     用户设置、校验和持久化
+├─ instance/                   单实例所有权与已有窗口交接
 └─ launcher/                   DSH 子进程边界
    ├─ launcher.go              启动、就绪、停止和进程状态
    ├─ runtime.go               包内运行时/系统 Node 解析
@@ -83,6 +84,7 @@ Wails application
 - iframe 只显式开放剪贴板读写权限，不开放任意外部页面的 Wails 绑定；代理只转发当前宿主持有的 DSH 进程；
 - 健康检查不使用系统代理，防止 loopback 请求泄漏；
 - `NO_PROXY` 始终合并 `127.0.0.1`、`localhost`、`::1`；
+- 单实例所有权只用内核对象或记录文件表达，第二实例不读取 DSH 会话、轨迹、附件或凭据，也不共享宿主的 token；它只读取宿主自己写下的 PID 记录用于窗口交接；
 - 自定义代理用于手动 registry 检查并传递给 DSH/npm 子进程；不可达时先尝试启动应用时继承的 HTTP(S) 环境代理，再直连国内 npm 镜像；镜像只影响 npm 运行时元数据和包下载，不替代 DeepSeek Harness 的模型/API 服务地址；
 - 配置不存储模型 API Key；
 - 日志文件权限使用用户私有权限，并最多保留最近 10 份；
@@ -91,6 +93,7 @@ Wails application
 
 ## 窗口与托盘生命周期
 
+- 同一登录会话只允许一个宿主机进程：`internal/instance` 用 Windows 命名内核互斥体（`Local\` 命名空间）或 Unix 上的 `flock` 记录文件表达所有权。第二个实例不创建窗口、托盘和 DSH 子进程，只按记录中的 PID 把已有窗口带回前台后退出；Windows 上按窗口标题加 PID 双重校验，避免误操作同名窗口。
 - Windows 使用 `HideWindowOnClose`：窗口右上角 X 只隐藏主窗口，应用和 DSH 子进程继续运行。
 - `internal/application/tray_windows.go` 仅在 Windows 编译第三方托盘依赖，提供“显示窗口”“重启 DSH”和“退出”。
 - Windows 只有显式“退出”会设置 `quitRequested` 并调用 `runtime.Quit`，随后进入 `OnShutdown`，确保 DSH/Node 进程树和托盘句柄一起回收。
@@ -104,21 +107,23 @@ Wails application
 ## 进程回收
 
 - Windows：DSH 使用独立 process group 和 `CREATE_NO_WINDOW`；关闭时对已记录 PID 执行隐藏的 `taskkill /T /F`。
-- macOS/Linux：子进程进入独立 process group，关闭时只向该进程组发送终止信号。
+- Windows 还把每个 DSH 子进程加入带 `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` 的 Job 对象：宿主正常退出、崩溃或被任务管理器强杀时，内核在最后一个 job 句柄关闭时回收整棵进程树。`taskkill` 只能在宿主仍能执行关闭流程时起作用，Job 对象补上的是宿主自己被杀之后的那一段。
+- macOS/Linux：子进程进入独立 process group，关闭时只向该进程组发送终止信号；没有 Job 对象的等价物。
 
-回收策略的目标不是优雅管理所有 DSH 实例，而是确保当前窗口拥有的子树不残留、不误伤其他实例。
+回收策略的目标不是优雅管理所有 DSH 实例，而是确保当前窗口拥有的子树不残留、不误伤其他实例。macOS/Linux 上宿主被强杀后可能残留 DSH 进程，此时需要人工结束它，否则下一次启动会被 DSH 的会话写锁挡下。
 
 ## 配置与日志
 
 | 类型 | 位置 |
 | --- | --- |
 | 配置 | `os.UserConfigDir()/starline-dsh-desktop/settings.json` |
+| 实例记录 | `os.UserConfigDir()/starline-dsh-desktop/instance.lock`：只保存当前宿主的 PID，用于把已有窗口带回前台和人工排查，不参与所有权判定 |
 | 日志 | `os.UserCacheDir()/starline-dsh-desktop/logs/` |
 | DSH/npm 数据 | 普通包由 DSH/npm 管理；离线包运行时只读随包提供，用户数据仍在 DSH 自身目录 |
 
 配置写入先完成临时文件，再替换目标。Windows 替换旧配置前需要显式移除旧文件，这是标准库跨平台语义差异。
 
-配置文件旁边保留 `settings.json.lock` 作为跨进程原子写锁：Windows 使用本机文件锁，macOS/Linux 使用 `flock`。保存时会在锁内重新读取磁盘配置并与当前实例的旧值比较；如果其他实例已经保存，当前写入返回冲突而不是覆盖。该锁只保护共享配置，不限制多个 DSH Web 实例同时运行。
+配置文件旁边保留 `settings.json.lock` 作为跨进程原子写锁：Windows 使用本机文件锁，macOS/Linux 使用 `flock`。保存时会在锁内重新读取磁盘配置并与当前实例的旧值比较；如果其他实例已经保存，当前写入返回冲突而不是覆盖。该锁只保护共享配置；DSH 实例本身由 `internal/instance` 的单实例所有权约束，因此同一登录会话里不会再出现第二个由桌面端启动的 DSH Web 实例。
 
 宿主当前不设置 `DSH_HOME`。桌面端与命令行 DSH 因而遵循上游默认用户数据目录，共享状态；`offline-full` 的“便携”只表示程序和运行时可以整体移动，不表示工作区、会话和账户配置也随包移动。
 

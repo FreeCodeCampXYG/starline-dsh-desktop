@@ -193,11 +193,20 @@ func writeFile(path string, settings Settings) error {
 	return nil
 }
 
-// Path 返回当前用户的设置文件路径，不依赖应用安装目录。
-func Path() (string, error) {
+// Dir 返回当前用户的桌面端配置目录，不依赖应用安装目录。
+func Dir() (string, error) {
 	base, err := os.UserConfigDir()
 	if err != nil || base == "" {
 		return "", errors.New("无法确定用户配置目录")
 	}
-	return filepath.Join(base, "starline-dsh-desktop", "settings.json"), nil
+	return filepath.Join(base, "starline-dsh-desktop"), nil
+}
+
+// Path 返回当前用户的设置文件路径，不依赖应用安装目录。
+func Path() (string, error) {
+	dir, err := Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "settings.json"), nil
 }

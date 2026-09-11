@@ -1,5 +1,16 @@
 # DEV_STATE
 
+## 2026-09-12 宿主单实例与 DSH 会话写锁争用修复
+
+- 用户实机红条 `command directory warmup failed: command.list failed: gateway/internal: resume failed for session "session-dfdd3309-…": SessionAlreadyOwnedError: session "…" is already owned by an active write handle` 与 token 透传、登录或认证交接无关。
+- 上游源码定位：`@deepseek-ai/dsh-session-persistence-jsonl@0.1.5-rc.1` 的 `SessionWriteLease.acquire` 在 Windows 分支调用 `acquireLockHandleWin32`，用 `CreateSemaphoreW` 建立以 `sha256(会话锁路径小写)` 命名的内核信号量，0 超时等待超时（`WAIT_TIMEOUT`）时抛 `SessionAlreadyOwnedError`；`dsh-api-session-controller` 把它包成 `gateway/internal`，`dsh-client-ui-commands` 的命令目录预热再包成页面红条。`@deepseek-ai/node-addon-system@0.1.2` 的 flock 绑定只在 Linux/macOS 可用，Windows 的锁载体是信号量而不是锁文件。
+- 现场证据：任务管理器里有两个 `starline-dsh-desktop.exe`（PID 32808/31968），各自带一个 `node.exe` 子进程，两个宿主共用同一份 `~/.dsh`。用 Koffi 探针复刻同一条信号量命名规则逐项扫描 `~/.dsh/sessions/--D-ProgGram-AIProjects-dshwork--` 下 41 个会话目录，只有 `session-dfdd3309-…` 返回 `HELD_BY_A_LIVE_PROCESS`，其余空闲，确认是重复宿主争用会话写锁。
+- 新增 `internal/instance`：Windows 用 `Local\` 命名内核互斥体、Unix 用记录文件 `flock` 表达“同一登录会话一个宿主”。第二实例按记录 PID 加窗口标题定位并唤回已有窗口后退出，绝不创建第二份 DSH；交接失败只写标准错误，不使用阻塞式弹窗，避免卡住脚本或自动化启动。所有权是内核对象存在性，进程被强杀不会留下需要人工判断的陈旧锁。`internal/config` 增加 `Dir()` 供它定位同级记录文件。
+- `internal/launcher` 在 Windows 为 DSH 子进程建立带 `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` 的 Job 对象：宿主崩溃或被任务管理器强杀时由内核回收整棵进程树，补上 `taskkill /T /F` 只能覆盖“宿主仍能执行关闭流程”的缺口。绑定或 Job 创建失败只写日志，不阻断启动。
+- 本机验证：`gofmt -l` 无输出，`go build ./...`、`go vet ./...`、`go test ./...` 通过；`internal/instance` 用例既覆盖同进程互斥，也用真实子进程验证“第二个进程会被挡住、释放后可取得”，并覆盖“缺记录时不误报”。前端 `docs:check`（15 个 Markdown）、`typecheck`、production build 通过。Wails Windows/amd64 生产构建成功：`build/bin/starline-dsh-desktop.exe`（13,431,808 字节，SHA-256 `df951ac714f5512a70f7ae42553c0470d53e87d170a01c6160936622883c4c1e`，`-X main.version=0.6.22-dev`），二进制内已包含实例互斥体名称与第二实例提示文本。`OnShutdown` 在 DSH 子树回收后立刻释放所有权，避免“退出后马上重启”被误判为已有实例。
+- `internal/launcher` 的 `TestDSHCommandShimDefaultsOnlyPluginProfile` 仍因本机没有 `pwsh.exe` 失败，属既有环境缺口，与本次改动无关。
+- 本轮未验证：Windows 实机双开与强杀回收行为（当前会话未提权，无法为需要管理员权限的正式 EXE 回应 UAC）、macOS/Linux 的 `flock` 分支、tag 与 Release。
+
 ## 2026-09-10 v0.6.21 内嵌 WebView 与离线包准备
 
 - 已确认 npm `latest` 为 `@deepseek-ai/dsh@0.1.5-rc.1`；`main.go`、前端初始状态、`offline-runtime/package.json`、锁文件和离线版本元数据已同步到该版本，Desktop 目标版本为 `0.6.21`。
