@@ -111,6 +111,45 @@ active write handle
 
 同一条提示也可能出现在另外两种用法下：手工执行 `dsh --profile web` 打开桌面端正在使用的会话，或在内嵌页面之外又用系统浏览器操作同一会话。此时先只保留一个写入方。
 
+## 开始对话后报 `registration.adapter.prepareCall is not a function`
+
+页面能起来、目录和设置都能打开，但一发消息就失败，错误形如：
+
+```text
+registration.adapter.prepareCall is not a function
+```
+
+这是**第三方 LLM 适配器插件与 DSH 新版适配器接口不匹配**，与登录、token、代理都无关。
+
+DSH 自 0.1.1 起把每一次模型调用（含 replay 路径）都改由适配器上的 `prepareCall()` 派发，0.1.5-rc.1 更是强制要求。`LlmAdapter` 基类自带一份默认实现，但**用普通对象"鸭子类型"冒充适配器的插件拿不到这份默认**，必须自己补上方法；否则注册阶段不会报错（注册表不做接口校验），直到第一次真正发起模型调用才炸——这就是"跑着跑着才出问题"的原因。
+
+判断依据：看当前使用的 provider 是否由插件派生。`~/.dsh/settings.yaml` 里：
+
+```yaml
+agent-default-model:
+  provider: modlens-tokens1688   # 形如 <插件>-<上游> 的 id 即为插件包装出来的路由
+  model: deepseek-v4-pro
+```
+
+`~/.dsh/profiles/web/package.json` 的 `dsh.profile.bundles` 能确认装了哪些插件。
+
+处理步骤：
+
+1. **升级该插件**，不要就地改它的源码。Profile 由 pnpm 管理，`node_modules` 里的文件是指向 pnpm Store 的硬链接，直接编辑会连带改坏 Store 里的副本。以 `@liustack/modlens` 为例（它在 3.19 之后补上了 `prepareCall`，对应上游 issue #73）：
+
+   ```bash
+   cd ~/.dsh/profiles/web
+   pnpm add "@liustack/modlens@3.26.1" --store-dir="<.modules.yaml 里 storeDir 的父目录>"
+   ```
+
+   `--store-dir` 要传**版本目录的上一级**（Store 形如 `...\pnpm\store\v11` 时传 `...\pnpm\store`），pnpm 自己会补上版本子目录；传错会报 `ERR_PNPM_UNEXPECTED_STORE`。
+2. 同步更正 `pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude` 里对应的版本号。
+3. 完成后**完全退出桌面端再重启**，让新的插件代码重新加载。
+
+如果暂时不想升级，也可以在 `~/.dsh/settings.yaml` 里把 `agent-default-model` 改成不经插件包装的真实路由（例如上例改回 `tokens1688`），代价是失去该插件提供的能力（如图像理解）。
+
+不要为了让报错消失而删除 `~/.dsh` 下的 sessions、credentials 或 attachments。
+
 ## 代理改完没有生效
 
 保存设置会重启 DSH。确认日志时间已经变化，并检查：
