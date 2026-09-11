@@ -15,3 +15,6 @@ __pycache__/
 *.py[cod]
 *.log
 .DS_Store
+/.workbuddy/
+/.codegraph/
+/codegraph.hold/
